@@ -1,0 +1,2290 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vale dos Nomeados</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+:root{
+  --bg:#f0f2ff;
+  --bg2:#e8eaf8;
+  --panel:#ffffff;
+  --panel2:#f8f9ff;
+  --dark:#0d0d2b;
+  --dark2:#13132e;
+  --dark3:#1a1a3e;
+  --border:#e2e0ff;
+  --border2:rgba(123,95,255,0.3);
+  --accent:#6c47ff;
+  --accent2:#9c7fff;
+  --accent3:#c4b5fd;
+  --gold:#f5a623;
+  --gold2:#ffd700;
+  --cyan:#06b6d4;
+  --green:#16a34a;
+  --orange:#ea580c;
+  --red:#dc2626;
+  --pink:#db2777;
+  --text:#1e1b4b;
+  --text2:#4c4f8a;
+  --muted:#9ca3af;
+  --shadow:0 4px 24px rgba(108,71,255,0.10);
+  --shadow2:0 8px 40px rgba(108,71,255,0.18);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;overflow-x:hidden;}
+
+/* ===== BG CANVAS ===== */
+#bg-canvas{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:0.5;}
+
+/* ===== APP ===== */
+#app{position:relative;z-index:1;display:flex;flex-direction:column;min-height:100vh;}
+
+/* ===== HEADER ===== */
+header{
+  background:rgba(255,255,255,0.95);
+  border-bottom:1px solid var(--border);
+  padding:0 24px;
+  display:flex;align-items:center;gap:16px;
+  height:64px;flex-shrink:0;
+  backdrop-filter:blur(12px);
+  position:sticky;top:0;z-index:200;
+  box-shadow:0 2px 16px rgba(108,71,255,0.08);
+}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-dragon{font-size:28px;animation:dragonFloat 3s ease-in-out infinite;display:inline-block;}
+@keyframes dragonFloat{0%,100%{transform:translateY(0)rotate(-4deg);}50%{transform:translateY(-5px)rotate(4deg);}}
+.logo h1{font-size:17px;font-weight:900;background:linear-gradient(135deg,var(--accent),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:1.5px;white-space:nowrap;}
+.logo small{font-size:9px;color:var(--muted);letter-spacing:2px;display:block;-webkit-text-fill-color:var(--muted);}
+
+.header-mid{flex:1;display:flex;align-items:center;gap:12px;justify-content:center;flex-wrap:wrap;}
+.exam-wrap{display:flex;align-items:center;gap:8px;}
+.exam-wrap label{font-size:11px;color:var(--text2);white-space:nowrap;font-weight:600;}
+.exam-wrap input[type=date]{background:var(--panel2);border:1.5px solid var(--border2);color:var(--accent);padding:5px 10px;border-radius:10px;font-size:12px;font-weight:700;}
+
+.days-pill{background:linear-gradient(135deg,var(--accent),#4f46e5);color:#fff;border-radius:20px;padding:6px 16px;text-align:center;white-space:nowrap;box-shadow:0 4px 12px rgba(108,71,255,0.3);}
+.days-pill .d-num{font-size:20px;font-weight:900;line-height:1;}
+.days-pill .d-lbl{font-size:8px;letter-spacing:1px;opacity:0.85;}
+
+.xp-pill{background:linear-gradient(135deg,var(--gold),#f97316);color:#fff;border-radius:20px;padding:6px 16px;text-align:center;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 12px rgba(245,166,35,0.3);}
+.xp-pill:hover{transform:scale(1.04);box-shadow:0 6px 20px rgba(245,166,35,0.4);}
+.xp-pill .x-num{font-size:18px;font-weight:900;line-height:1;}
+.xp-pill .x-lbl{font-size:8px;letter-spacing:1px;opacity:0.9;}
+
+/* ===== NAV ===== */
+nav{
+  background:rgba(255,255,255,0.97);
+  border-bottom:1px solid var(--border);
+  display:flex;overflow-x:auto;flex-shrink:0;
+  position:sticky;top:64px;z-index:199;
+  box-shadow:0 1px 8px rgba(108,71,255,0.06);
+}
+nav::-webkit-scrollbar{height:2px;}
+nav::-webkit-scrollbar-thumb{background:var(--accent);}
+.nav-btn{
+  background:none;border:none;color:var(--muted);
+  padding:12px 22px;cursor:pointer;font-size:12px;font-weight:800;
+  letter-spacing:1px;white-space:nowrap;transition:all 0.2s;
+  border-bottom:3px solid transparent;display:flex;align-items:center;gap:8px;
+  text-transform:uppercase;
+}
+.nav-btn:hover{color:var(--accent);}
+.nav-btn.active{color:var(--accent);border-bottom-color:var(--accent);background:rgba(108,71,255,0.04);}
+.nav-badge{background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:9px;font-weight:900;}
+.nav-icon{font-size:16px;}
+
+/* ===== SCREENS ===== */
+.screen{display:none;padding:28px 24px;flex:1;}
+.screen.active{display:block;}
+
+/* ===== SECTION TITLE ===== */
+.sec-title{font-size:13px;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:var(--accent);display:flex;align-items:center;gap:8px;margin-bottom:18px;}
+
+/* ===== MAP WORLD ===== */
+#world-map{
+  background:linear-gradient(160deg,#e8f4fd 0%,#f0e8ff 40%,#fdf0e8 70%,#e8fff4 100%);
+  border-radius:24px;
+  border:1.5px solid var(--border);
+  box-shadow:var(--shadow2);
+  padding:28px;
+  position:relative;
+  min-height:520px;
+  overflow:hidden;
+  margin-bottom:20px;
+}
+#world-map::before{
+  content:'';position:absolute;inset:0;border-radius:24px;
+  background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%236c47ff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  pointer-events:none;
+}
+.map-title-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:10px;}
+.map-title-bar h2{font-size:18px;font-weight:900;color:var(--text);display:flex;align-items:center;gap:8px;}
+#kingdoms-container{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(210px,1fr));
+  gap:16px;
+}
+
+/* TERRITORY CARD */
+.territory{
+  background:#fff;
+  border:2px solid transparent;
+  border-radius:18px;
+  padding:18px;
+  cursor:pointer;
+  transition:all 0.35s cubic-bezier(.34,1.56,.64,1);
+  position:relative;overflow:hidden;
+  box-shadow:0 3px 14px rgba(0,0,0,0.07);
+}
+.territory::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:4px;
+  border-radius:18px 18px 0 0;
+}
+.territory:hover{transform:translateY(-6px) scale(1.02);box-shadow:0 12px 36px rgba(0,0,0,0.13);}
+.territory-icon{font-size:38px;margin-bottom:10px;display:block;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.15));}
+.territory-name{font-size:13px;font-weight:900;color:var(--text);margin-bottom:10px;letter-spacing:0.3px;}
+.territory-stats{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;}
+.t-stat{background:var(--bg2);border-radius:8px;padding:6px 8px;text-align:center;}
+.t-stat .tv{font-size:16px;font-weight:900;}
+.t-stat .tl{font-size:9px;color:var(--muted);letter-spacing:0.5px;margin-top:1px;}
+.territory-progress{margin-top:8px;}
+.tp-label{display:flex;justify-content:space-between;font-size:10px;color:var(--text2);margin-bottom:4px;font-weight:700;}
+.tp-track{height:6px;background:var(--border);border-radius:3px;overflow:hidden;}
+.tp-fill{height:100%;border-radius:3px;transition:width 0.8s ease;}
+
+/* ADD TERRITORY */
+.add-territory{
+  background:rgba(108,71,255,0.04);
+  border:2px dashed rgba(108,71,255,0.3);
+  border-radius:18px;padding:18px;
+  cursor:pointer;transition:all 0.3s;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+  min-height:200px;color:var(--accent);
+}
+.add-territory:hover{background:rgba(108,71,255,0.08);border-color:var(--accent);transform:translateY(-4px);}
+.add-territory i{font-size:32px;opacity:0.6;}
+.add-territory span{font-size:12px;font-weight:900;letter-spacing:1px;opacity:0.7;}
+
+/* ===== BUTTONS ===== */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:12px;border:none;cursor:pointer;font-size:12px;font-weight:800;transition:all 0.2s;letter-spacing:0.5px;white-space:nowrap;}
+.btn-primary{background:linear-gradient(135deg,var(--accent),#4f46e5);color:#fff;box-shadow:0 4px 14px rgba(108,71,255,0.3);}
+.btn-primary:hover{filter:brightness(1.1);transform:translateY(-1px);box-shadow:0 6px 20px rgba(108,71,255,0.4);}
+.btn-gold{background:linear-gradient(135deg,var(--gold),#f97316);color:#fff;box-shadow:0 4px 14px rgba(245,166,35,0.3);}
+.btn-gold:hover{filter:brightness(1.08);transform:translateY(-1px);}
+.btn-cyan{background:linear-gradient(135deg,var(--cyan),#0e7490);color:#fff;box-shadow:0 4px 12px rgba(6,182,212,0.3);}
+.btn-cyan:hover{filter:brightness(1.1);transform:translateY(-1px);}
+.btn-ghost{background:var(--panel2);border:1.5px solid var(--border2);color:var(--text2);}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent);}
+.btn-danger{background:rgba(220,38,38,0.08);border:1.5px solid rgba(220,38,38,0.25);color:var(--red);}
+.btn-danger:hover{background:rgba(220,38,38,0.16);}
+.btn-green-s{background:rgba(22,163,74,0.1);border:1.5px solid rgba(22,163,74,0.3);color:var(--green);}
+.btn-green-s:hover{background:rgba(22,163,74,0.2);}
+.btn-sm{padding:6px 12px;font-size:11px;border-radius:9px;}
+.btn-xs{padding:4px 9px;font-size:10px;border-radius:7px;}
+
+/* ===== INPUT ===== */
+.inp{background:var(--panel2);border:1.5px solid var(--border);color:var(--text);padding:9px 13px;border-radius:12px;font-size:13px;transition:all 0.2s;outline:none;font-weight:500;}
+.inp:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(108,71,255,0.12);}
+.inp::placeholder{color:var(--muted);}
+
+/* ===== ADD FORM ===== */
+.add-form{background:#fff;border:1.5px solid var(--border);border-radius:16px;padding:14px 16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:18px;box-shadow:0 2px 10px rgba(0,0,0,0.04);}
+.add-form .inp{flex:1;min-width:160px;}
+
+/* ===== KINGDOM SCREEN ===== */
+.breadcrumb{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);margin-bottom:16px;flex-wrap:wrap;}
+.breadcrumb .bc-link{color:var(--accent);cursor:pointer;font-weight:800;}
+.breadcrumb .bc-link:hover{text-decoration:underline;}
+
+/* ===== TOPIC (BOSS) CARDS ===== */
+.topic-list{display:flex;flex-direction:column;gap:12px;}
+.topic-card{background:#fff;border:1.5px solid var(--border);border-radius:16px;overflow:hidden;transition:all 0.2s;box-shadow:0 2px 10px rgba(0,0,0,0.04);}
+.topic-card:hover{border-color:var(--border2);box-shadow:var(--shadow);}
+.topic-head{display:flex;align-items:center;gap:10px;padding:14px 18px;cursor:pointer;background:linear-gradient(135deg,rgba(108,71,255,0.03),rgba(255,255,255,0));transition:background 0.2s;}
+.topic-head:hover{background:rgba(108,71,255,0.05);}
+.topic-icon-el{font-size:22px;}
+.topic-name-el{flex:1;font-size:14px;font-weight:800;color:var(--text);}
+.topic-meta{font-size:10px;color:var(--muted);display:flex;gap:10px;align-items:center;}
+.topic-body{padding:16px 18px;border-top:1.5px solid var(--border);background:var(--panel2);}
+
+/* ===== SUBTOPIC (MINIBOSS) ===== */
+.sub-list{display:flex;flex-direction:column;gap:8px;}
+.sub-item{background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:12px 16px;transition:all 0.2s;box-shadow:0 1px 6px rgba(0,0,0,0.04);}
+.sub-item:hover{border-color:var(--border2);box-shadow:var(--shadow);}
+.sub-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.sub-name{flex:1;min-width:120px;font-size:13px;font-weight:800;color:var(--text);}
+.sub-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px;}
+
+/* PRIORITY */
+.pri-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:900;letter-spacing:0.5px;}
+.pri-30{background:rgba(22,163,74,0.1);color:var(--green);border:1.5px solid rgba(22,163,74,0.3);}
+.pri-70{background:rgba(234,88,12,0.1);color:var(--orange);border:1.5px solid rgba(234,88,12,0.3);}
+.pri-100{background:rgba(220,38,38,0.1);color:var(--red);border:1.5px solid rgba(220,38,38,0.3);animation:redPulse 2s infinite;}
+@keyframes redPulse{0%,100%{box-shadow:none;}50%{box-shadow:0 0 10px rgba(220,38,38,0.35);}}
+
+/* STATUS */
+.studied-badge{background:rgba(22,163,74,0.1);color:var(--green);border:1.5px solid rgba(22,163,74,0.3);border-radius:8px;font-size:9px;padding:2px 7px;font-weight:800;}
+.unstudy-badge{background:var(--bg2);color:var(--muted);border:1.5px solid var(--border);border-radius:8px;font-size:9px;padding:2px 7px;font-weight:700;}
+
+/* TIMER */
+.timer-wrap{background:linear-gradient(135deg,var(--dark2),var(--dark3));border-radius:14px;padding:16px;margin-top:10px;display:none;border:1px solid rgba(108,71,255,0.2);}
+
+/* ===== NOTE / OBSERVAÇÃO ===== */
+.note-wrap{background:#fffbeb;border:1.5px solid rgba(245,166,35,0.35);border-radius:14px;padding:14px;margin-top:10px;display:none;}
+.note-wrap.note-open{display:block;}
+
+/* ===== RESUMO ESTRATÉGICO ===== */
+.strat-badge-done{background:rgba(22,163,74,0.1);color:var(--green);border:1.5px solid rgba(22,163,74,0.35);border-radius:8px;font-size:9px;padding:2px 8px;font-weight:900;cursor:pointer;transition:all 0.2s;}
+.strat-badge-done:hover{background:rgba(22,163,74,0.2);}
+.strat-badge-todo{background:rgba(107,114,128,0.08);color:var(--muted);border:1.5px solid var(--border);border-radius:8px;font-size:9px;padding:2px 8px;font-weight:700;cursor:pointer;transition:all 0.2s;}
+.strat-badge-todo:hover{background:rgba(108,71,255,0.08);color:var(--accent);border-color:var(--accent);}
+
+/* ===== TOTAL TIME CHIP ===== */
+.total-time-chip{background:rgba(139,92,246,0.1);border:1.5px solid rgba(139,92,246,0.3);color:#8b5cf6;border-radius:8px;padding:2px 8px;font-size:10px;font-weight:800;}
+
+/* ===== STUDY CHART ===== */
+.chart-tabs{display:flex;gap:4px;margin-bottom:14px;}
+.chart-tab{padding:5px 14px;border-radius:20px;font-size:11px;font-weight:800;cursor:pointer;border:1.5px solid var(--border);background:#fff;color:var(--muted);transition:all 0.2s;}
+.chart-tab:hover{border-color:var(--accent);color:var(--accent);}
+.chart-tab.active{background:linear-gradient(135deg,var(--accent),#4f46e5);border-color:var(--accent);color:#fff;box-shadow:0 4px 12px rgba(108,71,255,0.25);}
+.chart-svg-wrap{width:100%;overflow:hidden;}
+.note-textarea{
+  width:100%;min-height:120px;resize:vertical;
+  background:#fff;border:1.5px solid var(--border);border-radius:10px;
+  padding:10px 12px;font-size:13px;font-family:inherit;color:var(--text);
+  line-height:1.5;outline:none;transition:border-color 0.2s;
+}
+.note-textarea:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(245,166,35,0.12);}
+.note-textarea::placeholder{color:var(--muted);}
+.timer-display{font-size:40px;font-weight:900;font-family:monospace;text-align:center;color:#c4b5fd;letter-spacing:4px;text-shadow:0 0 20px rgba(196,181,253,0.5);margin:8px 0;}
+.timer-ctrls{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
+
+/* ===== REVISION ITEMS ===== */
+.rev-item{background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:14px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;transition:all 0.2s;margin-bottom:8px;box-shadow:0 2px 8px rgba(0,0,0,0.04);}
+.rev-item:hover{box-shadow:var(--shadow);border-color:var(--border2);}
+.rev-item.overdue{border-color:rgba(220,38,38,0.3);background:rgba(220,38,38,0.02);}
+.rev-item.rev-today{border-color:rgba(234,88,12,0.4);background:rgba(234,88,12,0.03);}
+.rev-item.done-item{opacity:0.5;}
+.rev-item.rev-blocked{border-color:rgba(107,114,128,0.2);background:rgba(107,114,128,0.03);opacity:0.75;}
+.rev-info{flex:1;min-width:140px;}
+.rev-name{font-size:13px;font-weight:800;color:var(--text);}
+.rev-sub{font-size:10px;color:var(--muted);margin-top:3px;}
+.rev-cd{font-size:12px;font-weight:900;min-width:70px;text-align:right;}
+.cd-over{color:var(--red);}
+.cd-today{color:var(--orange);}
+.cd-ok{color:var(--green);}
+.after-exam-tag{background:rgba(234,88,12,0.1);color:var(--orange);border:1.5px solid rgba(234,88,12,0.25);border-radius:8px;font-size:9px;padding:2px 7px;font-weight:800;}
+.rev-num-badge{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0;}
+.rn-1{background:rgba(22,163,74,0.15);color:var(--green);border:1.5px solid rgba(22,163,74,0.35);}
+.rn-2{background:rgba(6,182,212,0.15);color:var(--cyan);border:1.5px solid rgba(6,182,212,0.35);}
+.rn-3{background:rgba(234,88,12,0.15);color:var(--orange);border:1.5px solid rgba(234,88,12,0.35);}
+.rn-4{background:rgba(220,38,38,0.15);color:var(--red);border:1.5px solid rgba(220,38,38,0.35);}
+
+/* ===== FILTER CHIPS ===== */
+.filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;}
+.chip{padding:5px 14px;border-radius:20px;font-size:11px;font-weight:800;cursor:pointer;border:1.5px solid var(--border);background:#fff;color:var(--muted);transition:all 0.2s;}
+.chip:hover{border-color:var(--accent);color:var(--accent);}
+.chip.active{background:linear-gradient(135deg,var(--accent),#4f46e5);border-color:var(--accent);color:#fff;box-shadow:0 4px 12px rgba(108,71,255,0.25);}
+
+/* ===== DASHBOARD ===== */
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:24px;}
+.stat-card{background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:12px 8px;text-align:center;transition:all 0.3s;box-shadow:0 2px 10px rgba(0,0,0,0.04);cursor:default;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.stat-card:hover{transform:translateY(-3px);box-shadow:var(--shadow);border-color:var(--border2);}
+.stat-icon{font-size:18px;margin-bottom:6px;display:block;}
+.stat-val{font-size:20px;font-weight:900;line-height:1;margin-bottom:3px;}
+.stat-lbl{font-size:8px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;font-weight:700;}
+.chart-svg-wrap{width:100%;overflow:hidden;}
+
+/* ===== PRIORITY CHART ===== */
+.pri-section{background:#fff;border:1.5px solid var(--border);border-radius:18px;padding:22px;margin-bottom:20px;box-shadow:0 2px 10px rgba(0,0,0,0.04);}
+.pri-rings{display:flex;gap:24px;align-items:center;flex-wrap:wrap;justify-content:center;}
+.pri-ring{text-align:center;}
+.pri-ring-label{font-size:11px;margin-top:8px;font-weight:800;line-height:1.4;}
+.pri-legend-item{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--border);}
+.pri-legend-item:last-child{border-bottom:none;}
+.pri-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.pri-legend-name{flex:1;font-size:12px;font-weight:700;color:var(--text2);}
+.pri-legend-count{font-size:20px;font-weight:900;}
+.pri-legend-bar-wrap{width:100%;height:4px;background:var(--bg2);border-radius:2px;margin-top:3px;overflow:hidden;}
+.pri-legend-bar{height:100%;border-radius:2px;transition:width 0.8s;}
+
+.mb-card:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:var(--shadow);}
+.mb-head{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.mb-name{flex:1;font-size:12px;font-weight:800;color:var(--text);}
+.mb-kingdom{font-size:10px;color:var(--muted);background:var(--bg2);padding:2px 7px;border-radius:7px;font-weight:700;}
+.mb-rev-dots{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;}
+.mb-dot{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;cursor:pointer;transition:transform 0.2s;border:2px solid transparent;}
+.mb-dot:hover{transform:scale(1.25);}
+.mbd-overdue{background:rgba(220,38,38,0.12);color:var(--red);border-color:rgba(220,38,38,0.4);animation:pulse 1.5s infinite;}
+.mbd-pending{background:rgba(234,88,12,0.1);color:var(--orange);border-color:rgba(234,88,12,0.3);}
+.mbd-done{background:rgba(22,163,74,0.08);color:rgba(22,163,74,0.5);border-color:rgba(22,163,74,0.2);}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
+.mb-progbar{height:4px;background:var(--bg2);border-radius:2px;overflow:hidden;margin-top:8px;}
+.mb-progfill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--accent),var(--cyan));transition:width 0.5s;}
+
+/* ===== MODAL ===== */
+#modal{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.4);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:20px;}
+#modal.open{display:flex;}
+.modal-box{background:#fff;border:1.5px solid var(--border);border-radius:22px;padding:26px;max-width:520px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.15);}
+.modal-box::-webkit-scrollbar{width:4px;}
+.modal-box::-webkit-scrollbar-thumb{background:var(--accent);border-radius:2px;}
+.modal-title{font-size:17px;font-weight:900;color:var(--text);display:flex;align-items:center;gap:8px;margin-bottom:20px;}
+.modal-title button{margin-left:auto;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;}
+.modal-title button:hover{color:var(--red);}
+
+/* ===== TOAST ===== */
+#toast{position:fixed;top:72px;right:16px;z-index:600;color:#fff;padding:12px 20px;border-radius:14px;font-size:13px;font-weight:800;display:none;box-shadow:0 8px 30px rgba(0,0,0,0.15);max-width:280px;animation:toastIn 0.3s ease;}
+@keyframes toastIn{from{transform:translateX(20px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+
+/* ===== SECTION CARD ===== */
+.section-card{background:#fff;border:1.5px solid var(--border);border-radius:18px;padding:20px;margin-bottom:18px;box-shadow:0 2px 10px rgba(0,0,0,0.04);}
+
+/* ===== RANK ROW ===== */
+.rank-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;margin-bottom:6px;background:var(--panel2);border:1.5px solid var(--border);transition:all 0.2s;cursor:pointer;}
+.rank-row:hover{border-color:var(--border2);background:#fff;box-shadow:var(--shadow);}
+.rank-pos{font-size:16px;font-weight:900;min-width:28px;text-align:center;}
+
+/* ===== TIME CHIP ===== */
+.time-chip{background:rgba(6,182,212,0.1);border:1.5px solid rgba(6,182,212,0.25);color:var(--cyan);border-radius:8px;padding:2px 8px;font-size:10px;font-weight:800;}
+
+/* ===== EMPTY ===== */
+.empty{text-align:center;padding:40px 20px;color:var(--muted);}
+.empty i{font-size:40px;display:block;margin-bottom:12px;opacity:0.25;}
+.empty p{font-size:13px;}
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--accent);border-radius:3px;}
+
+/* ===== GLOW DIVIDER ===== */
+.glow-div{height:2px;background:linear-gradient(90deg,transparent,var(--accent),var(--cyan),var(--accent),transparent);border-radius:1px;margin:18px 0;}
+
+/* ===== EDITAIS ===== */
+.edital-card{
+  background:#fff;border:2px solid transparent;border-radius:18px;padding:20px;
+  margin-bottom:12px;box-shadow:0 2px 12px rgba(0,0,0,0.05);
+  transition:all 0.25s;position:relative;overflow:hidden;
+  animation:cardIn 0.3s ease both;
+}
+.edital-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:4px;border-radius:18px 18px 0 0;
+}
+.edital-card:hover{transform:translateY(-3px);box-shadow:0 8px 28px rgba(0,0,0,0.1);}
+.edital-card.ed-realizado{opacity:0.6;}
+.edital-top{display:flex;align-items:flex-start;gap:14px;margin-bottom:14px;}
+.edital-icon{font-size:36px;flex-shrink:0;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.1));}
+.edital-info{flex:1;min-width:0;}
+.edital-nome{font-size:15px;font-weight:900;color:var(--text);margin-bottom:3px;}
+.edital-cargo{font-size:12px;color:var(--text2);font-weight:700;margin-bottom:6px;}
+.edital-meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.edital-status{border-radius:20px;padding:3px 10px;font-size:10px;font-weight:900;letter-spacing:0.5px;}
+.edital-banca-chip{background:var(--bg2);color:var(--text2);border-radius:8px;padding:2px 8px;font-size:10px;font-weight:800;}
+.edital-countdown{text-align:right;flex-shrink:0;}
+.edital-dias-num{font-size:28px;font-weight:900;line-height:1;}
+.edital-dias-lbl{font-size:9px;letter-spacing:1px;font-weight:700;opacity:0.7;}
+.edital-bottom{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding-top:12px;border-top:1px solid var(--border);}
+.edital-date-chip{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:800;color:var(--text2);}
+.edital-actions{display:flex;gap:6px;}
+.ed-status-previsto{background:rgba(107,114,128,0.12);color:#374151;}
+.ed-status-inscricoes{background:rgba(234,88,12,0.12);color:var(--orange);}
+.ed-status-inscrito{background:rgba(22,163,74,0.12);color:var(--green);}
+.ed-status-aguardando{background:rgba(108,71,255,0.12);color:var(--accent);}
+.ed-status-realizado{background:rgba(6,182,212,0.12);color:var(--cyan);}
+.edital-urgente{animation:redPulse 2s infinite;}
+.ed-counter-pill{background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:8px 14px;font-size:11px;font-weight:800;color:var(--text2);display:flex;align-items:center;gap:6px;}
+
+/* ===== PLANO SEMANAL ===== */
+.week-plan-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;}
+.day-col{background:var(--bg2);border-radius:14px;padding:14px;border:1.5px solid var(--border);}
+.day-col.today-col{background:linear-gradient(135deg,rgba(108,71,255,0.06),rgba(79,70,229,0.03));border-color:rgba(108,71,255,0.3);}
+.day-header{font-size:11px;font-weight:900;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;}
+.day-today-pill{background:linear-gradient(135deg,var(--accent),#4f46e5);color:#fff;border-radius:20px;padding:2px 8px;font-size:9px;font-weight:900;letter-spacing:0.5px;}
+.plan-item{background:#fff;border-radius:10px;padding:9px 11px;margin-bottom:6px;border:1.5px solid var(--border);display:flex;align-items:flex-start;gap:8px;transition:all 0.15s;}
+.plan-item:last-child{margin-bottom:0;}
+.plan-item:hover{border-color:var(--border2);box-shadow:0 2px 8px rgba(108,71,255,0.08);}
+.plan-item-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px;}
+.plan-item-text{font-size:11px;font-weight:700;color:var(--text);line-height:1.4;flex:1;}
+.plan-item-sub{font-size:9px;color:var(--muted);margin-top:2px;font-weight:600;}
+.plan-tag{font-size:9px;font-weight:900;padding:1px 6px;border-radius:20px;flex-shrink:0;}
+.plan-tag-rev{background:rgba(6,182,212,0.12);color:var(--cyan);}
+.plan-tag-new{background:rgba(220,38,38,0.1);color:var(--red);}
+.plan-tag-pend{background:rgba(234,88,12,0.1);color:var(--orange);}
+.plan-add-btn{background:rgba(108,71,255,0.08);border:1.5px dashed rgba(108,71,255,0.3);border-radius:8px;width:26px;height:26px;cursor:pointer;font-size:16px;color:var(--accent);display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0;}
+.plan-add-btn:hover{background:rgba(108,71,255,0.15);border-color:var(--accent);}
+
+@media(max-width:640px){
+  .edital-form-grid{grid-template-columns:1fr!important;}
+  .edital-countdown{display:none;}
+}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:640px){
+  header{flex-wrap:wrap;height:auto;padding:10px;gap:8px;}
+  .header-mid{justify-content:flex-start;}
+  #kingdoms-container{grid-template-columns:1fr 1fr;}
+  .screen{padding:18px 14px;}
+  .timer-display{font-size:30px;}
+  .stats-grid{grid-template-columns:repeat(2,1fr)!important;}
+  .dash-hero-row{grid-template-columns:1fr!important;}
+  .dash-two-col{grid-template-columns:1fr!important;}
+  .dash-top-row{grid-template-columns:1fr!important;}
+}
+@media(max-width:400px){#kingdoms-container{grid-template-columns:1fr;}}
+
+/* ===== FIRE PRIORITY BUTTONS ===== */
+.fire-btn{
+  background:rgba(108,71,255,0.07);border:1.5px solid var(--border);
+  border-radius:10px;padding:6px 10px;cursor:pointer;font-size:14px;
+  transition:all 0.18s;line-height:1;white-space:nowrap;
+}
+.fire-btn:hover{border-color:var(--orange);background:rgba(234,88,12,0.08);transform:scale(1.06);}
+.fire-btn.active{border-color:var(--orange);background:rgba(234,88,12,0.12);box-shadow:0 2px 10px rgba(234,88,12,0.2);}
+
+/* ===== CARD ENTRANCE ANIMATION ===== */
+@keyframes cardIn{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+.territory{animation:cardIn 0.35s ease both;}
+.topic-card{animation:cardIn 0.3s ease both;}
+.mb-card{animation:cardIn 0.3s ease both;}
+.rev-item{animation:cardIn 0.25s ease both;}
+
+/* ===== PROGRESS GLOW ===== */
+.tp-fill{height:100%;border-radius:3px;transition:width 0.8s ease;box-shadow:0 0 6px rgba(108,71,255,0.25);}
+
+/* ===== SUB-ITEM estudado highlight ===== */
+.sub-item.sub-studied{border-left:3px solid var(--green);}
+
+/* ===== TERRITORY unlocked glow ===== */
+.territory.has-pending{box-shadow:0 3px 14px rgba(220,38,38,0.15);}
+</style>
+</head>
+<body>
+<canvas id="bg-canvas"></canvas>
+<div id="app">
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <span class="logo-dragon">🐉</span>
+    <div>
+      <h1>VALE DOS NOMEADOS</h1>
+      <small>CONCURSO FEDERAL QUEST</small>
+    </div>
+  </div>
+  <div class="header-mid">
+    <div class="exam-wrap">
+      <label><i class="fa fa-calendar-alt" style="color:var(--accent)"></i> Data da Prova:</label>
+      <input type="date" id="exam-date">
+    </div>
+    <div class="days-pill">
+      <div class="d-num" id="days-left">—</div>
+      <div class="d-lbl">DIAS RESTANTES</div>
+    </div>
+    <div class="xp-pill" id="xp-pill-btn">
+      <div class="x-num" id="total-xp">0</div>
+      <div class="x-lbl">⭐ XP TOTAL</div>
+    </div>
+  </div>
+</header>
+
+<!-- NAV -->
+<nav>
+  <button class="nav-btn active" id="nav-map">
+    <span class="nav-icon">🗺️</span> MAPA DOS REINOS
+  </button>
+  <button class="nav-btn" id="nav-revisions">
+    <span class="nav-icon">🔔</span> REVISÕES
+    <span class="nav-badge" id="rev-badge" style="display:none">0</span>
+  </button>
+  <button class="nav-btn" id="nav-dashboard">
+    <span class="nav-icon">🏆</span> PAINEL DO HERÓI
+  </button>
+  <button class="nav-btn" id="nav-editais">
+    <span class="nav-icon">📋</span> EDITAIS
+    <span class="nav-badge" id="editais-badge" style="display:none;background:var(--cyan)">0</span>
+  </button>
+</nav>
+
+<!-- ===== MAP ===== -->
+<div class="screen active" id="screen-map">
+  <div id="world-map">
+    <div class="map-title-bar">
+      <h2>🌍 Mapa dos Reinos</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div style="background:rgba(255,255,255,0.8);border:1.5px solid var(--border);border-radius:12px;padding:6px 14px;font-size:11px;font-weight:800;color:var(--text2)">
+          <i class="fa fa-globe" style="color:var(--accent)"></i>
+          <span id="map-total-kingdoms">0 reinos</span> ·
+          <span id="map-total-bosses">0 chefões</span> ·
+          <span id="map-total-mini">0 minibosses</span>
+        </div>
+      </div>
+    </div>
+    <!-- SVG decorative map lines -->
+    <svg style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;opacity:0.07" preserveAspectRatio="none">
+      <path d="M0,200 Q200,100 400,200 T800,200" stroke="#6c47ff" stroke-width="2" fill="none"/>
+      <path d="M0,350 Q300,250 600,350 T1200,350" stroke="#06b6d4" stroke-width="1.5" fill="none"/>
+      <circle cx="15%" cy="40%" r="60" stroke="#6c47ff" stroke-width="1" fill="none"/>
+      <circle cx="70%" cy="60%" r="80" stroke="#06b6d4" stroke-width="1" fill="none"/>
+      <circle cx="40%" cy="75%" r="50" stroke="#f5a623" stroke-width="1" fill="none"/>
+    </svg>
+    <div id="kingdoms-container"></div>
+  </div>
+</div>
+
+<!-- ===== KINGDOM ===== -->
+<div class="screen" id="screen-kingdom">
+  <div class="breadcrumb">
+    <span class="bc-link" onclick="showScreen('map')"><i class="fa fa-home"></i> Mapa</span>
+    <i class="fa fa-chevron-right" style="font-size:9px"></i>
+    <span id="bc-kingdom" style="font-weight:800;color:var(--text)"></span>
+  </div>
+  <div class="sec-title" id="kingdom-title"></div>
+
+  <div class="add-form">
+    <span style="font-size:18px">⚔️</span>
+    <input class="inp" id="new-topic-name" placeholder="Nome do chefão (ex: Urgência e Emergência)">
+    <input class="inp" id="new-topic-icon" placeholder="🔥" style="width:64px;text-align:center;font-size:18px">
+    <div style="display:flex;gap:4px;align-items:center" title="Prioridade do chefão">
+      <button class="fire-btn active" id="fprio-1" onclick="setTopicPrio(1)" title="🔥 Baixa prioridade">🔥</button>
+      <button class="fire-btn" id="fprio-2" onclick="setTopicPrio(2)" title="🔥🔥 Média prioridade">🔥🔥</button>
+      <button class="fire-btn" id="fprio-3" onclick="setTopicPrio(3)" title="🔥🔥🔥 Alta prioridade">🔥🔥🔥</button>
+    </div>
+    <button class="btn btn-primary" onclick="addTopic()"><i class="fa fa-plus"></i> Criar Chefão</button>
+  </div>
+
+  <div id="topics-list" class="topic-list"></div>
+</div>
+
+<!-- ===== REVISIONS ===== -->
+<div class="screen" id="screen-revisions">
+  <div class="sec-title">🔔 Câmara de Revisões</div>
+  <div class="filter-row">
+    <button class="chip active" onclick="filterRevs('overdue',this)">🔴 Atrasadas</button>
+    <button class="chip" onclick="filterRevs('today',this)">🔥 Hoje</button>
+    <button class="chip" onclick="filterRevs('week',this)">📅 Próximos 7 dias</button>
+    <button class="chip" onclick="filterRevs('done',this)">✅ Concluídas</button>
+    <button class="chip" onclick="filterRevs('all',this)">📋 Todas</button>
+  </div>
+  <div id="revisions-list"></div>
+</div>
+
+<!-- ===== DASHBOARD ===== -->
+<div class="screen" id="screen-dashboard">
+  <div class="sec-title">🏆 Painel do Herói</div>
+
+  <!-- Stats 6 colunas compactos + gráfico ao lado -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px;align-items:stretch" class="dash-hero-row">
+    <div class="stats-grid" id="dash-stats" style="grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:8px;margin-bottom:0;height:100%"></div>
+    <div class="section-card" style="margin-bottom:0">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+        <div class="sec-title" style="margin-bottom:0;font-size:11px">📊 TEMPO ESTUDADO</div>
+        <div class="chart-tabs">
+          <button class="chart-tab active" id="ct-day" onclick="setChartTab('day',this)">Diário</button>
+          <button class="chart-tab" id="ct-week" onclick="setChartTab('week',this)">Semanal</button>
+          <button class="chart-tab" id="ct-month" onclick="setChartTab('month',this)">Mensal</button>
+        </div>
+      </div>
+      <div class="chart-svg-wrap" id="study-chart-wrap"></div>
+      <div id="study-chart-total" style="text-align:center;font-size:10px;color:var(--muted);margin-top:6px;font-weight:700"></div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:280px 1fr;gap:16px;margin-bottom:18px" class="dash-two-col">
+    <div class="pri-section" style="margin-bottom:0;padding:16px">
+      <div class="sec-title" style="margin-bottom:14px;font-size:11px">💀 PRIORIDADES</div>
+      <div id="pri-rings" style="display:flex;gap:10px;justify-content:center;margin-bottom:12px"></div>
+      <div id="pri-legend"></div>
+    </div>
+    <div class="section-card" style="margin-bottom:0;display:flex;flex-direction:column">
+      <div class="sec-title" style="margin-bottom:4px">⚠️ REVISÕES ATRASADAS</div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:10px;font-weight:600">Revisões cujo prazo já passou</div>
+      <div id="dash-overdue-revs" style="overflow-y:auto;max-height:280px;padding-right:4px"></div>
+    </div>
+  </div>
+
+  <div class="section-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <div class="sec-title" style="margin-bottom:0">📅 AGENDA SEMANAL DE ESTUDOS</div>
+      <div style="font-size:10px;color:var(--muted);font-weight:600">Clique em um dia para adicionar assuntos</div>
+    </div>
+    <div id="weekly-plan"></div>
+  </div>
+
+  <div class="section-card">
+    <div class="sec-title" style="margin-bottom:12px">🏅 RANKING DE REINOS</div>
+    <div id="kingdom-ranking"></div>
+  </div>
+
+  <!-- MOTIVATIONAL PHRASE -->
+  <div id="motive-card" onclick="rotatePhrase()" style="background:linear-gradient(135deg,var(--accent),#4f46e5);border-radius:18px;padding:22px 28px;text-align:center;margin-bottom:18px;box-shadow:0 6px 28px rgba(108,71,255,0.25);cursor:pointer;transition:transform 0.2s" title="Clique para outra frase">
+    <div style="font-size:11px;color:rgba(255,255,255,0.65);letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:8px">✨ MENSAGEM DO DIA</div>
+    <div id="motive-text" style="font-size:16px;font-weight:800;color:#fff;line-height:1.5;max-width:600px;margin:0 auto"></div>
+    <div style="font-size:10px;color:rgba(255,255,255,0.5);margin-top:10px">clique para trocar a frase</div>
+  </div>
+</div>
+
+<!-- ===== EDITAIS ===== -->
+<div class="screen" id="screen-editais">
+  <div class="sec-title">📋 Painel de Editais & Provas</div>
+
+  <!-- Formulário de adição -->
+  <div class="section-card" style="margin-bottom:18px">
+    <div style="font-size:12px;font-weight:900;color:var(--accent);letter-spacing:1px;margin-bottom:14px;text-transform:uppercase">➕ Adicionar Novo Edital</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px" class="edital-form-grid">
+      <input class="inp" id="ed-nome" placeholder="Nome do concurso / órgão (ex: EBSERH Nordeste)">
+      <input class="inp" id="ed-cargo" placeholder="Cargo (ex: Enfermeiro — Área Assistencial)">
+      <input class="inp" id="ed-banca" placeholder="Banca (ex: FGV, CESPE, AOCP...)">
+      <input class="inp" type="date" id="ed-data" title="Data da prova">
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <div style="display:flex;gap:6px;align-items:center">
+        <label style="font-size:11px;font-weight:800;color:var(--text2)">Ícone:</label>
+        <input class="inp" id="ed-icon" placeholder="📝" style="width:60px;text-align:center;font-size:18px">
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <label style="font-size:11px;font-weight:800;color:var(--text2)">Cor:</label>
+        <input class="inp" type="color" id="ed-color" value="#6c47ff" style="width:52px;height:38px;cursor:pointer;padding:2px 4px">
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <label style="font-size:11px;font-weight:800;color:var(--text2)">Status:</label>
+        <select class="inp" id="ed-status" style="min-width:140px">
+          <option value="previsto">📅 Data prevista</option>
+          <option value="inscricoes">✏️ Inscrições abertas</option>
+          <option value="inscrito">✅ Inscrito</option>
+          <option value="aguardando">⏳ Aguardando prova</option>
+          <option value="realizado">🎯 Prova realizada</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="addEdital()" style="margin-left:auto"><i class="fa fa-plus"></i> Adicionar Edital</button>
+    </div>
+  </div>
+
+  <!-- Filtros de status -->
+  <div class="filter-row" id="edital-filter-row">
+    <button class="chip active" onclick="filterEditais('all',this)">📋 Todos</button>
+    <button class="chip" onclick="filterEditais('inscricoes',this)">✏️ Inscrições</button>
+    <button class="chip" onclick="filterEditais('inscrito',this)">✅ Inscrito</button>
+    <button class="chip" onclick="filterEditais('aguardando',this)">⏳ Aguardando</button>
+    <button class="chip" onclick="filterEditais('realizado',this)">🎯 Realizados</button>
+  </div>
+
+  <!-- Contador rápido -->
+  <div id="edital-counters" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px"></div>
+
+  <!-- Lista de editais -->
+  <div id="editais-list"></div>
+</div>
+<div id="loading-overlay" style="position:fixed;inset:0;z-index:9999;background:rgba(240,242,255,0.97);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;backdrop-filter:blur(8px)">
+  <div style="font-size:52px;animation:dragonFloat 1.5s ease-in-out infinite">🐉</div>
+  <div style="font-size:18px;font-weight:900;background:linear-gradient(135deg,#6c47ff,#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent">VALE DOS NOMEADOS</div>
+  <div style="display:flex;gap:6px">
+    <div style="width:8px;height:8px;border-radius:50%;background:#6c47ff;animation:dot 1.2s ease-in-out infinite"></div>
+    <div style="width:8px;height:8px;border-radius:50%;background:#6c47ff;animation:dot 1.2s ease-in-out 0.2s infinite"></div>
+    <div style="width:8px;height:8px;border-radius:50%;background:#6c47ff;animation:dot 1.2s ease-in-out 0.4s infinite"></div>
+  </div>
+  <div id="loading-msg" style="font-size:12px;color:#9ca3af;font-weight:600">Conectando ao banco de dados...</div>
+  <div id="loading-error" style="display:none;text-align:center;margin-top:8px">
+    <div style="font-size:13px;color:#dc2626;font-weight:700" id="loading-error-msg"></div>
+    <button onclick="location.reload()" style="margin-top:12px;padding:10px 24px;background:#6c47ff;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">↺ Tentar novamente</button>
+  </div>
+</div>
+<style>
+@keyframes dot{0%,80%,100%{transform:scale(0.6);opacity:0.4;}40%{transform:scale(1);opacity:1;}}
+</style>
+
+</div><!-- #app -->
+
+<!-- MODAL -->
+<div id="modal">
+  <div class="modal-box">
+    <div class="modal-title" id="modal-title">
+      Modal
+      <button onclick="closeModal()"><i class="fa fa-xmark"></i></button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- Firebase SDK compat — funciona em qualquer ambiente (GitHub Pages, file://, etc) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+<script>
+// ===== CANVAS BG =====
+(function initCanvas(){
+  const c=document.getElementById('bg-canvas');
+  if(!c)return;
+  const ctx=c.getContext('2d');
+  let W,H;
+  const pts=Array.from({length:50},()=>({x:Math.random(),y:Math.random(),vx:(Math.random()-0.5)*0.0003,vy:(Math.random()-0.5)*0.0003,r:Math.random()*2+1}));
+  function resize(){W=c.width=innerWidth;H=c.height=innerHeight;}
+  resize();addEventListener('resize',resize);
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    pts.forEach(p=>{
+      p.x+=p.vx;p.y+=p.vy;
+      if(p.x<0||p.x>1)p.vx*=-1;
+      if(p.y<0||p.y>1)p.vy*=-1;
+      ctx.beginPath();ctx.arc(p.x*W,p.y*H,p.r,0,Math.PI*2);
+      ctx.fillStyle='rgba(108,71,255,0.25)';ctx.fill();
+    });
+    for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++){
+      const dx=(pts[i].x-pts[j].x)*W,dy=(pts[i].y-pts[j].y)*H;
+      const d=Math.sqrt(dx*dx+dy*dy);
+      if(d<120){ctx.beginPath();ctx.moveTo(pts[i].x*W,pts[i].y*H);ctx.lineTo(pts[j].x*W,pts[j].y*H);ctx.strokeStyle=`rgba(108,71,255,${0.12*(1-d/120)})`;ctx.lineWidth=1;ctx.stroke();}
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ===== DATA =====
+const DEFAULT_KINGDOMS=[
+  {id:'enfermagem',name:'Enfermagem',icon:'🏥',color:'#06b6d4'},
+  {id:'portugues',name:'Português',icon:'📚',color:'#8b5cf6'},
+  {id:'sus',name:'SUS',icon:'⚕️',color:'#16a34a'},
+  {id:'direito',name:'Dir. Administrativo',icon:'⚖️',color:'#f5a623'},
+  {id:'logica',name:'Raciocínio Lógico',icon:'🧠',color:'#ea580c'},
+  {id:'historia',name:'História',icon:'🏛️',color:'#db2777'},
+  {id:'atualidades',name:'Atualidades',icon:'📰',color:'#0891b2'},
+  {id:'hu',name:'Legislação HU Brasil',icon:'🏨',color:'#7c3aed'},
+];
+
+// ===== FIREBASE CONFIG (compat SDK) =====
+const firebaseConfig = {
+  apiKey: "AIzaSyAlLEfgUlGP_GwDX_sgdScgwHLK3f1-iJY",
+  authDomain: "vale-dos-nomeados.firebaseapp.com",
+  databaseURL: "https://vale-dos-nomeados-default-rtdb.firebaseio.com",
+  projectId: "vale-dos-nomeados",
+  storageBucket: "vale-dos-nomeados.firebasestorage.app",
+  messagingSenderId: "737113678098",
+  appId: "1:737113678098:web:31fae3686442c90c7393cb"
+};
+
+let firebaseDB=null, DB_REF=null, connectedRef=null;
+let useLocalFallback=false;
+const LS_KEY='vdn_local_v1';
+
+try{
+  firebase.initializeApp(firebaseConfig);
+  firebaseDB=firebase.database();
+  DB_REF=firebaseDB.ref('vdn_v1');
+  connectedRef=firebaseDB.ref('.info/connected');
+}catch(e){
+  console.warn('Firebase init failed, using localStorage:',e);
+  useLocalFallback=true;
+}
+
+function sanitizeForFirebase(obj){
+  return JSON.parse(JSON.stringify(obj));
+}
+
+let db={kingdoms:[],topics:{},times:{},revisions:{},xp:0,examDate:'',sessions:{}};
+let firebaseReady=false;
+let isSaving=false;
+let saveTimeout=null;
+
+function applyDefaults(){
+  if(!db.kingdoms||!db.kingdoms.length)db.kingdoms=JSON.parse(JSON.stringify(DEFAULT_KINGDOMS));
+  if(!db.topics)db.topics={};
+  if(!db.times)db.times={};
+  if(!db.revisions)db.revisions={};
+  if(!db.sessions)db.sessions={};
+  if(!db.kingdomSeconds)db.kingdomSeconds={};
+  if(!db.subTotalSeconds)db.subTotalSeconds={};
+  if(typeof db.lifetimeSeconds!=='number')db.lifetimeSeconds=0;
+  if(!db.xp)db.xp=0;
+  if(!db.editais)db.editais=[];
+  if(!db.weeklyPlan)db.weeklyPlan={};
+  db.kingdoms.forEach(k=>{if(!db.topics[k.id])db.topics[k.id]=[];});
+}
+
+function loadDB(callback){
+  const overlay=document.getElementById('loading-overlay');
+  const msg=document.getElementById('loading-msg');
+  const errBox=document.getElementById('loading-error');
+  const errMsg=document.getElementById('loading-error-msg');
+  overlay.style.display='flex';
+  if(errBox)errBox.style.display='none';
+  if(msg){msg.style.display='block';msg.textContent='Conectando ao banco de dados...';}
+
+  // FALLBACK: se Firebase falhou no init, usar localStorage
+  if(useLocalFallback||!DB_REF){
+    try{
+      const saved=localStorage.getItem(LS_KEY);
+      if(saved)Object.assign(db,JSON.parse(saved));
+    }catch(e){}
+    applyDefaults();
+    firebaseReady=true;
+    overlay.style.display='none';
+    if(msg)msg.textContent='Usando armazenamento local.';
+    if(callback)callback();
+    return;
+  }
+
+  // Monitorar conectividade (compat)
+  if(connectedRef){
+    connectedRef.on('value',(snap)=>{
+      if(!firebaseReady&&msg){
+        msg.textContent=snap.val()===true?'Conectado! Carregando dados...':'Aguardando conexão...';
+      }
+    });
+  }
+
+  // Timeout de segurança: 12s — tenta localStorage como fallback
+  const safetyTimer=setTimeout(()=>{
+    if(firebaseReady)return;
+    try{const s=localStorage.getItem(LS_KEY);if(s)Object.assign(db,JSON.parse(s));}catch(e){}
+    applyDefaults();firebaseReady=true;
+    overlay.style.display='none';
+    if(msg)msg.style.display='none';
+    if(errBox)errBox.style.display='block';
+    if(errMsg)errMsg.innerHTML='⚠️ Firebase indisponível — abrindo com dados locais.';
+    if(callback)callback();
+  },12000);
+
+  // Listener principal (compat API)
+  DB_REF.on('value',(snapshot)=>{
+    if(isSaving&&firebaseReady){isSaving=false;return;}
+    isSaving=false;
+    clearTimeout(safetyTimer);
+    const data=snapshot.val();
+    if(data)Object.assign(db,data);
+    applyDefaults();
+    try{localStorage.setItem(LS_KEY,JSON.stringify(db));}catch(e){}
+    if(!firebaseReady){
+      firebaseReady=true;
+      overlay.style.display='none';
+      if(callback)callback();
+    }else{
+      overlay.style.display='none';
+      renderHeader();renderMap();updateRevBadge();updateEditaisBadge();
+      const sc=document.querySelector('.screen.active')?.id;
+      if(sc==='screen-revisions')renderRevisions();
+      if(sc==='screen-dashboard')renderDashboard();
+      if(sc==='screen-editais')renderEditais();
+    }
+  },(error)=>{
+    clearTimeout(safetyTimer);
+    console.error('Firebase error:',error);
+    try{const s=localStorage.getItem(LS_KEY);if(s)Object.assign(db,JSON.parse(s));}catch(e){}
+    applyDefaults();
+    if(!firebaseReady){
+      firebaseReady=true;
+      overlay.style.display='none';
+      if(msg)msg.style.display='none';
+      if(errBox)errBox.style.display='block';
+      if(errMsg)errMsg.innerHTML=`⚠️ Erro Firebase: ${error.message||error.code}<br><small>Abrindo com dados locais.</small>`;
+      if(callback)callback();
+    }
+  });
+}
+
+function saveDB(){
+  try{localStorage.setItem(LS_KEY,JSON.stringify(sanitizeForFirebase(db)));}catch(e){}
+  if(useLocalFallback||!DB_REF)return;
+  isSaving=true;
+  clearTimeout(saveTimeout);
+  saveTimeout=setTimeout(()=>{
+    DB_REF.set(sanitizeForFirebase(db)).catch(e=>{
+      console.warn('Firebase save error:',e);
+      isSaving=false;
+    });
+  },800);
+}
+
+function genId(){return '_'+Math.random().toString(36).slice(2,9);}
+function todayStr(){return new Date().toISOString().slice(0,10);}
+function addDays(d,n){const dt=new Date(d+'T00:00:00');dt.setDate(dt.getDate()+n);return dt.toISOString().slice(0,10);}
+function daysDiff(a,b){return Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/86400000);}
+function fmtTime(s){if(!s)return '0m';const h=Math.floor(s/3600),m=Math.floor((s%3600)/60);return h?`${h}h${m}m`:`${m}m`;}
+function fmtHMS(s){return [Math.floor(s/3600),Math.floor((s%3600)/60),s%60].map(n=>String(n).padStart(2,'0')).join(':');}
+
+// Uma revisão só é "ativa" (pode atrasar, pode ser concluída) quando:
+// 1. O subtópico foi estudado
+// 2. Todas as revisões anteriores já foram concluídas
+function isRevActive(sub, revs, idx){
+  if(!sub.studied) return false;
+  return revs.slice(0,idx).every(r=>r.completed);
+}
+// Conta revisões realmente atrasadas para um subtópico
+function countOverdue(sub, today){
+  const revs=db.revisions[sub.id]||[];
+  return revs.filter((r,i)=>!r.completed&&isRevActive(sub,revs,i)&&r.date<today).length;
+}
+
+// ===== STATE =====
+let currentKingdom=null;
+let activeTimers={};
+let openNotes=new Set(); // subIds whose note panel is manually open
+let revFilter='overdue';
+let mbFilter='all';
+
+// ===== INIT =====
+loadDB(()=>{
+  renderHeader();
+  renderMap();
+  updateRevBadge();
+  updateEditaisBadge();
+});
+setInterval(tickTimers,1000);
+setInterval(updateRevBadge,30000);
+
+// Force an immediate timer refresh when the tab becomes visible again
+// (browsers throttle setInterval in background tabs, causing visual delay —
+// Date.now() math is always correct, this just forces a redraw on return)
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden) tickTimers();
+});
+window.addEventListener('focus',()=>tickTimers());
+
+// ===== HEADER =====
+function renderHeader(){
+  document.getElementById('total-xp').textContent=(db.xp||0).toLocaleString();
+  if(db.examDate){document.getElementById('exam-date').value=db.examDate;updateDaysLeft();}
+}
+function saveExamDate(){db.examDate=document.getElementById('exam-date').value;saveDB();updateDaysLeft();}
+function updateDaysLeft(){
+  const el=document.getElementById('days-left');
+  if(!db.examDate){el.textContent='—';return;}
+  const d=daysDiff(todayStr(),db.examDate);
+  el.textContent=d>=0?d:'✓';
+  el.style.opacity=d<10?'1':'1';
+}
+function isAfterExam(dateStr){return db.examDate&&dateStr>db.examDate;}
+
+// ===== SCREENS =====
+function showScreen(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+  const nb=document.getElementById('nav-'+name);if(nb)nb.classList.add('active');
+  if(name==='revisions')renderRevisions();
+  if(name==='dashboard')renderDashboard();
+  if(name==='editais'){renderEditais();updateEditaisBadge();}
+}
+
+// ===== MAP =====
+function renderMap(){
+  const cont=document.getElementById('kingdoms-container');
+  cont.innerHTML='';
+  let totKing=db.kingdoms.length,totBoss=0,totMini=0;
+  db.kingdoms.forEach(k=>{
+    const topics=db.topics[k.id]||[];
+    const subs=topics.flatMap(t=>t.subtopics||[]);
+    totBoss+=topics.length;totMini+=subs.length;
+    const studied=subs.filter(s=>s.studied).length;
+    const pending=subs.reduce((n,s)=>n+countOverdue(s,todayStr()),0);
+    const time=(db.kingdomSeconds&&db.kingdomSeconds[k.id])||0;
+    const pct=subs.length?Math.round(studied/subs.length*100):0;
+    const card=document.createElement('div');
+    card.className='territory'+(pending>0?' has-pending':'');
+    card.style.cssText=`border-color:${k.color}40;`;
+    card.innerHTML=`
+      <div style="position:absolute;top:0;left:0;right:0;height:4px;background:${k.color};border-radius:16px 16px 0 0"></div>
+      <span class="territory-icon">${k.icon}</span>
+      <div class="territory-name" style="color:${k.color}">${k.name}</div>
+      <div class="territory-stats">
+        <div class="t-stat"><div class="tv" style="color:${k.color}">${topics.length}</div><div class="tl">⚔️ Chefões</div></div>
+        <div class="t-stat"><div class="tv" style="color:var(--accent)">${subs.length}</div><div class="tl">👾 Miniboss</div></div>
+        <div class="t-stat"><div class="tv" style="color:${pending>0?'var(--red)':'var(--green)'}">${pending}</div><div class="tl">🔔 Atrasadas</div></div>
+        <div class="t-stat"><div class="tv" style="color:var(--cyan)">${fmtTime(time)}</div><div class="tl">⏱️ Estudado</div></div>
+      </div>
+      <div class="territory-progress">
+        <div class="tp-label"><span>Progresso</span><span style="color:${k.color}">${pct}%</span></div>
+        <div class="tp-track"><div class="tp-fill" style="width:${pct}%;background:${k.color}"></div></div>
+      </div>`;
+    card.onclick=()=>openKingdom(k);
+    // Delete button
+    const del=document.createElement('button');
+    del.className='btn btn-xs btn-danger';
+    del.style.cssText='position:absolute;top:10px;right:10px;z-index:2;opacity:0;transition:opacity 0.2s;';
+    del.innerHTML='<i class="fa fa-trash"></i>';
+    del.onclick=(e)=>{e.stopPropagation();deleteKingdom(k.id);};
+    card.appendChild(del);
+    card.addEventListener('mouseenter',()=>del.style.opacity='1');
+    card.addEventListener('mouseleave',()=>del.style.opacity='0');
+    cont.appendChild(card);
+  });
+  // Add button
+  const add=document.createElement('div');
+  add.className='add-territory';
+  add.innerHTML=`<i class="fa fa-plus-circle"></i><span>NOVO REINO</span><div style="font-size:11px;color:var(--muted);text-align:center">Adicione uma nova matéria ao mapa</div>`;
+  add.onclick=openAddKingdomModal;
+  cont.appendChild(add);
+  // Update map stats
+  document.getElementById('map-total-kingdoms').textContent=totKing+' reinos';
+  document.getElementById('map-total-bosses').textContent=totBoss+' chefões';
+  document.getElementById('map-total-mini').textContent=totMini+' minibosses';
+}
+
+function openAddKingdomModal(){
+  const emojis=[
+    '📚','📖','📝','✏️','🖊️','📐','📏','🔬','🔭','🧪','🧫','🧬','⚗️','🏥','⚕️','💊','🩺','🩻','🧠','🫀','🫁',
+    '⚖️','🏛️','📜','🗂️','📋','📊','📈','📉','🗃️','🗄️','💼','🧾','🪪','🔏','📰','🗞️','📣','📢','🔔','🔕',
+    '🧮','💻','🖥️','⌨️','🖱️','📡','📟','☎️','📱','🔋','💡','🔌','🛠️','⚙️','🔩','🪛','🔧','🪚','🔨','🪝',
+    '🌍','🌎','🌏','🗺️','🧭','🏔️','⛰️','🌋','🗾','🏝️','🌐','🗼','🏰','🏯','🏟️','🏛️','🕌','⛩️','🕍','⛪',
+    '⚔️','🛡️','🏹','🪃','🗡️','⚡','🔥','💧','🌊','🌪️','❄️','🌈','☀️','🌙','⭐','🌟','💥','✨','🎯','🎖️',
+    '🧩','♟️','🎲','🃏','🎮','🕹️','🎰','🧸','🪆','🎭','🎨','🖌️','🎬','🎤','🎵','🎶','🥁','🎹','🎸','🎺',
+    '🦁','🐯','🐻','🦊','🐺','🦅','🦉','🦋','🐉','🦄','🦈','🐬','🦍','🐘','🦏','🦒','🐆','🦌','🦜','🦚',
+    '🍎','🍋','🌿','🌸','🌺','🌻','🌹','🍀','🌴','🌵','🎋','🎍','🪴','🪸','🍄','🐚','🪨','💎','🪙','🏆',
+  ];
+  const grid=emojis.map(e=>`<button onclick="pickEmoji('${e}')" style="background:none;border:1.5px solid transparent;border-radius:8px;padding:4px;font-size:22px;cursor:pointer;transition:all 0.15s;width:40px;height:40px;" onmouseover="this.style.borderColor='var(--accent)';this.style.background='rgba(108,71,255,0.08)'" onmouseout="this.style.borderColor='transparent';this.style.background='none'">${e}</button>`).join('');
+  openModal('🏰 Criar Novo Reino',`
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <label style="font-size:11px;font-weight:800;color:var(--text2);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px">Nome do Reino</label>
+        <input class="inp" id="nk-name" placeholder="Ex: Farmacologia, Informática..." style="width:100%">
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-end">
+        <div>
+          <label style="font-size:11px;font-weight:800;color:var(--text2);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px">Emoji escolhido</label>
+          <input class="inp" id="nk-icon" placeholder="🏰" style="text-align:center;font-size:26px;width:64px;">
+        </div>
+        <div style="flex:1">
+          <label style="font-size:11px;font-weight:800;color:var(--text2);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px">Cor do Reino</label>
+          <input class="inp" id="nk-color" type="color" value="#6c47ff" style="height:44px;cursor:pointer;width:100%">
+        </div>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:800;color:var(--text2);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">Escolha um emoji</label>
+        <div style="display:flex;flex-wrap:wrap;gap:2px;max-height:220px;overflow-y:auto;background:var(--bg2);border-radius:12px;padding:8px;border:1.5px solid var(--border)">${grid}</div>
+      </div>
+      <button class="btn btn-primary" onclick="createKingdom()" style="width:100%;justify-content:center"><i class="fa fa-plus"></i> Criar Reino</button>
+    </div>
+  `);
+}
+function pickEmoji(e){
+  const inp=document.getElementById('nk-icon');
+  if(inp){inp.value=e;inp.style.transform='scale(1.2)';setTimeout(()=>inp.style.transform='scale(1)',150);}
+}
+function createKingdom(){
+  const name=document.getElementById('nk-name').value.trim();
+  const icon=document.getElementById('nk-icon').value.trim()||'🏰';
+  const color=document.getElementById('nk-color').value;
+  if(!name){toast('⚠️ Digite o nome do reino','var(--red)');return;}
+  const k={id:genId(),name,icon,color};
+  db.kingdoms.push(k);db.topics[k.id]=[];
+  saveDB();closeModal();renderMap();toast('🏰 Novo reino criado!','var(--accent)');
+}
+function deleteKingdom(id){
+  const k=db.kingdoms.find(x=>x.id===id);
+  if(!k)return;
+  const topics=db.topics[id]||[];
+  const totalSubs=topics.reduce((n,t)=>n+(t.subtopics||[]).length,0);
+  const warn=totalSubs>0?`\n⚠️ Isso apagará ${topics.length} chefão(ões) e ${totalSubs} miniboss(es)!`:'';
+  if(!confirm(`Apagar o reino "${k.name}"?${warn}`))return;
+  // clean up all data
+  topics.forEach(t=>(t.subtopics||[]).forEach(s=>{delete db.revisions[s.id];delete db.times[s.id];}));
+  delete db.topics[id];
+  if(db.kingdomSeconds)delete db.kingdomSeconds[id];
+  db.kingdoms=db.kingdoms.filter(x=>x.id!==id);
+  saveDB();renderMap();toast('🗑️ Reino removido','var(--red)');
+}
+
+// ===== KINGDOM =====
+function openKingdom(k){
+  currentKingdom=k;
+  document.getElementById('bc-kingdom').textContent=k.icon+' '+k.name;
+  document.getElementById('kingdom-title').innerHTML=`<span style="font-size:22px">${k.icon}</span><span style="color:${k.color}">${k.name.toUpperCase()}</span>`;
+  renderTopics();
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('screen-kingdom').classList.add('active');
+}
+
+let currentTopicPrio=1;
+function setTopicPrio(n){
+  currentTopicPrio=n;
+  [1,2,3].forEach(i=>{
+    const b=document.getElementById('fprio-'+i);
+    if(b)b.classList.toggle('active',i===n);
+  });
+}
+
+function addTopic(){
+  const name=document.getElementById('new-topic-name').value.trim();
+  const icon=document.getElementById('new-topic-icon').value.trim()||'⚔️';
+  if(!name){toast('⚠️ Digite o nome do chefão','var(--red)');return;}
+  const t={id:genId(),name,icon,priority:currentTopicPrio,subtopics:[]};
+  db.topics[currentKingdom.id].push(t);saveDB();
+  document.getElementById('new-topic-name').value='';
+  document.getElementById('new-topic-icon').value='';
+  setTopicPrio(1);
+  renderTopics();renderMap();toast('⚔️ Chefão invocado!','var(--accent)');
+}
+
+function deleteTopic(tid){
+  if(!confirm('Apagar este chefão e todos os seus minibosses?'))return;
+  let kId=currentKingdom?.id||'';
+  if(!kId||!db.topics[kId]?.find(t=>t.id===tid)){
+    for(const k of db.kingdoms){if((db.topics[k.id]||[]).find(t=>t.id===tid)){kId=k.id;currentKingdom=k;break;}}
+  }
+  if(!kId)return;
+  db.topics[kId]=db.topics[kId].filter(t=>t.id!==tid);
+  saveDB();renderTopics();renderMap();
+}
+
+function renderTopics(){
+  const list=document.getElementById('topics-list');
+  const topics=db.topics[currentKingdom.id]||[];
+  if(!topics.length){
+    list.innerHTML=`<div class="empty"><i class="fa fa-dragon"></i><p>Nenhum chefão neste reino.<br>Invoque o primeiro acima!</p></div>`;return;
+  }
+  list.innerHTML='';
+  topics.forEach(topic=>{
+    const subs=(topic.subtopics||[]).sort((a,b)=>b.priority-a.priority);
+    const pending=subs.reduce((n,s)=>n+countOverdue(s,todayStr()),0);
+    const studied=subs.reduce((n,s)=>n+(db.times[s.id]||0),0);
+    const el=document.createElement('div');
+    el.className='topic-card';el.id='tc-'+topic.id;
+    el.innerHTML=`
+      <div class="topic-head" onclick="toggleTopic('${topic.id}')">
+        <span class="topic-icon-el">${topic.icon}</span>
+        <span class="topic-name-el">${topic.name}</span>
+        <span style="font-size:13px;letter-spacing:-2px" title="Prioridade">${'🔥'.repeat(topic.priority||1)}</span>
+        <div class="topic-meta">
+          <span>👾 ${subs.length}</span>
+          <span class="time-chip"><i class="fa fa-clock"></i> ${fmtTime(studied)}</span>
+          ${pending>0?`<span style="background:rgba(220,38,38,0.1);color:var(--red);border:1.5px solid rgba(220,38,38,0.3);border-radius:8px;padding:2px 7px;font-size:9px;font-weight:900">${pending} atrasadas!</span>`:''}
+        </div>
+        <button class="btn btn-sm" style="background:linear-gradient(135deg,rgba(108,71,255,0.12),rgba(79,70,229,0.12));border:1.5px solid var(--border2);color:var(--accent);font-size:10px" onclick="event.stopPropagation();intensiveTraining('${topic.id}')"><i class="fa fa-fire" style="color:var(--orange)"></i> Intensivo</button>
+        <button class="btn btn-xs btn-danger" onclick="event.stopPropagation();deleteTopic('${topic.id}')"><i class="fa fa-trash"></i></button>
+        <i class="fa fa-chevron-down" style="color:var(--muted);font-size:11px;transition:transform 0.2s" id="chev-${topic.id}"></i>
+      </div>
+      <div class="topic-body" id="tb-${topic.id}" style="display:none">
+        <div class="add-form" style="margin-bottom:14px">
+          <span style="font-size:16px">👾</span>
+          <input class="inp" id="sn-${topic.id}" placeholder="Nome do miniboss (subtópico)">
+          <select class="inp" id="sp-${topic.id}" style="min-width:130px">
+            <option value="30">🟢 30% — Comum</option>
+            <option value="70" selected>🟠 70% — Raro</option>
+            <option value="100">🔴 100% — Lendário</option>
+          </select>
+          <button class="btn btn-cyan" onclick="addSubtopic('${topic.id}')"><i class="fa fa-plus"></i> Invocar</button>
+        </div>
+        <div id="sl-${topic.id}" class="sub-list">${renderSubsHTML(topic)}</div>
+      </div>`;
+    list.appendChild(el);
+  });
+}
+
+function toggleTopic(id){
+  const b=document.getElementById('tb-'+id);
+  const c=document.getElementById('chev-'+id);
+  const open=b.style.display==='none';
+  b.style.display=open?'block':'none';
+  if(c)c.style.transform=open?'rotate(180deg)':'rotate(0deg)';
+}
+
+// ===== SUBTOPICS =====
+function renderSubsHTML(topic){
+  const subs=(topic.subtopics||[]).sort((a,b)=>b.priority-a.priority);
+  if(!subs.length)return`<div class="empty" style="padding:18px"><i class="fa fa-ghost"></i><p>Nenhum miniboss. Invoque o primeiro!</p></div>`;
+  return subs.map(s=>subItemHTML(s,topic.id)).join('');
+}
+
+function subItemHTML(s,topicId){
+  const revs=db.revisions[s.id]||[];
+  const today=todayStr();
+  const overdueCount=revs.filter((r,i)=>!r.completed&&isRevActive(s,revs,i)&&r.date<today).length;
+  const done=revs.filter(r=>r.completed).length;
+  const time=db.times[s.id]||0;
+  const totalTime=(db.subTotalSeconds&&db.subTotalSeconds[s.id])||0;
+  const pCls=s.priority===30?'pri-30':s.priority===70?'pri-70':'pri-100';
+  const pLbl=s.priority===30?'🟢 COMUM':s.priority===70?'🟠 RARO':'🔴 LENDÁRIO';
+  const t=activeTimers[s.id];
+  const running=t&&t.running;
+  const panelOpen=t&&t.opened;
+  const nextPri=s.priority===30?70:s.priority===70?100:30;
+  const nextLbl=nextPri===30?'🟢':nextPri===70?'🟠':'🔴';
+  const hasNote=s.note&&s.note.trim().length>0;
+  const noteOpen=openNotes.has(s.id);
+  const stratDone=s.stratDone===true;
+  // Current session display time
+  let displayTime=time;
+  if(running) displayTime=time+Math.floor((Date.now()-t.startedAt)/1000);
+
+  // Status das revisões
+  const revLocked=!s.studied;
+  const revStatusBadge=revLocked
+    ? `<span style="background:rgba(107,114,128,0.1);color:var(--muted);border:1.5px solid var(--border);border-radius:8px;padding:2px 8px;font-size:9px;font-weight:800;display:inline-flex;align-items:center;gap:4px"><i class="fa fa-lock" style="font-size:8px"></i> REVISÕES BLOQUEADAS</span>`
+    : (overdueCount>0
+        ? `<span style="background:rgba(220,38,38,0.1);color:var(--red);border:1.5px solid rgba(220,38,38,0.3);border-radius:8px;padding:2px 7px;font-size:9px;font-weight:900">${overdueCount} atrasada${overdueCount>1?'s':''}!</span>`
+        : (revs.length>0
+            ? `<span style="background:rgba(22,163,74,0.08);color:var(--green);border:1.5px solid rgba(22,163,74,0.25);border-radius:8px;padding:2px 7px;font-size:9px;font-weight:800">${done}/${revs.length} revisões</span>`
+            : ''));
+
+  return`<div class="sub-item${s.studied?' sub-studied':''}" id="si-${s.id}">
+    <div class="sub-row">
+      <span class="sub-name"><i class="fa fa-user-ninja" style="color:${s.priority===100?'var(--red)':s.priority===70?'var(--orange)':'var(--green)'}"></i> ${s.name}</span>
+      <span class="pri-badge ${pCls}" style="cursor:pointer" onclick="cyclePriority('${s.id}','${topicId}')" title="Alterar → ${nextLbl}">${pLbl} ✎</span>
+      <span class="time-chip" id="tc-${s.id}" title="Tempo desta sessão (não salvo)">${running?'<i class="fa fa-circle" style="color:var(--red);font-size:6px;animation:pulse 1s infinite"></i> ':'<i class="fa fa-clock"></i> '}${fmtTime(displayTime)}</span>
+      ${totalTime>0?`<span class="total-time-chip" title="Tempo total salvo"><i class="fa fa-layer-group"></i> ${fmtTime(totalTime)}</span>`:''}
+      ${s.studied?'<span class="studied-badge">✓ ESTUDADO</span>':'<span class="unstudy-badge">NÃO ESTUDADO</span>'}
+      ${revStatusBadge}
+    </div>
+    <div class="sub-actions">
+      <button class="btn btn-sm ${running?'btn-gold':'btn-primary'}" onclick="toggleTimer('${s.id}','${topicId}')"><i class="fa fa-${running?'pause':'play'}"></i> ${running?'Pausar':'Estudar'}</button>
+      <button class="btn btn-sm btn-cyan" onclick="showSubRevisions('${s.id}','${topicId}')"><i class="fa fa-calendar-check"></i> Revisões${revLocked?' 🔒':''}</button>
+      <button class="btn btn-sm ${hasNote?'btn-gold':'btn-ghost'}" onclick="toggleNote('${s.id}')" id="note-btn-${s.id}"><i class="fa fa-note-sticky"></i> ${hasNote?'Anotação':'Anotar'}</button>
+      <button class="${stratDone?'strat-badge-done':'strat-badge-todo'}" onclick="toggleStrat('${s.id}','${topicId}')" title="Resumo estratégico concluído?">
+        ${stratDone?'✅ Resumo feito':'📋 Resumo'}
+      </button>
+      <button class="btn btn-sm btn-danger" onclick="deleteSub('${topicId}','${s.id}')"><i class="fa fa-trash"></i></button>
+    </div>
+    <div class="timer-wrap" id="tw-${s.id}" ${panelOpen?'style="display:block"':''}>
+      <div class="timer-display" id="td-${s.id}">${fmtHMS(displayTime)}</div>
+      <div style="text-align:center;font-size:10px;color:rgba(196,181,253,0.6);margin-bottom:8px">
+        ${totalTime>0?`Total acumulado: <b style="color:#c4b5fd">${fmtTime(totalTime)}</b>`:'Primeira sessão'}
+      </div>
+      <div class="timer-ctrls">
+        <button class="btn btn-sm btn-green-s" onclick="toggleTimer('${s.id}','${topicId}')"><i class="fa fa-${running?'pause':'play'}"></i></button>
+        <button class="btn btn-sm btn-ghost" onclick="resetTimer('${s.id}','${topicId}')"><i class="fa fa-undo"></i> Reset</button>
+        <button class="btn btn-sm btn-gold" onclick="saveTimer('${s.id}','${topicId}')"><i class="fa fa-floppy-disk"></i> Salvar</button>
+      </div>
+    </div>
+    <div class="note-wrap${noteOpen?' note-open':''}" id="note-${s.id}">
+      <textarea class="note-textarea" id="note-text-${s.id}" placeholder="Escreva aqui observações importantes sobre este miniboss (sem limite de caracteres)...">${s.note||''}</textarea>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+        <button class="btn btn-sm btn-ghost" onclick="closeNote('${s.id}')"><i class="fa fa-xmark"></i> Fechar</button>
+        <button class="btn btn-sm btn-gold" onclick="saveNote('${s.id}','${topicId}')"><i class="fa fa-floppy-disk"></i> Salvar Anotação</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function cyclePriority(subId,topicId){
+  let sub=null,topic=null;
+  const kId=currentKingdom?.id||'';
+  (db.topics[kId]||[]).forEach(t=>{const f=t.subtopics?.find(s=>s.id===subId);if(f){sub=f;topic=t;}});
+  if(!sub)return;
+  sub.priority=sub.priority===30?70:sub.priority===70?100:30;
+  saveDB();
+  const lbl=sub.priority===30?'🟢 Comum':sub.priority===70?'🟠 Raro':'🔴 Lendário';
+  toast(`Prioridade alterada para ${lbl}!`,sub.priority===30?'var(--green)':sub.priority===70?'var(--orange)':'var(--red)');
+  if(topic)refreshSubs(topic,topicId);
+}
+
+function toggleStrat(subId,topicId){
+  let sub=null,topic=null;
+  for(const k of db.kingdoms){
+    (db.topics[k.id]||[]).forEach(t=>{const f=t.subtopics?.find(s=>s.id===subId);if(f){sub=f;topic=t;}});
+    if(sub)break;
+  }
+  if(!sub)return;
+  sub.stratDone=!sub.stratDone;
+  saveDB();
+  if(sub.stratDone){
+    toast('📋 Resumo estratégico marcado como feito! ✅','var(--green)');
+  } else {
+    toast('📋 Resumo estratégico desmarcado','var(--muted)');
+  }
+  if(topic)refreshSubs(topic,topicId);
+}
+
+// ===== NOTES (OBSERVAÇÕES) =====
+function toggleNote(subId){
+  if(openNotes.has(subId)){
+    openNotes.delete(subId);
+  } else {
+    openNotes.add(subId);
+  }
+  const wrap=document.getElementById('note-'+subId);
+  if(wrap){
+    const open=openNotes.has(subId);
+    wrap.classList.toggle('note-open',open);
+    wrap.style.display=''; // clear any stale inline style
+    if(open){
+      const ta=document.getElementById('note-text-'+subId);
+      if(ta)setTimeout(()=>ta.focus(),50);
+    }
+  }
+}
+function closeNote(subId){
+  openNotes.delete(subId);
+  const wrap=document.getElementById('note-'+subId);
+  if(wrap){wrap.classList.remove('note-open');wrap.style.display='';}
+}
+function saveNote(subId,topicId){
+  let sub=null,topic=null;
+  for(const k of db.kingdoms){
+    (db.topics[k.id]||[]).forEach(t=>{const f=t.subtopics?.find(s=>s.id===subId);if(f){sub=f;topic=t;}});
+    if(sub)break;
+  }
+  if(!sub)return;
+  const ta=document.getElementById('note-text-'+subId);
+  sub.note=ta?ta.value:'';
+  saveDB();
+  toast('📝 Anotação salva!','var(--accent)');
+  if(topic)refreshSubs(topic,topicId);
+}
+
+function addSubtopic(topicId){
+  const nameEl=document.getElementById('sn-'+topicId);
+  const priEl=document.getElementById('sp-'+topicId);
+  const name=nameEl.value.trim();if(!name){toast('⚠️ Digite o nome do miniboss','var(--red)');return;}
+  const priority=parseInt(priEl.value);
+  const s={id:genId(),name,priority,createdAt:todayStr(),studied:false,note:'',stratDone:false};
+  // Search across all kingdoms in case currentKingdom ref is stale
+  let topic=null;
+  const kId=currentKingdom?.id||'';
+  if(kId) topic=(db.topics[kId]||[]).find(t=>t.id===topicId);
+  if(!topic){
+    // fallback: search all kingdoms
+    for(const k of db.kingdoms){
+      const found=(db.topics[k.id]||[]).find(t=>t.id===topicId);
+      if(found){topic=found;currentKingdom=k;break;}
+    }
+  }
+  if(!topic){toast('⚠️ Erro: chefão não encontrado. Tente novamente.','var(--red)');return;}
+  if(!topic.subtopics)topic.subtopics=[];
+  topic.subtopics.push(s);
+  // Revisões NÃO são criadas agora — serão geradas ao primeiro estudo (toggleTimer)
+  db.revisions[s.id]=[];
+  saveDB();nameEl.value='';
+  refreshSubs(topic,topicId);renderMap();updateRevBadge();
+  toast('👾 Miniboss invocado! Inicie o estudo para liberar as revisões.','var(--cyan)');
+}
+
+function deleteSub(topicId,subId){
+  if(!confirm('Apagar este miniboss?'))return;
+  let topic=null,kId=currentKingdom?.id||'';
+  if(kId) topic=(db.topics[kId]||[]).find(t=>t.id===topicId);
+  if(!topic){for(const k of db.kingdoms){const f=(db.topics[k.id]||[]).find(t=>t.id===topicId);if(f){topic=f;currentKingdom=k;kId=k.id;break;}}}
+  if(!topic)return;
+  topic.subtopics=topic.subtopics.filter(s=>s.id!==subId);
+  delete db.revisions[subId];delete db.times[subId];
+  if(db.subTotalSeconds)delete db.subTotalSeconds[subId];
+  if(activeTimers[subId])delete activeTimers[subId];
+  saveDB();refreshSubs(topic,topicId);renderMap();updateRevBadge();
+}
+
+function refreshSubs(topic,topicId){
+  const el=document.getElementById('sl-'+topicId);
+  if(el)el.innerHTML=renderSubsHTML(topic);
+}
+
+// ===== TIMERS =====
+// activeTimers[subId] = { running: bool, startedAt: timestamp (ms), opened: bool (panel stays visible once opened) }
+// db.times[subId] = total accumulated seconds (saved/persisted)
+function toggleTimer(subId,topicId){
+  if(!activeTimers[subId])activeTimers[subId]={running:false,startedAt:0,opened:false};
+  const t=activeTimers[subId];
+
+  if(!t.running){
+    // START (or RESUME)
+    t.running=true;
+    t.startedAt=Date.now();
+    t.opened=true;
+    const tw=document.getElementById('tw-'+subId);
+    if(tw)tw.style.display='block';
+    // Mark as studied + grant XP on first study start (scaled by priority)
+    const topic=(db.topics[currentKingdom?.id||'']||[]).find(tp=>tp.subtopics?.some(s=>s.id===subId));
+    if(topic){
+      const sub=topic.subtopics.find(s=>s.id===subId);
+      if(sub&&!sub.studied){
+        sub.studied=true;
+        sub.studiedAt=todayStr(); // data do primeiro estudo
+        // Gerar revisões espaçadas a partir da data do primeiro estudo
+        if(!db.revisions[sub.id]||!db.revisions[sub.id].length){
+          db.revisions[sub.id]=[7,14,30,45].map(d=>({date:addDays(sub.studiedAt,d),completed:false}));
+        }
+        const xpGain=sub.priority===100?150:sub.priority===70?80:50;
+        gainXP(xpGain);
+        saveDB();
+        toast(`🎯 Primeiro estudo! Revisões agendadas em 7, 14, 30 e 45 dias. +${xpGain} XP!`,'var(--green)');
+      }
+      refreshSubs(topic,topicId);
+    }
+  } else {
+    // PAUSE — accumulate elapsed time into db.times (not yet "banked"), KEEP panel open and visible
+    // Heatmap/lifetime/ranking are only updated when "Salvar" is pressed
+    const elapsedSec=Math.floor((Date.now()-t.startedAt)/1000);
+    db.times[subId]=(db.times[subId]||0)+elapsedSec;
+    t.running=false;
+    t.startedAt=0;
+    saveDB();
+    const topic=(db.topics[currentKingdom?.id||'']||[]).find(tp=>tp.subtopics?.some(s=>s.id===subId));
+    if(topic)refreshSubs(topic,topicId);
+    renderMap();
+  }
+}
+
+function tickTimers(){
+  Object.entries(activeTimers).forEach(([id,t])=>{
+    if(!t.running)return;
+    const base=db.times[id]||0;
+    const elapsedSec=Math.floor((Date.now()-t.startedAt)/1000);
+    const total=base+elapsedSec;
+    const td=document.getElementById('td-'+id);if(td)td.textContent=fmtHMS(total);
+    const tc=document.getElementById('tc-'+id);
+    if(tc)tc.innerHTML=`<i class="fa fa-clock" style="color:var(--orange)"></i> ${fmtTime(total)}`;
+  });
+}
+
+function saveTimer(subId,topicId){
+  const t=activeTimers[subId];
+  // Compute total seconds to bank (saved time + any currently running elapsed time)
+  let secondsToBank=db.times[subId]||0;
+  if(t&&t.running){
+    const elapsedSec=Math.floor((Date.now()-t.startedAt)/1000);
+    secondsToBank+=elapsedSec;
+  }
+  if(secondsToBank<=0){
+    toast('⚠️ Nenhum tempo para salvar ainda','var(--orange)');
+    return;
+  }
+  // Log to heatmap (today's study time)
+  logStudySeconds(secondsToBank);
+
+  // Accumulate into per-miniboss lifetime total (shown on the card)
+  if(!db.subTotalSeconds)db.subTotalSeconds={};
+  db.subTotalSeconds[subId]=(db.subTotalSeconds[subId]||0)+secondsToBank;
+
+  // Accumulate into lifetime total (Painel do Herói)
+  db.lifetimeSeconds=(db.lifetimeSeconds||0)+secondsToBank;
+
+  // Accumulate into this kingdom's total (Ranking de Reinos)
+  let kId=currentKingdom?.id||'';
+  if(!kId){
+    for(const k of db.kingdoms){
+      if((db.topics[k.id]||[]).some(tp=>tp.subtopics?.some(s=>s.id===subId))){kId=k.id;break;}
+    }
+  }
+  if(kId){
+    if(!db.kingdomSeconds)db.kingdomSeconds={};
+    db.kingdomSeconds[kId]=(db.kingdomSeconds[kId]||0)+secondsToBank;
+  }
+
+  // Reset this miniboss's own timer to zero and close the panel
+  db.times[subId]=0;
+  if(t){t.running=false;t.startedAt=0;t.opened=false;}
+
+  saveDB();
+  gainXP(5);toast(`⏱️ ${fmtTime(secondsToBank)} salvos! +5 XP`,'var(--cyan)');
+  const topic=(db.topics[currentKingdom?.id||'']||[]).find(tp=>tp.subtopics?.some(s=>s.id===subId))
+    || (function(){for(const k of db.kingdoms){const f=(db.topics[k.id]||[]).find(tp=>tp.subtopics?.some(s=>s.id===subId));if(f){currentKingdom=k;return f;}}return null;})();
+  if(topic)refreshSubs(topic,topicId);
+  renderMap();
+}
+
+// Logs seconds studied today into db.sessions (used by heatmap)
+function logStudySeconds(seconds){
+  if(seconds<=0)return;
+  if(!db.sessions)db.sessions={};
+  const td=todayStr();
+  db.sessions[td]=(db.sessions[td]||0)+seconds;
+}
+
+function resetTimer(subId,topicId){
+  if(!confirm('Zerar cronômetro deste miniboss?'))return;
+  if(activeTimers[subId]){activeTimers[subId].running=false;activeTimers[subId].startedAt=0;}
+  db.times[subId]=0;saveDB();
+  const td=document.getElementById('td-'+subId);if(td)td.textContent='00:00:00';
+  const tc=document.getElementById('tc-'+subId);
+  if(tc)tc.innerHTML=`<i class="fa fa-clock"></i> 0m`;
+  const topic=(db.topics[currentKingdom?.id||'']||[]).find(tp=>tp.subtopics?.some(s=>s.id===subId));
+  if(topic)refreshSubs(topic,topicId);
+}
+
+// ===== STUDY TIME CHART =====
+let currentChartTab='day';
+function setChartTab(tab,el){
+  currentChartTab=tab;
+  document.querySelectorAll('.chart-tab').forEach(c=>c.classList.remove('active'));
+  if(el)el.classList.add('active');
+  renderStudyChart();
+}
+
+function renderStudyChart(){
+  const wrap=document.getElementById('study-chart-wrap');
+  const totalEl=document.getElementById('study-chart-total');
+  if(!wrap)return;
+  const sessions=db.sessions||{};
+
+  const today=new Date();today.setHours(0,0,0,0);
+  const todayStr2=today.toISOString().slice(0,10);
+
+  let bars=[];
+  if(currentChartTab==='day'){
+    // Last 14 days
+    for(let i=13;i>=0;i--){
+      const d=new Date(today);d.setDate(d.getDate()-i);
+      const ds=d.toISOString().slice(0,10);
+      const label=i===0?'Hoje':i===1?'Ontem':d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+      bars.push({label,seconds:sessions[ds]||0,isToday:i===0});
+    }
+  } else if(currentChartTab==='week'){
+    // Last 8 weeks
+    for(let w=7;w>=0;w--){
+      let weekSec=0;
+      for(let d=0;d<7;d++){
+        const dt=new Date(today);
+        dt.setDate(dt.getDate()-(w*7+d));
+        const ds=dt.toISOString().slice(0,10);
+        weekSec+=sessions[ds]||0;
+      }
+      const startDt=new Date(today);startDt.setDate(startDt.getDate()-w*7-6);
+      const label=w===0?'Essa sem':startDt.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+      bars.push({label,seconds:weekSec,isToday:w===0});
+    }
+  } else {
+    // Last 6 months
+    for(let m=5;m>=0;m--){
+      const dt=new Date(today.getFullYear(),today.getMonth()-m,1);
+      const year=dt.getFullYear(),month=dt.getMonth();
+      let monthSec=0;
+      const daysInMonth=new Date(year,month+1,0).getDate();
+      for(let d=1;d<=daysInMonth;d++){
+        const ds=`${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        monthSec+=sessions[ds]||0;
+      }
+      const label=dt.toLocaleDateString('pt-BR',{month:'short'}).replace('.','');
+      bars.push({label,seconds:monthSec,isToday:m===0});
+    }
+  }
+
+  const maxSec=Math.max(1,...bars.map(b=>b.seconds));
+  const totalSec=bars.reduce((a,b)=>a+b.seconds,0);
+  const W=Math.max(400, wrap.clientWidth||500);
+  const H=130,padL=4,padR=4,padT=18,padB=28;
+  const bw=Math.floor((W-padL-padR)/bars.length);
+  const gap=3;
+  const barW=bw-gap;
+  const chartH=H-padT-padB;
+
+  let svgBars='',svgLabels='',svgValues='';
+  bars.forEach((b,i)=>{
+    const x=padL+i*bw;
+    const barH=b.seconds>0?Math.max(4,Math.round(b.seconds/maxSec*chartH)):0;
+    const y=padT+chartH-barH;
+    const color=b.isToday?'url(#todayGrad)':b.seconds>0?'url(#barGrad)':'rgba(0,0,0,0.06)';
+    svgBars+=`<rect x="${x+gap/2}" y="${y}" width="${barW}" height="${barH}" rx="4" fill="${color}"
+      onmouseover="document.getElementById('chart-tip').textContent='${b.label}: ${fmtTime(b.seconds)}';this.style.opacity='0.8'"
+      onmouseout="document.getElementById('chart-tip').textContent='';this.style.opacity='1'"
+      style="cursor:default;transition:opacity 0.15s"/>`;
+    if(b.seconds>0){
+      svgValues+=`<text x="${x+bw/2}" y="${y-3}" text-anchor="middle" font-size="8" fill="${b.isToday?'#6c47ff':'#9ca3af'}" font-weight="700">${fmtTime(b.seconds)}</text>`;
+    }
+    svgLabels+=`<text x="${x+bw/2}" y="${H-4}" text-anchor="middle" font-size="9" fill="${b.isToday?'#6c47ff':'#9ca3af'}" font-weight="${b.isToday?'900':'600'}">${b.label}</text>`;
+  });
+
+  wrap.innerHTML=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;overflow:visible">
+    <defs>
+      <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#a78bfa"/>
+        <stop offset="100%" stop-color="#6c47ff"/>
+      </linearGradient>
+      <linearGradient id="todayGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#fcd34d"/>
+        <stop offset="100%" stop-color="#f97316"/>
+      </linearGradient>
+    </defs>
+    <line x1="${padL}" y1="${padT+chartH}" x2="${W-padR}" y2="${padT+chartH}" stroke="#e2e0ff" stroke-width="1"/>
+    ${svgBars}${svgValues}${svgLabels}
+  </svg>
+  <div id="chart-tip" style="text-align:center;font-size:10px;color:var(--accent);font-weight:800;min-height:14px;margin-top:2px"></div>`;
+
+  if(totalEl) totalEl.textContent=totalSec>0?`Total no período: ${fmtTime(totalSec)}`:'Nenhum estudo registrado neste período';
+}
+
+// ===== REVISIONS =====
+function showSubRevisions(subId,topicId){
+  const revs=db.revisions[subId]||[];
+  const today=todayStr();
+  let subName='';let sub=null;
+  db.kingdoms.forEach(k=>{(db.topics[k.id]||[]).forEach(t=>{const f=t.subtopics?.find(s=>s.id===subId);if(f){subName=f.name;sub=f;}});});
+  const isStudied=sub&&sub.studied;
+  let html='';
+  if(!isStudied){
+    html+=`<div style="background:linear-gradient(135deg,rgba(108,71,255,0.06),rgba(79,70,229,0.04));border:1.5px solid rgba(108,71,255,0.2);border-radius:14px;padding:16px;margin-bottom:16px;display:flex;gap:12px;align-items:center">
+      <span style="font-size:32px">🔒</span>
+      <div>
+        <div style="font-size:13px;font-weight:900;color:var(--accent)">Revisões bloqueadas</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5">Inicie o cronômetro de estudo para liberar as revisões.<br>As 4 revisões serão agendadas automaticamente a partir da data do seu primeiro estudo.</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px">
+      ${['7 dias','14 dias','30 dias','45 dias'].map((l,i)=>`
+        <div style="background:var(--bg2);border:1.5px dashed var(--border);border-radius:12px;padding:12px 8px;text-align:center;opacity:0.5">
+          <div style="font-size:20px;margin-bottom:6px">🔒</div>
+          <div style="font-size:10px;font-weight:900;color:var(--muted)">Revisão ${i+1}</div>
+          <div style="font-size:9px;color:var(--muted)">${l} após estudo</div>
+        </div>`).join('')}
+    </div>`;
+  } else {
+    const lbs=['7 dias','14 dias','30 dias','45 dias'];
+    const rnCls=['rn-1','rn-2','rn-3','rn-4'];
+    html+=`<div style="background:rgba(22,163,74,0.04);border:1.5px solid rgba(22,163,74,0.2);border-radius:12px;padding:10px 14px;margin-bottom:16px;font-size:11px;color:var(--green);font-weight:700;display:flex;align-items:center;gap:8px">
+      <i class="fa fa-calendar-check"></i> Revisões agendadas desde ${sub.studiedAt||'data do estudo'}
+    </div>`;
+    html+=`<div style="display:flex;flex-direction:column;gap:8px">`;
+    revs.forEach((r,i)=>{
+      const after=isAfterExam(r.date);
+      const isPast=r.date<today;const isToday=r.date===today;
+      const prevDone=revs.slice(0,i).every(p=>p.completed);
+      const isChainLocked=!prevDone&&!r.completed;
+      html+=`<div style="background:${r.completed?'rgba(22,163,74,0.04)':isChainLocked?'rgba(107,114,128,0.04)':'var(--panel2)'};border:1.5px solid ${r.completed?'rgba(22,163,74,0.3)':isChainLocked?'rgba(107,114,128,0.2)':isPast&&!r.completed?'rgba(220,38,38,0.3)':'var(--border)'};border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:12px;${isChainLocked?'opacity:0.6':''}">
+        <div class="rev-num-badge ${rnCls[i]}">${i+1}</div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:6px">
+            Revisão ${i+1} — ${lbs[i]}
+            ${isChainLocked?'<i class="fa fa-link" style="font-size:10px;color:var(--muted)" title="Aguardando revisão anterior"></i>':''}
+          </div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px">${r.date}${isToday&&!isChainLocked?' 🔥 HOJE!':isPast&&!r.completed&&!isChainLocked?' ⚠️ Atrasada':isChainLocked?' · aguardando Rev.'+(i)+' ser concluída':''}</div>
+        </div>
+        ${after?'<span class="after-exam-tag">⚠️ Após prova</span>':''}
+        ${r.completed
+          ?'<span style="color:var(--green);font-size:12px;font-weight:900">✓ CONCLUÍDA</span>'
+          :isChainLocked
+            ?'<span style="color:var(--muted);font-size:10px;font-weight:700;display:flex;align-items:center;gap:4px"><i class="fa fa-lock" style="font-size:9px"></i> Bloqueada</span>'
+            :`<button class="btn btn-sm btn-green-s" onclick="completeRev('${subId}',${i})"><i class="fa fa-check"></i> Concluir</button>`}
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+  openModal(`📅 Revisões — ${subName}`,html);
+}
+
+function completeRev(subId,idx,fromList){
+  let sub=null;
+  db.kingdoms.forEach(k=>{(db.topics[k.id]||[]).forEach(t=>{const f=t.subtopics?.find(s=>s.id===subId);if(f)sub=f;});});
+  if(sub&&!sub.studied){toast('⚠️ Estude o conteúdo antes de revisar!','var(--red)');return;}
+  if(!db.revisions[subId])return;
+  db.revisions[subId][idx].completed=true;
+  gainXP(100);saveDB();
+  toast('✅ Revisão concluída! +100 XP','var(--green)');
+  updateRevBadge();renderMap();renderHeader();
+  if(fromList)renderRevisions();else closeModal();
+}
+
+function intensiveTraining(topicId){
+  const topic=(db.topics[currentKingdom.id]||[]).find(t=>t.id===topicId);
+  if(!topic||!topic.subtopics.length){toast('⚠️ Nenhum miniboss neste chefão','var(--orange)');return;}
+  const today=todayStr();
+  let added=0;
+  topic.subtopics.forEach(s=>{
+    if(!s.studied)return;// only studied ones
+    if(!db.revisions[s.id])db.revisions[s.id]=[];
+    db.revisions[s.id].push({date:today,completed:false});
+    added++;
+  });
+  saveDB();updateRevBadge();
+  if(added)toast(`🔥 ${added} revisão(ões) intensivas agendadas!`,'var(--accent)');
+  else toast('⚠️ Nenhum miniboss estudado neste chefão','var(--orange)');
+}
+
+// ===== REVISION SCREEN =====
+function filterRevs(f,el){
+  revFilter=f;
+  document.querySelectorAll('#screen-revisions .filter-row .chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  renderRevisions();
+}
+
+function getAllRevItems(){
+  const items=[];
+  db.kingdoms.forEach(k=>{
+    (db.topics[k.id]||[]).forEach(t=>{
+      (t.subtopics||[]).forEach(s=>{
+        const revs=db.revisions[s.id]||[];
+        revs.forEach((r,i)=>{
+          // Uma revisão só é "ativa" se todas as anteriores estiverem concluídas
+          const prevDone=revs.slice(0,i).every(prev=>prev.completed);
+          items.push({
+            subId:s.id,subName:s.name,topicName:t.name,
+            kingdomName:k.name,kingdomIcon:k.icon,kingdomColor:k.color,
+            date:r.date,completed:r.completed,idx:i,studied:s.studied,
+            locked:!prevDone  // bloqueada se alguma anterior não foi concluída
+          });
+        });
+      });
+    });
+  });
+  return items;
+}
+
+function goToSubtopic(subId){
+  // Encontrar reino e chefão do subtópico
+  let targetKingdom=null, targetTopicId=null;
+  for(const k of db.kingdoms){
+    for(const t of (db.topics[k.id]||[])){
+      if((t.subtopics||[]).some(s=>s.id===subId)){
+        targetKingdom=k;targetTopicId=t.id;break;
+      }
+    }
+    if(targetKingdom)break;
+  }
+  if(!targetKingdom){toast('⚠️ Assunto não encontrado','var(--red)');return;}
+  // Navegar para o reino
+  openKingdom(targetKingdom);
+  // Abrir o chefão após renderizar
+  setTimeout(()=>{
+    const body=document.getElementById('tb-'+targetTopicId);
+    if(body&&body.style.display==='none')toggleTopic(targetTopicId);
+    // Scroll até o miniboss
+    setTimeout(()=>{
+      const el=document.getElementById('si-'+subId);
+      if(el){el.scrollIntoView({behavior:'smooth',block:'center'});
+        el.style.boxShadow='0 0 0 3px var(--accent)';
+        setTimeout(()=>{el.style.boxShadow='';},2000);
+      }
+    },120);
+  },80);
+}
+
+function renderRevisions(){
+  const container=document.getElementById('revisions-list');
+  const today=todayStr();const in7=addDays(today,7);
+  let items=getAllRevItems();
+  // Filtros: itens bloqueados (anterior não concluída) nunca aparecem em atrasadas/hoje/semana
+  if(revFilter==='overdue')items=items.filter(i=>!i.completed&&!i.locked&&i.date<today&&i.studied);
+  else if(revFilter==='today')items=items.filter(i=>!i.completed&&!i.locked&&i.date===today&&i.studied);
+  else if(revFilter==='week')items=items.filter(i=>!i.completed&&!i.locked&&i.date>today&&i.date<=in7);
+  else if(revFilter==='done')items=items.filter(i=>i.completed);
+  // 'all' = no filter
+  items.sort((a,b)=>a.date.localeCompare(b.date));
+  if(!items.length){
+    container.innerHTML=`<div class="empty"><i class="fa fa-check-double"></i><p>${revFilter==='overdue'?'Nenhuma revisão atrasada! 🎉':'Nenhuma revisão aqui.'}</p></div>`;return;
+  }
+  const rnCls=['rn-1','rn-2','rn-3','rn-4'];
+  container.innerHTML=items.map(item=>{
+    const isPast=item.date<today;const isToday=item.date===today;
+    const after=isAfterExam(item.date);
+    // bloqueada = não estudou OU revisão anterior não concluída
+    const isBlocked=!item.studied||item.locked;
+    const cls=item.completed?'done-item':isBlocked?'rev-blocked':isPast?'overdue':isToday?'rev-today':'';
+    let cntText='',cntCls='cd-ok';
+    if(item.completed){cntText='✓ Feita';cntCls='';}
+    else if(!item.studied){cntText='🔒 Estude primeiro';cntCls='';}
+    else if(item.locked){cntText=`🔒 Conclua a Rev.${item.idx}`;cntCls='';}
+    else if(isPast){const d=daysDiff(item.date,today);cntText=`${d}d atraso`;cntCls='cd-over';}
+    else if(isToday){cntText='🔥 Hoje!';cntCls='cd-today';}
+    else{cntText=`em ${daysDiff(today,item.date)}d`;}
+    const rn=rnCls[item.idx]||'rn-1';
+    return`<div class="rev-item ${cls}">
+      <div class="rev-num-badge ${rn}">${item.idx+1}</div>
+      <span style="font-size:20px">${item.kingdomIcon}</span>
+      <div class="rev-info">
+        <div class="rev-name">${item.subName}</div>
+        <div class="rev-sub">${item.topicName} · ${item.kingdomName} · ${item.date}</div>
+        ${!item.studied?'<span class="unstudy-badge" style="margin-top:4px;display:inline-flex;align-items:center;gap:4px"><i class="fa fa-lock" style="font-size:8px"></i> Inicie o estudo para liberar</span>':''}
+        ${item.studied&&item.locked?`<span class="unstudy-badge" style="margin-top:4px;display:inline-flex;align-items:center;gap:4px"><i class="fa fa-link" style="font-size:8px"></i> Aguardando revisão ${item.idx} ser concluída</span>`:''}
+      </div>
+      ${after?'<span class="after-exam-tag">⚠️ Após prova</span>':''}
+      <span class="rev-cd ${cntCls}">${cntText}</span>
+      ${!item.completed
+        ? isBlocked
+          ? `<button class="btn btn-xs btn-ghost" style="opacity:0.4;cursor:not-allowed;" disabled><i class="fa fa-lock"></i></button>`
+          : `<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+               <button class="btn btn-xs btn-green-s" onclick="completeRev('${item.subId}',${item.idx},true)">✓ Feito</button>
+               <button class="btn btn-xs btn-primary" onclick="goToSubtopic('${item.subId}')"><i class="fa fa-book-open"></i> Revisar</button>
+             </div>`
+        : `<button class="btn btn-xs" style="background:rgba(108,71,255,0.08);color:var(--accent);border:1px solid var(--border)" onclick="goToSubtopic('${item.subId}')"><i class="fa fa-eye"></i> Ver</button>`
+      }
+    </div>`;
+  }).join('');
+}
+
+function updateRevBadge(){
+  const today=todayStr();let cnt=0;
+  db.kingdoms.forEach(k=>{(db.topics[k.id]||[]).forEach(t=>{(t.subtopics||[]).forEach(s=>{
+    if(!s.studied)return;
+    const revs=db.revisions[s.id]||[];
+    revs.forEach((r,i)=>{
+      const prevDone=revs.slice(0,i).every(p=>p.completed);
+      if(!r.completed&&prevDone&&r.date<=today)cnt++;
+    });
+  });});});
+  const b=document.getElementById('rev-badge');
+  if(cnt>0){b.textContent=cnt;b.style.display='inline';}else{b.style.display='none';}
+}
+
+// ===== DASHBOARD =====
+function renderDashboard(){
+  const today=todayStr();
+  let totBoss=0,totMini=0,totRevDone=0,totRevOver=0,p30=0,p70=0,p100=0;
+  const kingdoms=[];
+  db.kingdoms.forEach(k=>{
+    const topics=db.topics[k.id]||[];
+    let km=0;
+    topics.forEach(t=>{
+      km+=(t.subtopics||[]).length;
+      (t.subtopics||[]).forEach(s=>{
+        const revs=db.revisions[s.id]||[];
+        revs.forEach((r,i)=>{
+          if(r.completed){totRevDone++;}
+          else{
+            const prevDone=revs.slice(0,i).every(p=>p.completed);
+            if(prevDone&&s.studied&&r.date<today)totRevOver++;
+          }
+        });
+        if(s.priority===30)p30++;else if(s.priority===70)p70++;else p100++;
+      });
+    });
+    totBoss+=topics.length;totMini+=km;
+    const kTime=(db.kingdomSeconds&&db.kingdomSeconds[k.id])||0;
+    kingdoms.push({...k,bosses:topics.length,minis:km,time:kTime});
+  });
+  const totTime=db.lifetimeSeconds||0;
+
+  // Stats
+  document.getElementById('dash-stats').innerHTML=[
+    {icon:'⚔️',val:totBoss,lbl:'Chefões',color:'var(--accent)'},
+    {icon:'👾',val:totMini,lbl:'Minibosses',color:'var(--cyan)'},
+    {icon:'⏱️',val:fmtTime(totTime),lbl:'Tempo total',color:'#8b5cf6'},
+    {icon:'✅',val:totRevDone,lbl:'Revisões feitas',color:'var(--green)'},
+    {icon:'⚠️',val:totRevOver,lbl:'Rev. atrasadas',color:totRevOver>0?'var(--red)':'var(--green)'},
+    {icon:'⭐',val:(db.xp||0).toLocaleString(),lbl:'XP Total',color:'var(--gold)'},
+  ].map(s=>`<div class="stat-card"><span class="stat-icon">${s.icon}</span><div class="stat-val" style="color:${s.color}">${s.val}</div><div class="stat-lbl">${s.lbl}</div></div>`).join('');
+
+  // Priority rings
+  const total=Math.max(1,p30+p70+p100);
+  const pd=[
+    {label:'Comum',count:p30,pct:Math.round(p30/total*100),color:getComputedStyle(document.documentElement).getPropertyValue('--green').trim()||'#16a34a',hex:'#16a34a'},
+    {label:'Raro',count:p70,pct:Math.round(p70/total*100),color:'#ea580c',hex:'#ea580c'},
+    {label:'Lendário',count:p100,pct:Math.round(p100/total*100),color:'#dc2626',hex:'#dc2626'},
+  ];
+  const R=40,C=46,circ=2*Math.PI*R;
+  document.getElementById('pri-rings').innerHTML=pd.map(d=>`
+    <div class="pri-ring">
+      <svg width="${C*2}" height="${C*2}" viewBox="0 0 ${C*2} ${C*2}">
+        <circle cx="${C}" cy="${C}" r="${R}" fill="${d.hex}14" stroke="${d.hex}20" stroke-width="9"/>
+        <circle cx="${C}" cy="${C}" r="${R}" fill="none" stroke="${d.hex}" stroke-width="9"
+          stroke-dasharray="${circ}" stroke-dashoffset="${circ*(1-d.pct/100)}"
+          stroke-linecap="round" transform="rotate(-90 ${C} ${C})"/>
+        <text x="${C}" y="${C-2}" text-anchor="middle" dominant-baseline="central" font-size="15" font-weight="900" fill="${d.hex}">${d.pct}%</text>
+        <text x="${C}" y="${C+14}" text-anchor="middle" font-size="10" font-weight="700" fill="${d.hex}99">${d.count}</text>
+      </svg>
+      <div class="pri-ring-label" style="color:${d.hex}">${d.label}</div>
+    </div>`).join('');
+  document.getElementById('pri-legend').innerHTML=pd.map(d=>`
+    <div class="pri-legend-item">
+      <div class="pri-dot" style="background:${d.hex}"></div>
+      <div style="flex:1">
+        <div class="pri-legend-name" style="color:${d.hex}">${d.label}</div>
+        <div class="pri-legend-bar-wrap"><div class="pri-legend-bar" style="width:${d.pct}%;background:${d.hex}"></div></div>
+      </div>
+      <div class="pri-legend-count" style="color:${d.hex}">${d.count}</div>
+    </div>`).join('');
+
+  // Overdue revisions (dashboard — only truly late, respeitando encadeamento)
+  let overdueItems=getAllRevItems().filter(i=>!i.completed&&!i.locked&&i.studied&&i.date<today);
+  overdueItems.sort((a,b)=>a.date.localeCompare(b.date));
+  overdueItems=overdueItems.slice(0,8);
+  const oEl=document.getElementById('dash-overdue-revs');
+  if(!overdueItems.length){
+    oEl.innerHTML=`<div class="empty" style="padding:20px"><i class="fa fa-party-horn"></i><p>Sem revisões atrasadas! Continue assim! 🎉</p></div>`;
+  }else{
+    const rnCls=['rn-1','rn-2','rn-3','rn-4'];
+    oEl.innerHTML=overdueItems.map(item=>{
+      const d=daysDiff(item.date,today);
+      return`<div class="rev-item overdue">
+        <div class="rev-num-badge ${rnCls[item.idx]||'rn-1'}">${item.idx+1}</div>
+        <span style="font-size:18px">${item.kingdomIcon}</span>
+        <div class="rev-info"><div class="rev-name">${item.subName}</div><div class="rev-sub">${item.kingdomName} · ${item.date}</div></div>
+        <span class="rev-cd cd-over">${d}d atraso</span>
+        <button class="btn btn-xs btn-green-s" onclick="completeRev('${item.subId}',${item.idx},false);renderDashboard()"${!item.studied?' style="opacity:0.35;cursor:not-allowed;"':''}>✓</button>
+      </div>`;
+    }).join('');
+  }
+
+  // Plano semanal
+  renderWeeklyPlan();
+
+  // Ranking
+  kingdoms.sort((a,b)=>b.time-a.time);
+  document.getElementById('kingdom-ranking').innerHTML=kingdoms.map((k,i)=>`
+    <div class="rank-row" onclick="openKingdom(db.kingdoms.find(x=>x.id==='${k.id}'))">
+      <div class="rank-pos">${i===0?'🥇':i===1?'🥈':i===2?'🥉':`#${i+1}`}</div>
+      <span style="font-size:22px">${k.icon}</span>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:900;color:${k.color}">${k.name}</div>
+        <div style="font-size:10px;color:var(--muted);font-weight:600">${k.bosses} chefões · ${k.minis} minibosses</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:14px;font-weight:900;color:var(--cyan)">${fmtTime(k.time)}</div>
+        <div style="font-size:10px;color:var(--muted)">estudados</div>
+      </div>
+    </div>`).join('');
+  initPhrase();
+  renderStudyChart();
+}
+
+function setMbFilter(id,el){
+  mbFilter=id;
+  document.querySelectorAll('#mb-filter-row .chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  renderMBGrid(id);
+}
+
+function renderWeeklyPlan(){
+  const el=document.getElementById('weekly-plan');
+  if(!el)return;
+  if(!db.weeklyPlan)db.weeklyPlan={};
+  const today=new Date();today.setHours(0,0,0,0);
+  const todayKey=todayStr();
+  const DAYS_FULL=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+
+  // Gerar 7 dias
+  const days=[];
+  for(let i=0;i<7;i++){
+    const d=new Date(today);d.setDate(today.getDate()+i);
+    const ds=d.toISOString().slice(0,10);
+    const dow=d.getDay();
+    // Revisões ativas neste dia
+    const revs=[];
+    db.kingdoms.forEach(k=>{
+      (db.topics[k.id]||[]).forEach(t=>{
+        (t.subtopics||[]).forEach(s=>{
+          const sRevs=db.revisions[s.id]||[];
+          sRevs.forEach((r,ri)=>{
+            if(!r.completed&&isRevActive(s,sRevs,ri)&&r.date===ds){
+              revs.push({name:s.name,topic:t.name,kColor:k.color,subId:s.id,revIdx:ri});
+            }
+          });
+        });
+      });
+    });
+    days.push({ds,dow,full:DAYS_FULL[dow],isToday:i===0,revs,items:db.weeklyPlan[ds]||[]});
+  }
+
+  el.innerHTML=`<div class="week-plan-grid">${days.map(day=>{
+    const dateLabel=new Date(day.ds+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+    const isSun=day.dow===0;
+    const revHtml=day.revs.map(r=>`
+      <div class="plan-item" style="border-left:3px solid var(--cyan)">
+        <div class="plan-item-dot" style="background:var(--cyan)"></div>
+        <div style="flex:1"><div class="plan-item-text">${r.name}</div><div class="plan-item-sub">${r.topic}</div></div>
+        <span class="plan-tag plan-tag-rev">REV</span>
+      </div>`).join('');
+    const itemsHtml=(day.items||[]).map((item,idx)=>`
+      <div class="plan-item" style="border-left:3px solid ${item.kColor||'var(--accent)'}">
+        <div class="plan-item-dot" style="background:${item.kColor||'var(--accent)'}"></div>
+        <div style="flex:1"><div class="plan-item-text">${item.name}</div><div class="plan-item-sub">${item.topic} · ${item.kingdom}</div></div>
+        <button onclick="removePlanItem('${day.ds}',${idx})" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:12px;padding:2px 4px" title="Remover">✕</button>
+      </div>`).join('');
+    return`<div class="day-col${day.isToday?' today-col':''}">
+      <div class="day-header" style="color:${day.isToday?'var(--accent)':'var(--text2)'}">
+        <div>
+          <div>${day.full}</div>
+          <div style="font-size:9px;color:var(--muted);font-weight:600;margin-top:1px">${dateLabel}</div>
+        </div>
+        ${day.isToday?'<span class="day-today-pill">HOJE</span>':''}
+        ${!isSun?`<button class="plan-add-btn" onclick="openAddPlanItem('${day.ds}')" title="Adicionar assunto">＋</button>`:''}
+      </div>
+      ${isSun
+        ?`<div class="plan-empty-day">🌟 Descanso</div>`
+        :`${revHtml}${itemsHtml}${!revHtml&&!itemsHtml?'<div class="plan-empty-day" style="cursor:pointer" onclick="openAddPlanItem(\''+day.ds+'\')">＋ Adicionar assunto</div>':''}`
+      }
+    </div>`;
+  }).join('')}</div>
+  <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
+    <span style="font-size:10px;color:var(--muted);font-weight:700;display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:var(--cyan);display:inline-block"></span> Revisão agendada automaticamente</span>
+    <span style="font-size:10px;color:var(--muted);font-weight:700;display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block"></span> Assunto escolhido por você</span>
+  </div>`;
+}
+
+function openAddPlanItem(ds){
+  // Montar lista de todos os minibosses disponíveis
+  let opts='';
+  db.kingdoms.forEach(k=>{
+    (db.topics[k.id]||[]).forEach(t=>{
+      (t.subtopics||[]).forEach(s=>{
+        opts+=`<option value="${s.id}|${encodeURIComponent(s.name)}|${encodeURIComponent(t.name)}|${encodeURIComponent(k.name)}|${encodeURIComponent(k.color)}">${k.icon} ${k.name} › ${t.name} › ${s.name}${s.studied?' ✓':''}</option>`;
+      });
+    });
+  });
+  const html=`
+    <div style="margin-bottom:12px;font-size:13px;color:var(--text2);font-weight:600">Escolha o assunto para adicionar na agenda:</div>
+    <select id="plan-sub-sel" class="inp" style="width:100%;margin-bottom:14px;font-size:12px">
+      <option value="">— Selecione um miniboss —</option>
+      ${opts}
+    </select>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmAddPlanItem('${ds}')"><i class="fa fa-plus"></i> Adicionar</button>
+    </div>`;
+  openModal('📅 Adicionar à Agenda — '+new Date(ds+'T00:00:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long'}), html);
+}
+
+function confirmAddPlanItem(ds){
+  const sel=document.getElementById('plan-sub-sel');
+  if(!sel||!sel.value){toast('⚠️ Selecione um assunto','var(--red)');return;}
+  const [subId,name,topic,kingdom,kColor]=sel.value.split('|').map((v,i)=>i>1?decodeURIComponent(v):v);
+  if(!db.weeklyPlan)db.weeklyPlan={};
+  if(!db.weeklyPlan[ds])db.weeklyPlan[ds]=[];
+  // Evitar duplicata
+  if(db.weeklyPlan[ds].some(x=>x.subId===subId)){toast('Já está na agenda deste dia','var(--orange)');return;}
+  db.weeklyPlan[ds].push({subId,name:decodeURIComponent(name),topic:decodeURIComponent(topic),kingdom:decodeURIComponent(kingdom),kColor:decodeURIComponent(kColor)});
+  saveDB();closeModal();renderWeeklyPlan();
+  toast('✅ Adicionado à agenda!','var(--green)');
+}
+
+function removePlanItem(ds,idx){
+  if(!db.weeklyPlan||!db.weeklyPlan[ds])return;
+  db.weeklyPlan[ds].splice(idx,1);
+  saveDB();renderWeeklyPlan();
+}
+
+// ===== MODAL =====
+function openModal(title,body){
+  document.getElementById('modal-title').innerHTML=title+'<button onclick="closeModal()"><i class="fa fa-xmark"></i></button>';
+  document.getElementById('modal-body').innerHTML=body;
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal(){document.getElementById('modal').classList.remove('open');}
+
+// ===== TOAST =====
+let toastT=null;
+function toast(msg,color='var(--accent)'){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.style.background=color;el.style.display='block';
+  if(toastT)clearTimeout(toastT);
+  toastT=setTimeout(()=>{el.style.display='none';},2600);
+}
+
+// ===== MOTIVATIONAL PHRASES =====
+const PHRASES=[
+  "A aprovação não é sorte — é a soma de cada dia que você escolheu estudar quando ninguém estava olhando.",
+  "Cada revisão concluída é um tijolo na ponte entre você e a nomeação.",
+  "O concurseiro que vence não é o mais inteligente — é o mais consistente.",
+  "Hoje você pode descansar. Amanhã, alguém que não descansou vai ocupar a vaga que era sua.",
+  "A dificuldade que você sente agora é exatamente o que os outros estão evitando. Continue.",
+  "Não existe atalho para a aprovação, mas existe o caminho mais eficiente — e você já está nele.",
+  "Cada flashcard virado, cada questão resolvida, cada revisão feita: isso é seu futuro sendo construído.",
+  "A banca não reprova os que erraram — reprova os que pararam. Nunca pare.",
+  "Seu futuro servidor público existe hoje em cada minuto de estudo que você acumula.",
+  "A ansiedade do concurso é a prova de que você se importa. Transforme isso em combustível.",
+  "Disciplina é escolher o que você quer mais sobre o que você quer agora.",
+  "Quando bater o cansaço, lembre: quem passou também sentiu exatamente isso. E continuou.",
+  "Uma hora de estudo focado vale mais que três horas de estudo disperso. Qualidade > quantidade.",
+  "Você não está apenas estudando — está construindo a versão mais preparada de si mesmo.",
+  "O concurso vai testar seu conhecimento, mas já está testando sua disciplina. Você está passando.",
+  "Não compare seu capítulo 1 com o capítulo 20 de outra pessoa. Foque na sua linha do tempo.",
+  "Cada matéria que parece impossível hoje vai ser sua maior vantagem na prova.",
+  "A revisão é chata? Sim. A nomeação não.",
+  "Não existe estudo perdido. Tudo fica guardado no lugar certo: na sua mente.",
+  "A prova não é o fim da jornada — é só a confirmação de uma preparação que já aconteceu.",
+  "Quem estuda com método vence quem estuda com pressa.",
+  "Um chefão por vez. Um miniboss por vez. É assim que montanhas são escaladas.",
+  "Revisão 1, revisão 2, revisão 3… cada uma te afasta do esquecimento e te aproxima da aprovação.",
+  "Não espere motivação para começar. Comece, e a motivação aparece.",
+  "O seu nome na lista de aprovados começa a ser escrito aqui, hoje, nesse momento.",
+  "Estudar quando está com vontade é fácil. Estudar quando está cansado é o que te diferencia.",
+  "Cada segundo no cronômetro é um segundo investido no seu futuro servidor público.",
+  "Outros têm o mesmo sonho que você. A diferença está em quem acorda mais cedo para correr atrás.",
+  "A aprovação é certa para quem estuda certo. Siga o método, confie no processo.",
+  "Vale dos Nomeados: esse não é só um app. É o mapa da sua aprovação. Use-o todos os dias.",
+];
+let phraseIdx=Math.floor(Math.random()*PHRASES.length);
+function rotatePhrase(){
+  phraseIdx=(phraseIdx+1)%PHRASES.length;
+  const el=document.getElementById('motive-text');
+  if(el){el.style.opacity='0';setTimeout(()=>{el.textContent=PHRASES[phraseIdx];el.style.opacity='1';},200);}
+}
+function initPhrase(){
+  const el=document.getElementById('motive-text');
+  if(el){el.textContent=PHRASES[phraseIdx];el.style.transition='opacity 0.2s';}
+}
+
+function gainXP(n){
+  db.xp=(db.xp||0)+n;saveDB();
+  document.getElementById('total-xp').textContent=(db.xp||0).toLocaleString();
+}
+
+// ===== EDITAIS =====
+let edFilter='all';
+
+const ED_STATUS_MAP={
+  previsto:  {label:'📅 Data prevista', cls:'ed-status-previsto'},
+  inscricoes:{label:'✏️ Inscrições abertas', cls:'ed-status-inscricoes'},
+  inscrito:  {label:'✅ Inscrito', cls:'ed-status-inscrito'},
+  aguardando:{label:'⏳ Aguardando prova', cls:'ed-status-aguardando'},
+  realizado: {label:'🎯 Realizado', cls:'ed-status-realizado'},
+};
+
+function addEdital(){
+  const nome=document.getElementById('ed-nome').value.trim();
+  const cargo=document.getElementById('ed-cargo').value.trim();
+  const banca=document.getElementById('ed-banca').value.trim();
+  const data=document.getElementById('ed-data').value;
+  const icon=document.getElementById('ed-icon').value.trim()||'📝';
+  const color=document.getElementById('ed-color').value||'#6c47ff';
+  const status=document.getElementById('ed-status').value;
+  if(!nome){toast('⚠️ Digite o nome do concurso','var(--red)');return;}
+  if(!data){toast('⚠️ Informe a data da prova','var(--red)');return;}
+  if(!db.editais)db.editais=[];
+  db.editais.push({id:genId(),nome,cargo,banca,data,icon,color,status,createdAt:todayStr()});
+  db.editais.sort((a,b)=>a.data.localeCompare(b.data));
+  saveDB();
+  // Limpar form
+  ['ed-nome','ed-cargo','ed-banca','ed-data'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('ed-icon').value='';
+  toast('📋 Edital adicionado!','var(--accent)');
+  renderEditais();updateEditaisBadge();
+}
+
+function deleteEdital(id){
+  if(!confirm('Remover este edital?'))return;
+  db.editais=(db.editais||[]).filter(e=>e.id!==id);
+  saveDB();renderEditais();updateEditaisBadge();
+  toast('🗑️ Edital removido','var(--red)');
+}
+
+function changeEditalStatus(id,newStatus){
+  const e=(db.editais||[]).find(x=>x.id===id);
+  if(!e)return;
+  e.status=newStatus;
+  saveDB();renderEditais();updateEditaisBadge();
+  toast(`Status atualizado: ${ED_STATUS_MAP[newStatus]?.label||newStatus}`,'var(--green)');
+}
+
+function filterEditais(f,el){
+  edFilter=f;
+  document.querySelectorAll('#edital-filter-row .chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  renderEditais();
+}
+
+function updateEditaisBadge(){
+  const today=todayStr();
+  const urgent=(db.editais||[]).filter(e=>e.status!=='realizado'&&e.data>=today&&daysDiff(today,e.data)<=30).length;
+  const b=document.getElementById('editais-badge');
+  if(urgent>0){b.textContent=urgent;b.style.display='inline';}else{b.style.display='none';}
+}
+
+function renderEditais(){
+  const today=todayStr();
+  let list=(db.editais||[]);
+  if(edFilter!=='all')list=list.filter(e=>e.status===edFilter);
+  list=[...list].sort((a,b)=>a.data.localeCompare(b.data));
+
+  // Contadores rápidos
+  const all=db.editais||[];
+  const counts={
+    total:all.length,
+    inscricoes:all.filter(e=>e.status==='inscricoes').length,
+    inscrito:all.filter(e=>e.status==='inscrito').length,
+    aguardando:all.filter(e=>e.status==='aguardando').length,
+    realizado:all.filter(e=>e.status==='realizado').length,
+    proximos:all.filter(e=>e.status!=='realizado'&&e.data>=today&&daysDiff(today,e.data)<=30).length,
+  };
+  document.getElementById('edital-counters').innerHTML=[
+    {icon:'📋',val:counts.total,lbl:'Total',color:'var(--text2)'},
+    {icon:'✅',val:counts.inscrito,lbl:'Inscrito',color:'var(--green)'},
+    {icon:'⏳',val:counts.aguardando,lbl:'Aguardando',color:'var(--accent)'},
+    {icon:'🔥',val:counts.proximos,lbl:'Em 30 dias',color:'var(--red)'},
+  ].map(c=>`<div class="ed-counter-pill" style="border-color:${c.color}30"><span style="font-size:14px">${c.icon}</span><span style="color:${c.color};font-size:15px;font-weight:900">${c.val}</span><span>${c.lbl}</span></div>`).join('');
+
+  const el=document.getElementById('editais-list');
+  if(!list.length){
+    el.innerHTML=`<div class="empty"><i class="fa fa-file-circle-plus"></i><p>Nenhum edital cadastrado${edFilter!=='all'?' neste filtro':''}.<br>Adicione o primeiro acima!</p></div>`;return;
+  }
+  el.innerHTML=list.map(e=>{
+    const dias=daysDiff(today,e.data);
+    const passou=dias<0;
+    const urgente=!passou&&dias<=7&&e.status!=='realizado';
+    const st=ED_STATUS_MAP[e.status]||{label:e.status,cls:'ed-status-previsto'};
+    let diasHtml='';
+    if(passou){
+      diasHtml=`<div class="edital-countdown"><div class="edital-dias-num" style="color:var(--muted)">—</div><div class="edital-dias-lbl" style="color:var(--muted)">REALIZADO</div></div>`;
+    } else {
+      const diasColor=dias<=7?'var(--red)':dias<=30?'var(--orange)':'var(--accent)';
+      diasHtml=`<div class="edital-countdown ${urgente?'edital-urgente':''}">
+        <div class="edital-dias-num" style="color:${diasColor}">${dias}</div>
+        <div class="edital-dias-lbl" style="color:${diasColor}">DIAS</div>
+      </div>`;
+    }
+    return`<div class="edital-card${e.status==='realizado'?' ed-realizado':''}" style="border-color:${e.color}35">
+      <div style="position:absolute;top:0;left:0;right:0;height:4px;background:${e.color};border-radius:18px 18px 0 0"></div>
+      <div class="edital-top">
+        <div class="edital-icon">${e.icon}</div>
+        <div class="edital-info">
+          <div class="edital-nome">${e.nome}</div>
+          ${e.cargo?`<div class="edital-cargo"><i class="fa fa-user-nurse" style="color:${e.color}"></i> ${e.cargo}</div>`:''}
+          <div class="edital-meta">
+            <span class="edital-status ${st.cls}">${st.label}</span>
+            ${e.banca?`<span class="edital-banca-chip"><i class="fa fa-building"></i> ${e.banca}</span>`:''}
+            ${urgente?'<span style="background:rgba(220,38,38,0.1);color:var(--red);border-radius:20px;padding:2px 8px;font-size:9px;font-weight:900;animation:redPulse 2s infinite">🔥 URGENTE</span>':''}
+          </div>
+        </div>
+        ${diasHtml}
+      </div>
+      <div class="edital-bottom">
+        <div class="edital-date-chip">
+          <i class="fa fa-calendar" style="color:${e.color}"></i>
+          <span>${new Date(e.data+'T00:00:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'})}</span>
+        </div>
+        <div class="edital-actions">
+          <select class="inp" style="font-size:10px;padding:4px 8px;border-radius:8px" onchange="changeEditalStatus('${e.id}',this.value)">
+            ${Object.entries(ED_STATUS_MAP).map(([k,v])=>`<option value="${k}"${e.status===k?' selected':''}>${v.label}</option>`).join('')}
+          </select>
+          <button class="btn btn-xs btn-danger" onclick="deleteEdital('${e.id}')"><i class="fa fa-trash"></i></button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ===== BIND STATIC HTML EVENTS (module scripts are isolated from onclick) =====
+function bindStaticEvents(){
+  document.getElementById('nav-map')?.addEventListener('click',()=>showScreen('map'));
+  document.getElementById('nav-revisions')?.addEventListener('click',()=>showScreen('revisions'));
+  document.getElementById('nav-dashboard')?.addEventListener('click',()=>showScreen('dashboard'));
+  document.getElementById('nav-editais')?.addEventListener('click',()=>showScreen('editais'));
+  document.getElementById('xp-pill-btn')?.addEventListener('click',()=>showScreen('dashboard'));
+  document.getElementById('exam-date')?.addEventListener('change',saveExamDate);
+  document.getElementById('motive-card')?.addEventListener('click',rotatePhrase);
+  document.getElementById('modal')?.addEventListener('click',e=>{
+    if(e.target===document.getElementById('modal'))closeModal();
+  });
+}
+bindStaticEvents();
+
+// Functions called from dynamically generated innerHTML must be on window
+window.showScreen=showScreen;
+window.openKingdom=openKingdom;
+window.addTopic=addTopic;
+window.deleteTopic=deleteTopic;
+window.toggleTopic=toggleTopic;
+window.addSubtopic=addSubtopic;
+window.deleteSub=deleteSub;
+window.toggleTimer=toggleTimer;
+window.saveTimer=saveTimer;
+window.resetTimer=resetTimer;
+window.cyclePriority=cyclePriority;
+window.showSubRevisions=showSubRevisions;
+window.completeRev=completeRev;
+window.intensiveTraining=intensiveTraining;
+window.filterRevs=filterRevs;
+window.setMbFilter=setMbFilter;
+window.renderDashboard=renderDashboard;
+window.openModal=openModal;
+window.closeModal=closeModal;
+window.createKingdom=createKingdom;
+window.deleteKingdom=deleteKingdom;
+window.openAddKingdomModal=openAddKingdomModal;
+window.pickEmoji=pickEmoji;
+window.setTopicPrio=setTopicPrio;
+window.toggleNote=toggleNote;
+window.closeNote=closeNote;
+window.saveNote=saveNote;
+window.toggleStrat=toggleStrat;
+window.setChartTab=setChartTab;
+window.addEdital=addEdital;
+window.deleteEdital=deleteEdital;
+window.changeEditalStatus=changeEditalStatus;
+window.goToSubtopic=goToSubtopic;
+window.openAddPlanItem=openAddPlanItem;
+window.confirmAddPlanItem=confirmAddPlanItem;
+window.removePlanItem=removePlanItem;
+</script>
+</body>
+</html>
