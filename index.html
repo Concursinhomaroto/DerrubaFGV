@@ -188,6 +188,11 @@ nav{
   display:flex;flex-direction:column;
   min-height:100vh;
 }
+/* Reserva espaço pro cronômetro flutuante quando aberto, pra ele nunca ficar por
+   cima de conteúdo real (grids que preenchem a largura toda, ex: flashcards). */
+@media(min-width:769px){
+  #main-content.has-float-timer{padding-right:300px;transition:padding-right 0.25s ease;}
+}
 
 /* ===== SCREENS ===== */
 .screen{display:none;padding:28px 28px;flex:1;}
@@ -5871,11 +5876,13 @@ function floatTimerOpen(){
   ftUpdateDisplay();
   const st=document.getElementById('ft-status');if(st)st.textContent=ftRunning?'▶ Em andamento...':'Pronto para iniciar';
   if(ftRunning)ftRafId=requestAnimationFrame(ftTick);
+  document.getElementById('main-content')?.classList.add('has-float-timer');
 }
 function floatTimerClose(){
   document.getElementById('float-timer').style.display='none';
   const btn=document.getElementById('float-timer-btn');if(btn){btn.style.display='flex';btn.style.visibility='visible';}
   if(ftRafId){cancelAnimationFrame(ftRafId);ftRafId=null;}
+  document.getElementById('main-content')?.classList.remove('has-float-timer');
 }
 function floatTimerToggle(){
   const btn=document.getElementById('ft-btn-play');const st=document.getElementById('ft-status');
