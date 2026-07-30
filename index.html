@@ -3625,6 +3625,8 @@ function renderRevisions(){
   }).join('');
 }
 
+// Conta só o que já passou do prazo (mesma regra da aba "Atrasadas") — não mistura
+// com o que vence hoje, pra o alarme da barra lateral bater com o que a tela mostra.
 function updateRevBadge(){
   const today=todayStr();let cnt=0;
   db.kingdoms.forEach(k=>{(db.topics[k.id]||[]).forEach(t=>{(t.subtopics||[]).forEach(s=>{
@@ -3632,7 +3634,7 @@ function updateRevBadge(){
     const revs=db.revisions[s.id]||[];
     revs.forEach((r,i)=>{
       const prevDone=revs.slice(0,i).every(p=>p.completed);
-      if(!r.completed&&prevDone&&r.date<=today)cnt++;
+      if(!r.completed&&prevDone&&r.date<today)cnt++;
     });
   });});});
   const b=document.getElementById('rev-badge');
