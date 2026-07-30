@@ -1472,9 +1472,30 @@ function loadDB(callback){
       if(errBox)errBox.style.display='block';
       if(errMsg)errMsg.innerHTML=`⚠️ Erro Firebase: ${error.message||error.code}<br><small>Abrindo com dados locais.</small>`;
       if(callback)callback();
+    }else{
+      warnSyncIssue('⚠️ Conexão com o banco de dados perdida. Suas alterações continuam sendo salvas neste dispositivo.');
     }
   });
 }
+
+// Evita bombardear o usuário de toasts se os mesmos erros se repetirem em sequência.
+let lastWarningAt=0;
+function warnSyncIssue(msg){
+  const now=Date.now();
+  if(now-lastWarningAt<20000)return;
+  lastWarningAt=now;
+  toast(msg,'var(--red)');
+}
+
+// Rede de segurança: erros não tratados não devem deixar a tela "morta" sem feedback.
+window.addEventListener('error',(e)=>{
+  console.error('Erro não tratado:',e.error||e.message);
+  warnSyncIssue('⚠️ Algo deu errado. Se a tela parecer travada, recarregue a página.');
+});
+window.addEventListener('unhandledrejection',(e)=>{
+  console.error('Promise rejeitada:',e.reason);
+  warnSyncIssue('⚠️ Algo deu errado. Se a tela parecer travada, recarregue a página.');
+});
 
 function saveDB(){
   try{localStorage.setItem(LS_KEY,JSON.stringify(sanitizeForFirebase(db)));}catch(e){}
@@ -1485,6 +1506,7 @@ function saveDB(){
     DB_REF.set(sanitizeForFirebase(db)).catch(e=>{
       console.warn('Firebase save error:',e);
       isSaving=false;
+      warnSyncIssue('⚠️ Não foi possível salvar na nuvem agora. Seus dados estão seguros neste dispositivo.');
     });
   },800);
 }
