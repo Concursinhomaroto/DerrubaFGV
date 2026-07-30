@@ -110,10 +110,11 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 /* ===== SIDEBAR ===== */
 #sidebar{
   width:220px;flex-shrink:0;
-  background:linear-gradient(180deg,#7c3aed 0%,#8b5cf6 50%,#a78bfa 100%);
+  background:linear-gradient(180deg,#1b1533 0%,#141034 55%,#0c0a16 100%);
   display:flex;flex-direction:column;
   position:fixed;top:0;left:0;bottom:0;z-index:200;
-  box-shadow:4px 0 24px rgba(124,58,237,0.15);
+  box-shadow:4px 0 24px rgba(5,3,15,0.5);
+  border-right:1px solid rgba(124,79,216,0.25);
   overflow-y:auto;
 }
 #sidebar::-webkit-scrollbar{width:3px;}
@@ -1452,13 +1453,13 @@ nav{
   </div>
 </div>
 <style>
-#screen-vale{padding:20px}
+#screen-vale{padding:12px}
 #screen-vale.active{display:flex;justify-content:center}
-@media(max-width:700px){#screen-vale{padding:10px}}
+@media(max-width:700px){#screen-vale{padding:8px}}
 .vale-shell{
-  width:min(1400px,100%);display:flex;flex-direction:column;gap:16px;
+  width:min(1900px,100%);display:flex;flex-direction:column;gap:14px;
   background:linear-gradient(160deg,#171029,#100c1c);border:1px solid rgba(255,255,255,.08);
-  border-radius:20px;padding:22px;box-shadow:0 30px 80px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.04);
+  border-radius:20px;padding:16px;box-shadow:0 30px 80px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.04);
   position:relative;overflow:hidden;
 }
 .vale-glow-a{position:absolute;top:-120px;left:-80px;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle,rgba(124,79,216,.16),transparent 70%);pointer-events:none}
@@ -1475,6 +1476,7 @@ nav{
 }
 .vale-kg{cursor:pointer}
 .vale-kg:focus-visible{outline:2px solid #e8c15a;outline-offset:3px;border-radius:50%}
+.vale-boss-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:7px 14px;max-height:260px;overflow-y:auto;padding-right:4px}
 @media(max-width:700px){
   .vale-title{font-size:15px}
   .vale-coverage{font-size:10.5px;padding:5px 10px}
@@ -2415,7 +2417,7 @@ function valeDeleteKingdom(kingdomId){
       const k=claimed.get(zi);
       if(k)return {id:k.id,kingdom:k,name:k.name,states,zoneIdx:zi,hue:k.color,st:valeKingdomStats(k),off:ZONE_LABEL_OFFSET[zi]};
       return {id:'unclaimed_'+zi,kingdom:null,name:null,states,zoneIdx:zi,hue:UNCLAIMED_HUE,
-        st:{state:'fog',dominio:0,totalChefoes:0,defeated:0,atrasadas:0,matured:0,total:0,retencao:null},off:ZONE_LABEL_OFFSET[zi]};
+        st:{state:'fog',dominio:0,totalChefoes:0,defeated:0,chefoes:[],atrasadas:0,matured:0,total:0,retencao:null},off:ZONE_LABEL_OFFSET[zi]};
     });
   }
 
@@ -2676,12 +2678,11 @@ function valeDeleteKingdom(kingdomId){
 
   function openKingdomModal(g){
     const r=g.reino,st=r.st,claimed=!!r.kingdom;
-    const bt=st.totalChefoes,bd=st.defeated;
-    const bossesHtml=bt>0?Array.from({length:bt},(_,i)=>`
-      <div style="display:flex;align-items:center;gap:8px;font-size:14px">
-        <span style="width:10px;height:10px;border-radius:50%;background:${i<bd?r.hue:'#3b3358'};display:inline-block;box-shadow:${i<bd?`0 0 8px ${r.hue}`:'none'}"></span>
-        <span>Chefão ${i+1}</span>
-      </div>`).join(''):`<div style="opacity:.6;font-size:13px">Nenhum chefão criado neste reino ainda.</div>`;
+    const bossesHtml=st.chefoes.length>0?`<div class="vale-boss-grid">${st.chefoes.map(c=>`
+      <div style="display:flex;align-items:center;gap:8px;font-size:13.5px;min-width:0">
+        <span style="width:10px;height:10px;border-radius:50%;flex:none;background:${c.defeated?r.hue:'#3b3358'};display:inline-block;box-shadow:${c.defeated?`0 0 8px ${r.hue}`:'none'}"></span>
+        <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${c.name}">${c.name}</span>
+      </div>`).join('')}</div>`:`<div style="opacity:.6;font-size:13px">Nenhum chefão criado neste reino ainda.</div>`;
     const statusLabel=!claimed?'Terra Ignota':st.state==='fog'?'Enevoado':st.state==='dominado'?'Dominado':'Descoberto';
     const actions=claimed?`
         <button class="btn" onclick="valeManageKingdom('${r.kingdom.id}')"><i class="fa fa-list"></i> Gerenciar chefões</button>
