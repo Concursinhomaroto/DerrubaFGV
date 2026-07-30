@@ -13,6 +13,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Vale dos Nomeados">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;900&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#f5f3ff;
@@ -1091,8 +1094,8 @@ nav{
     <button class="nav-btn active" id="nav-dashboard">
       <span class="nav-icon">🏆</span><span class="nav-label">PAINEL DO HERÓI</span>
     </button>
-    <button class="nav-btn" id="nav-map">
-      <span class="nav-icon">🗺️</span><span class="nav-label">MAPA DOS REINOS</span>
+    <button class="nav-btn" id="nav-vale">
+      <span class="nav-icon">🐉</span><span class="nav-label">MAPA DO VALE</span>
     </button>
     <button class="nav-btn" id="nav-revisions">
       <span class="nav-icon">🔔</span><span class="nav-label">REVISÕES</span>
@@ -1154,7 +1157,7 @@ nav{
 <!-- ===== KINGDOM ===== -->
 <div class="screen" id="screen-kingdom">
   <div class="breadcrumb">
-    <span class="bc-link" onclick="showScreen('map')"><i class="fa fa-home"></i> Mapa</span>
+    <span class="bc-link" onclick="showScreen('vale')"><i class="fa fa-home"></i> Mapa</span>
     <i class="fa fa-chevron-right" style="font-size:9px"></i>
     <span id="bc-kingdom" style="font-weight:800;color:var(--text)"></span>
   </div>
@@ -1435,6 +1438,62 @@ nav{
   <div id="conquistas-grid"></div>
 </div>
 
+<div class="screen" id="screen-vale">
+  <div class="vale-shell" id="vale-shell">
+    <div class="vale-glow-a"></div><div class="vale-glow-b"></div>
+    <div class="vale-topbar">
+      <div class="vale-title"><span style="font-size:22px">🗺️</span> O Mapa do Vale</div>
+      <div id="vale-coverage" class="vale-coverage">carregando território…</div>
+    </div>
+    <div class="vale-mapwrap" id="vale-mapwrap">
+      <svg id="vale-map" viewBox="0 0 1600 1000"></svg>
+      <div id="vale-tip" class="vale-tip"></div>
+    </div>
+  </div>
+</div>
+<style>
+#screen-vale{padding:20px}
+#screen-vale.active{display:flex;justify-content:center}
+@media(max-width:700px){#screen-vale{padding:10px}}
+.vale-shell{
+  width:min(1400px,100%);display:flex;flex-direction:column;gap:16px;
+  background:linear-gradient(160deg,#171029,#100c1c);border:1px solid rgba(255,255,255,.08);
+  border-radius:20px;padding:22px;box-shadow:0 30px 80px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.04);
+  position:relative;overflow:hidden;
+}
+.vale-glow-a{position:absolute;top:-120px;left:-80px;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle,rgba(124,79,216,.16),transparent 70%);pointer-events:none}
+.vale-glow-b{position:absolute;bottom:-140px;right:-100px;width:380px;height:380px;border-radius:50%;background:radial-gradient(circle,rgba(14,155,179,.14),transparent 70%);pointer-events:none}
+.vale-topbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;position:relative}
+.vale-title{display:flex;align-items:center;gap:10px;color:#e9e4f5;font-size:18px;font-weight:700}
+.vale-coverage{font-size:12.5px;color:#c9c2e0;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:999px;padding:7px 16px;font-variant-numeric:tabular-nums}
+.vale-mapwrap{position:relative;width:100%;aspect-ratio:1600/1000;border-radius:14px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.55),0 0 0 1px rgba(201,154,75,.35)}
+#vale-map{width:100%;height:100%;display:block}
+.vale-tip{
+  position:absolute;display:none;background:#160f2c;border:1px solid #7c4fd8;border-radius:10px;
+  padding:12px 14px;width:230px;box-shadow:0 10px 30px rgba(0,0,0,.6),0 0 18px rgba(124,79,216,.35);
+  pointer-events:none;font-family:'IM Fell English',serif;color:#e2dcf5;transform:translate(-50%,-115%);z-index:5;
+}
+.vale-kg{cursor:pointer}
+.vale-kg:focus-visible{outline:2px solid #e8c15a;outline-offset:3px;border-radius:50%}
+@media(max-width:700px){
+  .vale-title{font-size:15px}
+  .vale-coverage{font-size:10.5px;padding:5px 10px}
+  .vale-tip{width:190px;padding:9px 11px;font-size:12px}
+}
+@media (prefers-reduced-motion: no-preference){
+  @keyframes valeFogDrift{0%,100%{transform:translate(0,0)}50%{transform:translate(3px,-4px)}}
+  @keyframes valeHaloPulse{0%,100%{opacity:.45}50%{opacity:.85}}
+  @keyframes valeWaterShimmer{0%,100%{opacity:.3}50%{opacity:.6}}
+  @keyframes valeShipBob{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(9px) rotate(2deg)}}
+  @keyframes valeSailA{from{transform:translate(96px,240px)}to{transform:translate(96px,930px)}}
+  @keyframes valeSailB{from{transform:translate(1516px,880px)}to{transform:translate(1516px,230px)}}
+  @keyframes valeSailC{from{transform:translate(-120px,138px)}to{transform:translate(1720px,138px)}}
+  @keyframes valeRainFall{from{transform:translate(0,-140px)}to{transform:translate(-70px,1160px)}}
+  @keyframes valeSerpent{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+  @keyframes valeLightning{0%,92%,100%{opacity:0}93%{opacity:.28}95%{opacity:.05}96%{opacity:.22}98%{opacity:0}}
+}
+</style>
+
 <div id="loading-overlay" class="loading-overlay">
   <div class="skeleton-shell" aria-hidden="true">
     <div class="skeleton-topbar"></div>
@@ -1560,6 +1619,10 @@ nav{
 <!-- Firebase SDK compat — funciona em qualquer ambiente (GitHub Pages, file://, etc) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+<!-- D3 + topojson-client — só usados pelo "O Mapa do Vale" (mapa real do Brasil) -->
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
 
 <script>
 // ===== CANVAS BG =====
@@ -1992,6 +2055,7 @@ function showScreen(name){
   if(name==='redacoes')renderRedacoesScreen();
   if(name==='repertorio')renderRepertorioScreen();
   if(name==='conquistas')renderConquistasScreen();
+  if(name==='vale')renderValeMap();
 }
 
 // ===== MAP =====
@@ -2118,8 +2182,11 @@ function createKingdom(){
   const color=document.getElementById('nk-color').value;
   if(!name){toast('⚠️ Digite o nome do reino','var(--red)');return;}
   const k={id:genId(),name,icon,color};
+  if(typeof valePendingZone==='number'){k.mapZone=valePendingZone;valePendingZone=null;}
   db.kingdoms.push(k);db.topics[k.id]=[];
-  saveDB();closeModal();renderMap();toast('🏰 Novo reino criado!','var(--accent)');
+  saveDB();closeModal();renderMap();
+  if(document.getElementById('screen-vale')?.classList.contains('active')&&typeof renderValeMap==='function')renderValeMap();
+  toast('🏰 Novo reino criado!','var(--accent)');
 }
 function deleteKingdom(id){
   const k=db.kingdoms.find(x=>x.id===id);
@@ -2133,8 +2200,603 @@ function deleteKingdom(id){
   delete db.topics[id];
   if(db.kingdomSeconds)delete db.kingdomSeconds[id];
   db.kingdoms=db.kingdoms.filter(x=>x.id!==id);
-  saveDB();renderMap();toast('🗑️ Reino removido','var(--red)');
+  saveDB();renderMap();
+  if(document.getElementById('screen-vale')?.classList.contains('active')&&typeof renderValeMap==='function')renderValeMap();
+  toast('🗑️ Reino removido','var(--red)');
 }
+
+// ===== O MAPA DO VALE (mapa real do Brasil — D3 + GeoJSON, data-driven) =====
+function valeHash(str){
+  let h=2166136261;
+  for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619);}
+  return h>>>0;
+}
+
+function valeKingdomCards(k){
+  const topicIds=(db.topics[k.id]||[]).map(t=>t.id);
+  return Object.values(db.flashcards||{}).filter(c=>topicIds.includes(c.mbId));
+}
+// Estados do território reaproveitando o mesmo critério de "maduro" (lastConf>=4)
+// já usado pela conquista Reino Dominado — o mapa nunca diverge da conquista.
+function valeKingdomStats(k){
+  const topics=db.topics[k.id]||[];
+  const cards=valeKingdomCards(k);
+  const total=cards.length;
+  const studied=cards.filter(c=>(c.lastConf||0)>0).length;
+  const matured=cards.filter(c=>(c.lastConf||0)>=4).length;
+  let state='fog';
+  if(total>0&&studied>0)state=(matured===total)?'dominado':'descoberto';
+  const chefoes=topics.map(t=>{
+    const tc=getAllFCForTopic(t.id);
+    return {id:t.id,name:t.name,total:tc.length,defeated:tc.length>0&&tc.every(c=>(c.lastConf||0)>=4)};
+  });
+  let acertos=0,erros=0,lastVisit=null;
+  cards.forEach(c=>{
+    acertos+=(c.acertos||0);erros+=(c.erros||0);
+    if(c.ultimaRevisao&&(!lastVisit||c.ultimaRevisao>lastVisit))lastVisit=c.ultimaRevisao;
+  });
+  const atrasadas=topics.reduce((n,t)=>n+(t.subtopics||[]).reduce((m,s)=>m+countOverdue(s,todayStr()),0),0);
+  return {
+    total,studied,matured,state,chefoes,
+    defeated:chefoes.filter(c=>c.defeated).length,
+    totalChefoes:chefoes.length,
+    lastVisit,atrasadas,
+    dominio: total?Math.round(matured/total*100):0,
+    retencao: (acertos+erros)>0?Math.round(acertos/(acertos+erros)*100):null
+  };
+}
+function valeFlavorText(k,st){
+  if(st.state==='fog')return `Território ainda envolto em névoa. Nenhum passo foi dado além da fronteira de ${k.name}.`;
+  if(st.state==='dominado')return `Erguida por completo sob sua bandeira. ${st.atrasadas>0?`Ainda assim, o dragão dorme de olho aberto: ${st.atrasadas} revisão(ões) bate(m) à porta.`:'Nem o dragão que a guarda encontra motivo pra despertar.'}`;
+  return `${st.dominio}% do reino já responde ao seu comando, Nomeado.${st.atrasadas>0?` ${st.atrasadas} revisão(ões) cobrada(s) esperam resposta.`:''}`;
+}
+function valeGotoFlashcards(kingdomId){
+  closeModal();
+  fcFilterKingdom=kingdomId;
+  showScreen('flashcards');
+}
+let valePendingZone=null;
+function valeCreateKingdomHere(zoneIdx){
+  closeModal();
+  valePendingZone=zoneIdx;
+  openAddKingdomModal();
+}
+function valeManageKingdom(kingdomId){
+  closeModal();
+  const k=db.kingdoms.find(x=>x.id===kingdomId);
+  if(k)openKingdom(k);
+}
+function valeDeleteKingdom(kingdomId){
+  closeModal();
+  deleteKingdom(kingdomId);
+}
+
+(function(){
+  const W=1600, H=1000;
+  // 10 zonas geográficas fixas (agrupamentos contíguos de estados). Cada reino real do
+  // usuário é atribuído a uma zona (determinístico, persistido em k.mapZone); zonas sem
+  // reino ficam como "Terra Ignota" enevoada, convidando a criar um reino ali.
+  const ZONES=[
+    ['AM','AC','RO','RR'],
+    ['PA','AP','TO'],
+    ['MA','PI','CE'],
+    ['RN','PB','PE','AL','SE'],
+    ['BA'],
+    ['MT','MS'],
+    ['GO','DF'],
+    ['MG','ES'],
+    ['SP','RJ'],
+    ['PR','SC','RS']
+  ];
+  const ZONE_LABEL_OFFSET={3:[58,30],8:[10,18]};
+  const UNCLAIMED_HUE='#6b6153';
+
+  const REDUCE_MOTION=!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  function anim(s){return REDUCE_MOTION?null:s;}
+
+  const UF_BY_NAME={acre:'AC',alagoas:'AL',amapa:'AP',amazonas:'AM',bahia:'BA',ceara:'CE','distrito federal':'DF','espirito santo':'ES',goias:'GO',maranhao:'MA','mato grosso':'MT','mato grosso do sul':'MS','minas gerais':'MG',para:'PA',paraiba:'PB',parana:'PR',pernambuco:'PE',piaui:'PI','rio de janeiro':'RJ','rio grande do norte':'RN','rio grande do sul':'RS',rondonia:'RO',roraima:'RR','santa catarina':'SC','sao paulo':'SP',sergipe:'SE',tocantins:'TO'};
+  const UF_BY_IBGE={11:'RO',12:'AC',13:'AM',14:'RR',15:'PA',16:'AP',17:'TO',21:'MA',22:'PI',23:'CE',24:'RN',25:'PB',26:'PE',27:'AL',28:'SE',29:'BA',31:'MG',32:'ES',33:'RJ',35:'SP',41:'PR',42:'SC',43:'RS',50:'MS',51:'MT',52:'GO',53:'DF'};
+  const UFS=new Set(Object.values(UF_BY_NAME));
+  const SOURCES=[
+    'https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson',
+    'https://cdn.jsdelivr.net/gh/deldersveld/topojson@master/countries/brazil/brazil-states.json',
+    'https://cdn.jsdelivr.net/npm/br-atlas@1.0.0/geo/uf.json'
+  ];
+
+  function normStr(s){return String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();}
+  function ufOf(obj){
+    const p=obj.properties||{};
+    for(const v of [...Object.values(p),obj.id]){
+      if(v==null)continue;
+      const s=String(v).toUpperCase().trim();
+      if(s.length===2&&UFS.has(s))return s;
+    }
+    for(const v of [...Object.values(p),obj.id]){
+      if(v==null)continue;
+      const n=Number(v);
+      if(UF_BY_IBGE[n])return UF_BY_IBGE[n];
+    }
+    for(const v of Object.values(p)){
+      if(typeof v==='string'&&UF_BY_NAME[normStr(v)])return UF_BY_NAME[normStr(v)];
+    }
+    return null;
+  }
+  function brMulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return ((t^t>>>14)>>>0)/4294967296;};}
+
+  async function loadStates(){
+    for(const url of SOURCES){
+      try{
+        const raw=await (await fetch(url)).json();
+        let features=null,topo=null,objName=null;
+        if(raw.type==='Topology'){
+          topo=raw;objName=Object.keys(raw.objects)[0];
+          features=topojson.feature(raw,raw.objects[objName]).features;
+        }else if(raw.type==='FeatureCollection'){
+          features=raw.features;
+        }
+        if(!features)continue;
+        const tagged=features.map((f,i)=>({f,uf:ufOf(f),gi:i})).filter(d=>d.uf);
+        if(tagged.length>=20)return {tagged,topo,objName};
+      }catch(e){/* tenta próxima fonte */}
+    }
+    throw new Error('Não foi possível carregar a geometria dos estados.');
+  }
+
+  function groupFeature(members,topo,objName){
+    if(topo&&objName){
+      const geoms=members.map(m=>topo.objects[objName].geometries[m.gi]);
+      try{return {type:'Feature',properties:{},geometry:topojson.merge(topo,geoms)};}catch(e){}
+    }
+    const polys=[];
+    members.forEach(m=>{
+      const g=m.f.geometry;
+      if(!g)return;
+      if(g.type==='Polygon')polys.push(g.coordinates);
+      else if(g.type==='MultiPolygon')g.coordinates.forEach(c=>polys.push(c));
+    });
+    return {type:'Feature',properties:{},geometry:{type:'MultiPolygon',coordinates:polys}};
+  }
+
+  function mtnPaths(x,y,n,s){
+    let base='',sh='',hl='';
+    for(let i=0;i<n;i++){
+      const ox=(i-n/2)*s*0.72,h=s*(0.75+(i%4)*0.18);
+      const bx=x+ox,by=y+s*0.32;
+      base+=`M ${bx-s*0.48} ${by} L ${bx} ${by-h} L ${bx+s*0.48} ${by} Z `;
+      sh+=`M ${bx} ${by-h} L ${bx+s*0.48} ${by} L ${bx+s*0.1} ${by} Z `;
+      hl+=`M ${bx} ${by-h} L ${bx+s*0.2} ${by-h*0.5} L ${bx-s*0.15} ${by-h*0.42} Z `;
+    }
+    return {base,sh,hl};
+  }
+  function treePaths(x,y,n,s){
+    let base='',sh='';
+    for(let i=0;i<n;i++){
+      const ox=(i%3)*s*0.85-s*0.9,oy=Math.floor(i/3)*s*0.75;
+      const bx=x+ox,by=y+oy;
+      base+=`M ${bx-s*0.4} ${by} L ${bx} ${by-s} L ${bx+s*0.4} ${by} Z `;
+      sh+=`M ${bx} ${by-s} L ${bx+s*0.4} ${by} L ${bx+s*0.08} ${by} Z `;
+    }
+    return {base,sh};
+  }
+  function compassStar(){
+    const pts=[];const L=48,S=16;
+    for(let i=0;i<8;i++){
+      const a1=i*45*Math.PI/180,a2=(i*45+22.5)*Math.PI/180,r=i%2===0?L:S;
+      pts.push(`${i===0?'M':'L'} ${(r*Math.sin(a1)).toFixed(1)} ${(-r*Math.cos(a1)).toFixed(1)}`);
+      pts.push(`L ${(S*Math.sin(a2)).toFixed(1)} ${(-S*Math.cos(a2)).toFixed(1)}`);
+    }
+    return pts.join(' ')+' Z';
+  }
+
+  // Atribuição determinística reino->zona: mantém as já persistidas, dá as livres pros
+  // reinos novos (hash do id, resolve colisão andando pra próxima zona livre) e salva.
+  function assignZones(){
+    const used=new Set();
+    db.kingdoms.forEach(k=>{
+      if(typeof k.mapZone==='number'&&k.mapZone>=0&&k.mapZone<ZONES.length&&!used.has(k.mapZone))used.add(k.mapZone);
+      else k.mapZone=undefined;
+    });
+    let changed=false;
+    db.kingdoms.forEach(k=>{
+      if(typeof k.mapZone==='number')return;
+      if(used.size>=ZONES.length)return;
+      let z=valeHash(k.id)%ZONES.length,tries=0;
+      while(used.has(z)&&tries<ZONES.length){z=(z+1)%ZONES.length;tries++;}
+      if(!used.has(z)){k.mapZone=z;used.add(z);changed=true;}
+    });
+    if(changed)saveDB();
+  }
+
+  function buildReinos(){
+    assignZones();
+    const claimed=new Map();
+    db.kingdoms.forEach(k=>{if(typeof k.mapZone==='number')claimed.set(k.mapZone,k);});
+    return ZONES.map((states,zi)=>{
+      const k=claimed.get(zi);
+      if(k)return {id:k.id,kingdom:k,name:k.name,states,zoneIdx:zi,hue:k.color,st:valeKingdomStats(k),off:ZONE_LABEL_OFFSET[zi]};
+      return {id:'unclaimed_'+zi,kingdom:null,name:null,states,zoneIdx:zi,hue:UNCLAIMED_HUE,
+        st:{state:'fog',dominio:0,totalChefoes:0,defeated:0,atrasadas:0,matured:0,total:0,retencao:null},off:ZONE_LABEL_OFFSET[zi]};
+    });
+  }
+
+  let BR={built:false,building:false,groups:[],path:null,projection:null};
+
+  async function build(){
+    const {tagged,topo,objName}=await loadStates();
+    const byUf=new Map(tagged.map(d=>[d.uf,d]));
+    const reinos=buildReinos();
+    const groups=reinos.map(r=>{
+      const members=r.states.map(u=>byUf.get(u)).filter(Boolean);
+      return {reino:r,feature:groupFeature(members,topo,objName),members};
+    });
+    BR.groups=groups;
+
+    const all={type:'FeatureCollection',features:groups.map(g=>g.feature)};
+    const projection=d3.geoMercator().fitExtent([[190,175],[W-190,H-110]],all);
+    const path=d3.geoPath(projection);
+    BR.projection=projection;BR.path=path;
+
+    const svg=d3.select('#vale-map');
+    svg.selectAll('*').remove();
+
+    const defs=svg.append('defs');
+    defs.html(`
+      <radialGradient id="valeParch" cx="42%" cy="38%" r="80%">
+        <stop offset="0%" stop-color="#2a2247"/><stop offset="55%" stop-color="#221c3b"/>
+        <stop offset="100%" stop-color="#191430"/>
+      </radialGradient>
+      <radialGradient id="valeOcean" cx="50%" cy="45%" r="78%">
+        <stop offset="0%" stop-color="#141034"/><stop offset="100%" stop-color="#08061a"/>
+      </radialGradient>
+      <radialGradient id="valeFog" cx="50%" cy="50%" r="60%">
+        <stop offset="0%" stop-color="#241d3f"/><stop offset="100%" stop-color="#0f0b22"/>
+      </radialGradient>
+      <radialGradient id="valeVig" cx="50%" cy="50%" r="72%">
+        <stop offset="55%" stop-color="#000" stop-opacity="0"/><stop offset="100%" stop-color="#05030f" stop-opacity=".7"/>
+      </radialGradient>
+      <filter id="valeGrain" x="-20%" y="-20%" width="140%" height="140%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7" result="n"/>
+        <feColorMatrix in="n" type="matrix" values="0 0 0 0 .7 0 0 0 0 .65 0 0 0 0 1 0 0 0 .05 0"/>
+      </filter>
+      <filter id="valeBlur6"><feGaussianBlur stdDeviation="6"/></filter>
+      <filter id="valeBlur12"><feGaussianBlur stdDeviation="12"/></filter>
+      <filter id="valeDrop" x="-50%" y="-50%" width="200%" height="200%">
+        <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#05030f" flood-opacity=".7"/>
+      </filter>
+    `);
+
+    svg.append('rect').attr('width',W).attr('height',H).attr('fill','url(#valeOcean)');
+    const gSea=svg.append('g').attr('pointer-events','none');
+    [[80,120,'#7c4fd8'],[1480,240,'#0e9bb3'],[120,840,'#0e9bb3'],[1500,720,'#7c4fd8'],[1520,480,'#2f6fc9'],[300,60,'#0e9bb3'],[900,960,'#7c4fd8']].forEach(([x,y,col],i)=>{
+      gSea.append('path').attr('d',`M ${x-48} ${y} q 24 -14 48 0 q 24 14 48 0`).attr('fill','none')
+        .attr('stroke',col).attr('stroke-width',2.5).attr('opacity',.35)
+        .style('filter',`drop-shadow(0 0 6px ${col})`)
+        .style('animation',anim(`valeWaterShimmer ${4+i}s ease-in-out infinite`));
+    });
+
+    [[120,430,26,'#0e9bb3'],[160,700,20,'#7c4fd8'],[1500,330,24,'#2f6fc9'],[1478,760,18,'#0e9bb3'],[330,952,16,'#7c4fd8'],[1140,86,20,'#c92f6f']].forEach(([x,y,r,col])=>{
+      const isl=gSea.append('g');
+      isl.append('ellipse').attr('cx',x).attr('cy',y).attr('rx',r).attr('ry',r*0.62).attr('fill','#241d3f')
+        .attr('stroke',col).attr('stroke-width',1.6).style('filter',`drop-shadow(0 0 8px ${col})`);
+      const m=mtnPaths(x,y-2,2,r*0.5);
+      isl.append('path').attr('d',m.base).attr('fill','#332a55').attr('opacity',.95);
+      isl.append('path').attr('d',m.hl).attr('fill',col).attr('opacity',.55);
+    });
+
+    function galleon(parent,scale,col,rot){
+      const s=parent.append('g').attr('transform',`scale(${scale}) rotate(${rot||0})`);
+      s.append('path').attr('d','M -30 10 Q 0 -14 30 10 Q 0 21 -30 10 Z').attr('fill','#1b1533').attr('stroke',col).attr('stroke-width',2.4);
+      s.append('path').attr('d','M 0 -12 L 0 -40').attr('stroke',col).attr('stroke-width',2);
+      s.append('path').attr('d','M 2 -38 L 22 -26 L 2 -18 Z').attr('fill',col).attr('opacity',.55);
+      s.append('path').attr('d','M -2 -34 L -18 -24 L -2 -16 Z').attr('fill',col).attr('opacity',.35);
+      s.style('filter',`drop-shadow(0 0 7px ${col})`);
+      return s;
+    }
+    [['valeSailA',46,'#0e9bb3',.85,90],['valeSailB',54,'#7c4fd8',.75,-90],['valeSailC',60,'#2f6fc9',.7,0]].forEach(([animName,dur,col,sc,rot])=>{
+      const lane=gSea.append('g').style('animation',anim(`${animName} ${dur}s linear infinite`));
+      const bob=lane.append('g').style('animation',anim('valeShipBob 4s ease-in-out infinite'));
+      galleon(bob,sc,col,rot);
+    });
+
+    const serp=gSea.append('g').attr('transform','translate(1420,540)').style('animation',anim('valeSerpent 5s ease-in-out infinite'));
+    serp.append('path').attr('d','M -70 20 q 22 -34 44 0 q 22 34 44 0 q 22 -34 44 0').attr('fill','none')
+      .attr('stroke','#149e6e').attr('stroke-width',5).attr('stroke-linecap','round')
+      .style('filter','drop-shadow(0 0 10px #149e6e)');
+    serp.append('circle').attr('cx',66).attr('cy',6).attr('r',9).attr('fill','#149e6e').style('filter','drop-shadow(0 0 10px #149e6e)');
+    serp.append('circle').attr('cx',69).attr('cy',4).attr('r',2.2).attr('fill','#03110c');
+
+    const landAll=svg.append('g');
+    landAll.append('path').attr('d',path(all)).attr('fill','#0e9bb3').attr('opacity',.18)
+      .attr('transform','translate(6,8)').attr('filter','url(#valeBlur12)');
+
+    const gLand=svg.append('g');
+    const gTerrain=svg.append('g').attr('pointer-events','none');
+    const gRoads=svg.append('g').attr('pointer-events','none').attr('class','vale-roads');
+    const gMarks=svg.append('g');
+    const gFog=svg.append('g').attr('pointer-events','none');
+    const gLabels=svg.append('g').attr('pointer-events','none');
+    const gDecor=svg.append('g').attr('pointer-events','none');
+
+    groups.forEach(g=>{
+      const d=path(g.feature);
+      gLand.append('path').attr('d',d).attr('fill','url(#valeParch)');
+      g.tint=gLand.append('path').attr('d',d).attr('class','vale-tint').attr('fill',g.reino.hue).attr('opacity',.2);
+      gLand.append('path').attr('d',d).attr('fill','url(#valeGrain)').attr('opacity',.35);
+    });
+    tagged.forEach(t=>gLand.append('path').attr('d',path(t.f)).attr('fill','none')
+      .attr('stroke','#b9a8ff').attr('stroke-width',.8).attr('stroke-dasharray','3 4').attr('opacity',.22));
+    groups.forEach(g=>g.border=gLand.append('path').attr('d',path(g.feature)).attr('fill','none')
+      .attr('class','vale-border')
+      .attr('stroke',g.reino.hue).attr('stroke-width',2.2).attr('opacity',.9)
+      .style('filter',`drop-shadow(0 0 6px ${g.reino.hue})`));
+    gLand.append('path').attr('d',path(all)).attr('fill','none').attr('stroke','#0b0820').attr('stroke-width',5);
+    gLand.append('path').attr('d',path(all)).attr('fill','none').attr('stroke','#9f8bff').attr('stroke-width',1.6).attr('opacity',.75)
+      .style('filter','drop-shadow(0 0 8px #7c4fd8)');
+
+    groups.forEach((g,gi)=>{
+      const rnd=brMulberry32(1000+gi*77);
+      const [[x0,y0],[x1,y1]]=d3.geoBounds(g.feature);
+      const picks=[];let tries=0;const want=12;
+      while(picks.length<want&&tries<900){
+        tries++;
+        const lon=x0+rnd()*(x1-x0),lat=y0+rnd()*(y1-y0);
+        if(!d3.geoContains(g.feature,[lon,lat]))continue;
+        const p=projection([lon,lat]);
+        if(!p)continue;
+        if(picks.some(q=>Math.hypot(q[0]-p[0],q[1]-p[1])<52))continue;
+        picks.push(p);
+      }
+      picks.forEach((p,i)=>{
+        if(i%2===0){
+          const s=15+rnd()*10;
+          const m=mtnPaths(p[0],p[1],3,s);
+          gTerrain.append('path').attr('d',m.base).attr('fill','#332a55').attr('opacity',.9).attr('stroke','#0f0b22').attr('stroke-width',1).attr('filter','url(#valeDrop)');
+          gTerrain.append('path').attr('d',m.sh).attr('fill','#1a1533').attr('opacity',.6);
+          gTerrain.append('path').attr('d',m.hl).attr('fill','#b9a8ff').attr('opacity',.5);
+        }else{
+          const s=11+rnd()*6;
+          const t=treePaths(p[0],p[1],6,s);
+          gTerrain.append('path').attr('d',t.base).attr('fill','#1c4a45').attr('opacity',.85).attr('stroke','#149e6e').attr('stroke-width',.7);
+          gTerrain.append('path').attr('d',t.sh).attr('fill','#0f2b28').attr('opacity',.5);
+        }
+      });
+      g.centroid=path.centroid(g.feature);
+    });
+
+    groups.forEach(g=>{
+      const [cx,cy]=g.centroid;
+      const grp=gMarks.append('g').attr('class','vale-kg').attr('data-id',g.reino.id)
+        .attr('tabindex',0).attr('role','button').attr('aria-label',g.reino.name||'Terra Ignota');
+      grp.append('circle').attr('cx',cx).attr('cy',cy).attr('r',34).attr('class','glow').attr('fill',g.reino.hue).attr('opacity',.25).attr('filter','url(#valeBlur6)');
+      grp.append('circle').attr('cx',cx).attr('cy',cy).attr('r',30).attr('fill','#151030').attr('opacity',.95).attr('filter','url(#valeDrop)');
+      grp.append('circle').attr('class','ring').attr('cx',cx).attr('cy',cy).attr('r',30).attr('fill','none')
+        .attr('stroke',g.reino.hue).attr('stroke-width',5).attr('stroke-linecap','round')
+        .attr('transform',`rotate(-90 ${cx} ${cy})`).style('filter',`drop-shadow(0 0 6px ${g.reino.hue})`);
+      const keep=grp.append('g').attr('class','keep');
+      keep.append('rect').attr('x',cx-15).attr('y',cy-6).attr('width',30).attr('height',17).attr('fill','#e7e1ff');
+      [-15,-7.5,0,7.5].forEach(dx=>keep.append('rect').attr('x',cx+dx).attr('y',cy-12).attr('width',5).attr('height',7).attr('fill','#e7e1ff'));
+      keep.append('rect').attr('class','door').attr('x',cx-3).attr('y',cy+2).attr('width',6).attr('height',9).attr('fill','#151030').attr('opacity',.8);
+      grp.append('g').attr('class','bosses');
+      grp.append('g').attr('class','flag');
+      g.node=grp;
+
+      const fogG=gFog.append('g').attr('class','fogwrap').attr('data-id',g.reino.id);
+      fogG.append('path').attr('d',path(g.feature)).attr('class','fogfill')
+        .attr('fill','url(#valeFog)').attr('filter','url(#valeBlur6)');
+      fogG.append('g').attr('class','lock');
+      g.fog=fogG;
+
+      const lbl=gLabels.append('g');
+      const ox=(g.reino.off&&g.reino.off[0])||0, oy=(g.reino.off&&g.reino.off[1])||0;
+      lbl.append('text').attr('class','lbl').attr('x',cx+ox).attr('y',cy+52+oy).attr('text-anchor','middle')
+        .attr('font-family',"'IM Fell English',serif").attr('font-style','italic').attr('font-size',22)
+        .attr('fill','#e9e4f5').attr('stroke','#0b0820').attr('stroke-width',4).attr('paint-order','stroke')
+        .style('filter',`drop-shadow(0 0 8px ${g.reino.hue})`);
+      lbl.append('text').attr('class','sub').attr('x',cx+ox).attr('y',cy+72+oy).attr('text-anchor','middle')
+        .attr('font-family',"'Cinzel',serif").attr('font-size',12).attr('letter-spacing',1).attr('fill','#a99ecb')
+        .attr('stroke','#0b0820').attr('stroke-width',3).attr('paint-order','stroke');
+      g.label=lbl;
+    });
+
+    const t=gDecor.append('g').attr('transform','translate(800,62)');
+    t.append('path').attr('d','M -330 -34 L 330 -34 L 390 0 L 330 34 L -330 34 L -390 0 Z').attr('fill','#151030').attr('stroke','#7c4fd8').attr('stroke-width',2).style('filter','drop-shadow(0 0 12px #7c4fd8)');
+    [-1,1].forEach(s=>t.append('path').attr('d',`M ${s*410} -20 L ${s*410} -62 L ${s*386} -72 L ${s*362} -62 L ${s*362} -20 L ${s*386} -6 Z`).attr('fill','#151030').attr('stroke','#0e9bb3').attr('stroke-width',2).style('filter','drop-shadow(0 0 8px #0e9bb3)'));
+    t.append('text').attr('y',10).attr('text-anchor','middle').attr('font-family',"'Cinzel',serif").attr('font-weight',700).attr('font-size',32).attr('letter-spacing',4).attr('fill','#efe9ff').style('filter','drop-shadow(0 0 10px #7c4fd8)').text('O VALE DOS NOMEADOS');
+
+    const c=gDecor.append('g').attr('transform','translate(1450,860)').attr('opacity',.95);
+    c.append('circle').attr('r',52).attr('fill','#151030').attr('opacity',.8);
+    c.append('circle').attr('r',52).attr('fill','none').attr('stroke','#0e9bb3').attr('stroke-width',2.5).style('filter','drop-shadow(0 0 8px #0e9bb3)');
+    c.append('path').attr('d',compassStar()).attr('fill','#b9a8ff').style('filter','drop-shadow(0 0 6px #7c4fd8)');
+    c.append('text').attr('y',-62).attr('text-anchor','middle').attr('font-family',"'Cinzel',serif").attr('font-size',16).attr('fill','#e9e4f5').text('N');
+
+    const A=[-60,-15],Bp=[-55,-15];
+    const km=d3.geoDistance(A,Bp)*6371;
+    const px=Math.hypot(...projection(Bp).map((v,i)=>v-projection(A)[i]));
+    const leguaKm=6.6,targetLeguas=300;
+    const barPx=px*(targetLeguas*leguaKm)/km;
+    const sc=gDecor.append('g').attr('transform','translate(140,930)');
+    sc.append('line').attr('x2',barPx).attr('stroke','#b9a8ff').attr('stroke-width',3);
+    [0,barPx/2,barPx].forEach(x=>sc.append('line').attr('x1',x).attr('x2',x).attr('y1',-6).attr('y2',6).attr('stroke','#b9a8ff').attr('stroke-width',3));
+    sc.append('text').attr('x',barPx/2).attr('y',24).attr('text-anchor','middle').attr('font-family',"'IM Fell English',serif").attr('font-size',15).attr('fill','#b9a8ff').text(`${targetLeguas} léguas reais`);
+
+    const lg=gDecor.append('g').attr('transform','translate(60,150)');
+    lg.append('rect').attr('x',-14).attr('y',-32).attr('width',250).attr('height',162).attr('rx',10).attr('fill','#150f28').attr('stroke','#7c4fd8').attr('stroke-width',1.6).attr('opacity',.95).style('filter','drop-shadow(0 0 10px #7c4fd8)');
+    lg.append('rect').attr('x',-8).attr('y',-26).attr('width',238).attr('height',150).attr('rx',8).attr('fill','none').attr('stroke','#3a2f5c').attr('stroke-width',1);
+    lg.append('text').attr('y',-8).attr('x',105).attr('text-anchor','middle').attr('font-family',"'Cinzel',serif").attr('font-size',15).attr('font-weight',700).attr('fill','#e9e4f5').text('LEGENDA');
+    const rows=[['#6b6153','Enevoado — reino bloqueado'],['#0e9bb3','Descoberto — em progresso'],['#c92f6f','Dominado — 100% maduro']];
+    rows.forEach(([col,txt],i)=>{
+      lg.append('circle').attr('cx',8).attr('cy',22+i*28).attr('r',8).attr('fill',col).style('filter',`drop-shadow(0 0 6px ${col})`);
+      lg.append('text').attr('x',26).attr('y',27+i*28).attr('font-family',"'IM Fell English',serif").attr('font-size',14).attr('fill','#c9c2e0').text(txt);
+    });
+    lg.append('circle').attr('cx',8).attr('cy',106).attr('r',5).attr('fill','#c99a3f').style('filter','drop-shadow(0 0 6px #c99a3f)');
+    lg.append('text').attr('x',26).attr('y',110).attr('font-family',"'IM Fell English',serif").attr('font-size',13).attr('fill','#c9c2e0').text('Marcador = chefão (subtópico)');
+
+    const gRain=svg.append('g').attr('pointer-events','none').attr('opacity',.75);
+    const rr=brMulberry32(99);
+    for(let i=0;i<120;i++){
+      const x=rr()*1700-50,y=rr()*1000-200,len=16+rr()*18;
+      gRain.append('line').attr('x1',x).attr('y1',y).attr('x2',x-6).attr('y2',y+len)
+        .attr('stroke',i%9===0?'#0e9bb3':'#9fb4ff').attr('stroke-width',1.1).attr('opacity',.3+rr()*.4)
+        .style('animation',anim(`valeRainFall ${(1.1+rr()*1.3).toFixed(2)}s linear ${(rr()*2.5).toFixed(2)}s infinite`));
+    }
+    svg.append('rect').attr('width',W).attr('height',H).attr('fill','#cfd8ff').attr('pointer-events','none')
+      .style('animation',anim('valeLightning 14s linear infinite')).attr('opacity',0);
+
+    svg.append('rect').attr('width',W).attr('height',H).attr('fill','url(#valeVig)').attr('pointer-events','none');
+    const fr=svg.append('g').attr('pointer-events','none');
+    fr.append('rect').attr('x',14).attr('y',14).attr('width',W-28).attr('height',H-28).attr('fill','none').attr('stroke','#0b0820').attr('stroke-width',6);
+    fr.append('rect').attr('x',24).attr('y',24).attr('width',W-48).attr('height',H-48).attr('fill','none').attr('stroke','#7c4fd8').attr('stroke-width',2).attr('opacity',.8).style('filter','drop-shadow(0 0 10px #7c4fd8)');
+    [[24,24],[W-24,24],[24,H-24],[W-24,H-24]].forEach(([x,y])=>fr.append('circle').attr('cx',x).attr('cy',y).attr('r',10).attr('fill','#0e9bb3').style('filter','drop-shadow(0 0 8px #0e9bb3)'));
+    [[800,24],[800,H-24],[24,500],[W-24,500]].forEach(([x,y])=>fr.append('rect').attr('x',x-6).attr('y',y-6).attr('width',12).attr('height',12).attr('fill','#7c4fd8').attr('transform',`rotate(45 ${x} ${y})`));
+
+    wireInteractions();
+    render();
+  }
+
+  function wireInteractions(){
+    const tip=document.getElementById('vale-tip');
+    BR.groups.forEach(g=>{
+      const open=()=>{
+        const r=g.reino,st=r.st,claimed=!!r.kingdom;
+        tip.style.display='block';
+        tip.style.left=(g.centroid[0]/W*100)+'%';
+        tip.style.top=(g.centroid[1]/H*100)+'%';
+        tip.innerHTML=`<div style="font-family:'Cinzel',serif;font-size:15px;font-weight:700;margin-bottom:6px">${claimed?r.name:'Terra Ignota'}</div>
+          <div style="font-size:14px;line-height:1.5">${claimed?'':'Território ainda sem reino — crie um reino no Mapa dos Reinos pra reivindicar esta terra.<br/>'}
+          ${claimed?`Domínio: ${st.dominio}%<br/>Chefões: ${st.defeated}/${st.totalChefoes}<br/>Retenção: ${st.retencao===null?'—':st.retencao+'%'}<br/>Cards maduros: ${st.matured}/${st.total}<br/>`:''}
+          Estados: ${r.states.join(' · ')}</div>`;
+        const wrapH=document.getElementById('vale-mapwrap').clientHeight;
+        const topPx=g.centroid[1]/H*wrapH;
+        tip.style.transform=(topPx-tip.offsetHeight*1.15<4)?'translate(-50%,18%)':'translate(-50%,-115%)';
+      };
+      g.node.on('mouseenter',open).on('mouseleave',()=>{tip.style.display='none';}).on('click',()=>openKingdomModal(g));
+      g.node.node().addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openKingdomModal(g);}});
+    });
+  }
+
+  function openKingdomModal(g){
+    const r=g.reino,st=r.st,claimed=!!r.kingdom;
+    const bt=st.totalChefoes,bd=st.defeated;
+    const bossesHtml=bt>0?Array.from({length:bt},(_,i)=>`
+      <div style="display:flex;align-items:center;gap:8px;font-size:14px">
+        <span style="width:10px;height:10px;border-radius:50%;background:${i<bd?r.hue:'#3b3358'};display:inline-block;box-shadow:${i<bd?`0 0 8px ${r.hue}`:'none'}"></span>
+        <span>Chefão ${i+1}</span>
+      </div>`).join(''):`<div style="opacity:.6;font-size:13px">Nenhum chefão criado neste reino ainda.</div>`;
+    const statusLabel=!claimed?'Terra Ignota':st.state==='fog'?'Enevoado':st.state==='dominado'?'Dominado':'Descoberto';
+    const actions=claimed?`
+        <button class="btn" onclick="valeManageKingdom('${r.kingdom.id}')"><i class="fa fa-list"></i> Gerenciar chefões</button>
+        ${st.total>0?`<button class="btn btn-primary" onclick="valeGotoFlashcards('${r.kingdom.id}')">Ver flashcards →</button>`:''}
+        <button class="btn btn-danger" onclick="valeDeleteKingdom('${r.kingdom.id}')" title="Excluir reino"><i class="fa fa-trash"></i></button>`
+      :`<button class="btn btn-primary" onclick="valeCreateKingdomHere(${r.zoneIdx})"><i class="fa fa-plus"></i> Criar reino aqui</button>`;
+    openModal(claimed?((r.kingdom.icon||'🏰')+' '+r.name):'🌫️ Terra Ignota',`
+      <div style="font-family:'IM Fell English',serif">
+        <div style="font-size:13px;opacity:.75;margin-bottom:14px">${statusLabel}${claimed?` · ${st.dominio}% de domínio`:''} · ${r.states.join(' · ')}</div>
+        ${claimed?`<div style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:1px;margin-bottom:8px;opacity:.85">CHEFÕES DO REINO</div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px">${bossesHtml}</div>`:''}
+        <div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap">${actions}</div>
+      </div>`);
+  }
+
+  // Recalcula do zero quais reinos ocupam quais zonas (cobre criação/exclusão de reino
+  // desde o último render, não só mudança de progresso) sem tocar na geometria já construída.
+  function syncData(){
+    const reinos=buildReinos();
+    BR.groups.forEach((g,i)=>{g.reino=reinos[i];});
+  }
+
+  function render(){
+    const path=BR.path;
+    BR.groups.forEach(g=>{
+      const r=g.reino,st=r.st,claimed=!!r.kingdom,[cx,cy]=g.centroid;
+      const C=2*Math.PI*30,filled=C*st.dominio/100;
+
+      g.node.attr('data-id',r.id).attr('aria-label',r.name||'Terra Ignota');
+      g.tint.attr('fill',st.state==='fog'?'#6b6153':r.hue)
+        .attr('opacity',st.state==='fog'?.16:st.state==='dominado'?.3:.22);
+      g.border.attr('stroke',st.state==='fog'?'#4a4270':r.hue)
+        .style('filter',st.state==='fog'?'none':`drop-shadow(0 0 6px ${r.hue})`);
+
+      g.node.select('.ring').attr('stroke',st.state==='fog'?'#4a4270':r.hue)
+        .style('filter',st.state==='fog'?'none':`drop-shadow(0 0 7px ${r.hue})`)
+        .attr('stroke-dasharray',`${filled.toFixed(1)} ${C.toFixed(1)}`);
+      g.node.select('.glow').attr('opacity',st.state==='fog'?.05:st.state==='dominado'?.45:.25)
+        .style('animation',st.state==='dominado'?anim('valeHaloPulse 2.6s ease-in-out infinite'):null);
+      g.node.selectAll('.keep rect').filter(function(){return !this.classList.contains('door');})
+        .attr('fill',st.state==='fog'?'#5b5470':'#e7e1ff');
+
+      const bosses=g.node.select('.bosses');bosses.selectAll('*').remove();
+      if(st.state!=='fog'&&st.totalChefoes>0){
+        const bt=st.totalChefoes,bd=st.defeated;
+        for(let i=0;i<bt;i++){
+          const a=i/bt*Math.PI*2-Math.PI/2;
+          bosses.append('circle').attr('cx',cx+Math.cos(a)*42).attr('cy',cy+Math.sin(a)*42).attr('r',6)
+            .attr('fill',i<bd?r.hue:'#3b3358').attr('stroke','#0b0820').attr('stroke-width',1)
+            .style('filter',i<bd?`drop-shadow(0 0 6px ${r.hue})`:'none');
+        }
+      }
+
+      const flag=g.node.select('.flag');flag.selectAll('*').remove();
+      if(st.state==='dominado'){
+        flag.append('rect').attr('x',cx+8).attr('y',cy-42).attr('width',3).attr('height',26).attr('fill','#e7e1ff');
+        flag.append('path').attr('d',`M ${cx+11} ${cy-40} L ${cx+30} ${cy-33} L ${cx+11} ${cy-26} Z`).attr('fill',r.hue)
+          .style('filter',`drop-shadow(0 0 8px ${r.hue})`)
+          .style('animation',anim('valeHaloPulse 2.4s ease-in-out infinite'));
+      }
+
+      g.fog.select('.fogfill')
+        .attr('opacity',st.state==='fog'?.82:st.state==='dominado'?0:.4*(1-st.dominio/100))
+        .style('animation',st.state==='fog'?anim('valeFogDrift 7s ease-in-out infinite'):null);
+      const lock=g.fog.select('.lock');lock.selectAll('*').remove();
+      if(st.state==='fog'){
+        lock.append('rect').attr('x',cx-11).attr('y',cy-4).attr('width',22).attr('height',17).attr('rx',2).attr('fill','#b9a8ff').style('filter','drop-shadow(0 0 6px #7c4fd8)');
+        lock.append('path').attr('d',`M ${cx-6} ${cy-4} v -5 a 6 6 0 0 1 12 0 v 5`).attr('fill','none').attr('stroke','#b9a8ff').attr('stroke-width',3);
+      }
+
+      const labelTxt=claimed?(r.name||'???'):'???';
+      const subTxt=!claimed?'TERRA IGNOTA':(st.state==='fog'?'ENEVOADO':`${st.dominio}% DE DOMÍNIO`);
+      g.label.select('.lbl').text(labelTxt)
+        .attr('fill',st.state==='fog'?'#8a82a8':'#e9e4f5')
+        .style('filter',st.state==='fog'?'none':`drop-shadow(0 0 8px ${r.hue})`);
+      g.label.select('.sub').text(subTxt);
+    });
+
+    const gRoads=d3.select('.vale-roads');gRoads.selectAll('*').remove();
+    const openGroups=BR.groups.filter(g=>g.reino.st.state!=='fog').sort((a,b)=>b.reino.st.dominio-a.reino.st.dominio);
+    openGroups.slice(1).forEach((g,i)=>{
+      const p=openGroups[i].centroid,q=g.centroid;
+      const mx=(p[0]+q[0])/2+(i%2?-35:35),my=(p[1]+q[1])/2+(i%2?30:-30);
+      gRoads.append('path').attr('d',`M ${p[0]} ${p[1]} Q ${mx} ${my} ${q[0]} ${q[1]}`)
+        .attr('fill','none').attr('stroke','#b9a8ff').attr('stroke-width',2.5)
+        .attr('stroke-dasharray','2 10').attr('stroke-linecap','round').attr('opacity',.55)
+        .style('filter','drop-shadow(0 0 5px #7c4fd8)');
+    });
+
+    const dom=db.kingdoms.filter(k=>valeKingdomStats(k).state==='dominado').length;
+    const illum=db.kingdoms.length?Math.round(db.kingdoms.reduce((s,k)=>s+valeKingdomStats(k).dominio,0)/db.kingdoms.length):0;
+    const homeless=db.kingdoms.filter(k=>typeof k.mapZone!=='number').length;
+    let covText=`${dom} de ${db.kingdoms.length} reinos dominados · ${illum}% do Vale iluminado`;
+    if(homeless>0)covText+=` · ${homeless} reino(s) sem território neste mapa`;
+    const covEl=document.getElementById('vale-coverage');
+    if(covEl)covEl.textContent=covText;
+  }
+
+  window.renderValeMap=function(){
+    if(!document.getElementById('vale-map'))return;
+    if(BR.building)return;
+    if(!BR.built){
+      BR.building=true;
+      build().then(()=>{BR.built=true;BR.building=false;}).catch(err=>{
+        BR.building=false;
+        const covEl=document.getElementById('vale-coverage');
+        if(covEl)covEl.textContent='Não foi possível carregar o mapa do Brasil agora. Verifique sua internet e tente de novo.';
+        console.error('Vale map build failed:',err);
+      });
+    }else{
+      syncData();
+      render();
+    }
+  };
+})();
 
 // ===== KINGDOM =====
 function openKingdom(k){
@@ -3220,7 +3882,7 @@ function globalSearch(q){
     (db.topics[k.id]||[]).forEach(t=>{
       (t.subtopics||[]).forEach(s=>{
         if((s.name||'').toLowerCase().includes(q)){
-          results.push({icon:k.icon||'🏰',title:s.name,sub:`${k.name} · ${t.name}`,typeLabel:'Assunto',action:()=>{closeModal();showScreen('map');goToSubtopic(s.id);}});
+          results.push({icon:k.icon||'🏰',title:s.name,sub:`${k.name} · ${t.name}`,typeLabel:'Assunto',action:()=>{closeModal();goToSubtopic(s.id);}});
         }
       });
     });
@@ -4829,6 +5491,7 @@ function renderRedacoesScreen(){
   rdInit();rdRenderTopics();rdRenderMain();
 }
 let fcSelectedMb=null;   // chefão selecionado {id, name, topic, kingdom, kColor, icon}
+let fcFilterKingdom=null; // id de reino opcional pra filtrar a tela inicial (setado pelo Mapa do Vale)
 let fcMode='grid';       // 'grid' | 'study' | 'timeline'
 let fcRevFilter='all';   // 'all' | 'due' | '7' | '14' | '21' | '41'
 let fcStudyIdx=0;
@@ -5023,11 +5686,17 @@ function renderFCMain(){
         const cards=getAllFCForTopic(t.id);
         const due=cards.filter(c=>fcStatus(c)==='due').length;
         const novo=cards.filter(c=>fcStatus(c)==='new').length;
-        if(cards.length>0)byBoss[t.id]={name:t.name,kingdom:k.name,kColor:k.color,kIcon:k.icon||'🏰',due,novo,total:cards.length,topicId:t.id};
+        if(cards.length>0)byBoss[t.id]={name:t.name,kingdom:k.name,kingdomId:k.id,kColor:k.color,kIcon:k.icon||'🏰',due,novo,total:cards.length,topicId:t.id};
       });
     });
-    const urgentes=Object.values(byBoss).filter(b=>b.due>0).sort((a,b)=>b.due-a.due).slice(0,5);
-    const todosChefoes=Object.values(byBoss).sort((a,b)=>a.kingdom.localeCompare(b.kingdom)||a.name.localeCompare(b.name));
+    const filterKingdom=fcFilterKingdom?db.kingdoms.find(k=>k.id===fcFilterKingdom):null;
+    if(fcFilterKingdom&&!filterKingdom)fcFilterKingdom=null; // reino filtrado foi removido
+    let urgentes=Object.values(byBoss).filter(b=>b.due>0).sort((a,b)=>b.due-a.due).slice(0,5);
+    let todosChefoes=Object.values(byBoss).sort((a,b)=>a.kingdom.localeCompare(b.kingdom)||a.name.localeCompare(b.name));
+    if(filterKingdom){
+      urgentes=urgentes.filter(b=>b.kingdomId===filterKingdom.id);
+      todosChefoes=todosChefoes.filter(b=>b.kingdomId===filterKingdom.id);
+    }
 
     el.innerHTML=`
       <div style="padding:4px 0">
@@ -5036,6 +5705,12 @@ function renderFCMain(){
           <div style="font-size:20px;font-weight:900;color:var(--text)">🃏 Seus Flashcards</div>
           <div style="font-size:12px;color:var(--muted);margin-top:4px">${total} cards no total — selecione um chefão para estudar ou criar cards</div>
         </div>
+        ${filterKingdom?`
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;background:${filterKingdom.color}14;border:1.5px solid ${filterKingdom.color}40;border-radius:12px;padding:8px 14px">
+          <span style="font-size:16px">${filterKingdom.icon||'🏰'}</span>
+          <span style="font-size:12px;font-weight:800;color:${filterKingdom.color};flex:1">Filtrado pelo reino: ${filterKingdom.name}</span>
+          <button class="btn btn-xs" onclick="fcFilterKingdom=null;renderFCMain();" style="font-size:11px">✕ Limpar filtro</button>
+        </div>`:''}
 
         <!-- Stats compactas -->
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px">
@@ -6075,7 +6750,7 @@ function removeRevFromPlan(subId,revIdx,ds){
 
 // ===== BIND STATIC HTML EVENTS (module scripts are isolated from onclick) =====
 function bindStaticEvents(){
-  document.getElementById('nav-map')?.addEventListener('click',()=>showScreen('map'));
+  document.getElementById('nav-vale')?.addEventListener('click',()=>showScreen('vale'));
   document.getElementById('nav-revisions')?.addEventListener('click',()=>showScreen('revisions'));
   document.getElementById('nav-dashboard')?.addEventListener('click',()=>showScreen('dashboard'));
   document.getElementById('nav-editais')?.addEventListener('click',()=>showScreen('editais'));
