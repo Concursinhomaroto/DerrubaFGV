@@ -1112,6 +1112,7 @@ nav{
             <button class="chart-tab" id="ct-month" onclick="setChartTab('month',this)">Mensal</button>
           </div>
           <button class="btn btn-xs btn-ghost" onclick="exportStudyCSV()" title="Baixar histórico de estudos em CSV"><i class="fa fa-download"></i> CSV</button>
+          <button class="btn btn-xs btn-ghost" onclick="exportHistoryPDF()" title="Gerar PDF do histórico de estudos e desempenho"><i class="fa fa-file-pdf"></i> PDF</button>
         </div>
       </div>
       <div class="chart-svg-wrap" id="study-chart-wrap"></div>
@@ -1151,6 +1152,19 @@ nav{
   <div class="section-card">
     <div class="sec-title" style="margin-bottom:12px">🏅 RANKING DE REINOS</div>
     <div id="kingdom-ranking"></div>
+  </div>
+
+  <!-- Analytics avançado -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px" class="dash-two-col">
+    <div class="section-card" style="margin-bottom:0">
+      <div class="sec-title" style="margin-bottom:10px">📈 APROVEITAMENTO NOS FLASHCARDS</div>
+      <div id="fc-trend-chart"></div>
+      <div id="fc-trend-total" style="text-align:center;font-size:10px;color:var(--muted);margin-top:6px;font-weight:700"></div>
+    </div>
+    <div class="section-card" style="margin-bottom:0">
+      <div class="sec-title" style="margin-bottom:10px">⏱️ TEMPO MÉDIO POR ASSUNTO</div>
+      <div id="avg-time-list"></div>
+    </div>
   </div>
 
   <!-- Frase motivacional -->
@@ -1366,30 +1380,55 @@ nav{
 <div id="toast"></div>
 
 <!-- CRONÔMETRO FLUTUANTE -->
-<div id="float-timer" style="display:none;position:fixed;bottom:80px;right:20px;z-index:500;background:linear-gradient(135deg,#4c1d95,#6d28d9);border-radius:20px;padding:14px 18px;box-shadow:0 8px 32px rgba(76,29,149,0.4);min-width:220px">
+<div id="float-timer" style="display:none;position:fixed;bottom:80px;right:20px;z-index:500;background:linear-gradient(135deg,#4c1d95,#6d28d9);border-radius:20px;padding:14px 18px;box-shadow:0 8px 32px rgba(76,29,149,0.4);min-width:230px">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
     <div style="font-size:10px;font-weight:900;color:rgba(255,255,255,0.7);letter-spacing:1px;text-transform:uppercase">⏱️ Sessão de Estudo</div>
     <button onclick="floatTimerClose()" style="background:rgba(255,255,255,0.15);border:none;color:#fff;cursor:pointer;border-radius:50%;width:22px;height:22px;font-size:12px;display:flex;align-items:center;justify-content:center">✕</button>
   </div>
-  <div id="ft-display" style="font-size:36px;font-weight:900;color:#fff;text-align:center;font-variant-numeric:tabular-nums;letter-spacing:2px;margin-bottom:8px">00:00:00</div>
-  <div style="margin-bottom:8px">
-    <select id="ft-tipo" style="width:100%;background:#4c1d95;border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;outline:none">
-      <option value="geral" style="background:#4c1d95;color:#fff">📚 Revisão Geral</option>
-      <option value="questoes" style="background:#4c1d95;color:#fff">✏️ Questões</option>
-      <option value="leitura" style="background:#4c1d95;color:#fff">📖 Leitura</option>
-      <option value="resumo" style="background:#4c1d95;color:#fff">📝 Resumos</option>
-      <option value="simulado" style="background:#4c1d95;color:#fff">🎯 Simulado</option>
-    </select>
+
+  <div style="display:flex;gap:4px;margin-bottom:10px;background:rgba(0,0,0,0.15);border-radius:10px;padding:3px">
+    <button id="ft-tab-livre" onclick="ftSetMode('livre')" style="flex:1;background:rgba(255,255,255,0.9);color:#4c1d95;border:none;border-radius:8px;padding:6px;font-size:11px;font-weight:900;cursor:pointer;transition:all .15s">⏱️ Livre</button>
+    <button id="ft-tab-pomodoro" onclick="ftSetMode('pomodoro')" style="flex:1;background:none;color:rgba(255,255,255,0.7);border:none;border-radius:8px;padding:6px;font-size:11px;font-weight:900;cursor:pointer;transition:all .15s">🍅 Foco</button>
   </div>
-  <div style="margin-bottom:10px">
-    <select id="ft-reino" style="width:100%;background:#4c1d95;border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;outline:none"></select>
+
+  <!-- ===== MODO LIVRE ===== -->
+  <div id="ft-mode-livre">
+    <div id="ft-display" style="font-size:36px;font-weight:900;color:#fff;text-align:center;font-variant-numeric:tabular-nums;letter-spacing:2px;margin-bottom:8px">00:00:00</div>
+    <div style="margin-bottom:8px">
+      <select id="ft-tipo" style="width:100%;background:#4c1d95;border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;outline:none">
+        <option value="geral" style="background:#4c1d95;color:#fff">📚 Revisão Geral</option>
+        <option value="questoes" style="background:#4c1d95;color:#fff">✏️ Questões</option>
+        <option value="leitura" style="background:#4c1d95;color:#fff">📖 Leitura</option>
+        <option value="resumo" style="background:#4c1d95;color:#fff">📝 Resumos</option>
+        <option value="simulado" style="background:#4c1d95;color:#fff">🎯 Simulado</option>
+      </select>
+    </div>
+    <div style="margin-bottom:10px">
+      <select id="ft-reino" style="width:100%;background:#4c1d95;border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;outline:none"></select>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button id="ft-btn-play" onclick="floatTimerToggle()" style="flex:1;background:rgba(255,255,255,0.9);color:#4c1d95;border:none;border-radius:12px;padding:9px;font-size:13px;font-weight:900;cursor:pointer">▶ Iniciar</button>
+      <button onclick="floatTimerSave()" style="background:linear-gradient(135deg,#fb923c,#f97316);color:#fff;border:none;border-radius:12px;padding:9px 12px;font-size:13px;font-weight:900;cursor:pointer" title="Salvar">💾</button>
+      <button onclick="floatTimerReset()" style="background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.7);border:none;border-radius:12px;padding:9px 12px;font-size:13px;cursor:pointer" title="Resetar">↺</button>
+    </div>
+    <div id="ft-status" style="text-align:center;font-size:9px;color:rgba(255,255,255,0.5);margin-top:6px;font-weight:600"></div>
   </div>
-  <div style="display:flex;gap:6px">
-    <button id="ft-btn-play" onclick="floatTimerToggle()" style="flex:1;background:rgba(255,255,255,0.9);color:#4c1d95;border:none;border-radius:12px;padding:9px;font-size:13px;font-weight:900;cursor:pointer">▶ Iniciar</button>
-    <button onclick="floatTimerSave()" style="background:linear-gradient(135deg,#fb923c,#f97316);color:#fff;border:none;border-radius:12px;padding:9px 12px;font-size:13px;font-weight:900;cursor:pointer" title="Salvar">💾</button>
-    <button onclick="floatTimerReset()" style="background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.7);border:none;border-radius:12px;padding:9px 12px;font-size:13px;cursor:pointer" title="Resetar">↺</button>
+
+  <!-- ===== MODO POMODORO ===== -->
+  <div id="ft-mode-pomodoro" style="display:none">
+    <div id="pmd-phase-label" style="text-align:center;font-size:11px;font-weight:900;color:#fcd34d;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px">🎯 Foco</div>
+    <div id="pmd-display" style="font-size:36px;font-weight:900;color:#fff;text-align:center;font-variant-numeric:tabular-nums;letter-spacing:2px;margin-bottom:6px">25:00</div>
+    <div id="pmd-cycles" style="text-align:center;font-size:10px;color:rgba(255,255,255,0.6);font-weight:700;margin-bottom:10px">Ciclo 1 · 🍅</div>
+    <div style="margin-bottom:10px">
+      <select id="pmd-reino" style="width:100%;background:#4c1d95;border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;outline:none"></select>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button id="pmd-btn-play" onclick="pmdToggle()" style="flex:1;background:rgba(255,255,255,0.9);color:#4c1d95;border:none;border-radius:12px;padding:9px;font-size:13px;font-weight:900;cursor:pointer">▶ Iniciar</button>
+      <button onclick="pmdSkip()" style="background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.7);border:none;border-radius:12px;padding:9px 12px;font-size:13px;cursor:pointer" title="Pular para próxima etapa">⏭</button>
+      <button onclick="pmdReset()" style="background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.7);border:none;border-radius:12px;padding:9px 12px;font-size:13px;cursor:pointer" title="Resetar">↺</button>
+    </div>
+    <div id="pmd-status" style="text-align:center;font-size:9px;color:rgba(255,255,255,0.5);margin-top:6px;font-weight:600">25min foco · 5min pausa · pausa longa a cada 4</div>
   </div>
-  <div id="ft-status" style="text-align:center;font-size:9px;color:rgba(255,255,255,0.5);margin-top:6px;font-weight:600"></div>
 </div>
 
 
@@ -1501,6 +1540,7 @@ function applyDefaults(){
   if(!db.redacoes)db.redacoes={topics:{},textos:{}};
   if(!db.repertorio)db.repertorio={eixos:[...EIXOS_DEFAULT],temas:{}};
   if(typeof db.dailyGoalMinutes!=='number')db.dailyGoalMinutes=60;
+  if(!db.fcReviewLog)db.fcReviewLog=[];
 
   // Limpar revisões inválidas (date=undefined ou extras além de 4)
   const INTERVALOS_MAX=4;
@@ -2554,6 +2594,88 @@ function globalSearch(q){
 }
 
 // ===== EXPORTAR CSV =====
+// ===== ANALYTICS AVANÇADO =====
+function computeFCAccuracyTrend(){
+  const log=db.fcReviewLog||[];
+  const today=new Date();today.setHours(0,0,0,0);
+  const days=[];
+  for(let i=13;i>=0;i--){
+    const d=new Date(today);d.setDate(d.getDate()-i);
+    const ds=d.toISOString().slice(0,10);
+    const label=i===0?'Hoje':i===1?'Ontem':d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+    const entries=log.filter(e=>e.date===ds);
+    const total=entries.length;
+    const ok=entries.filter(e=>e.ok).length;
+    days.push({label,total,pct:total?Math.round(ok/total*100):null});
+  }
+  return days;
+}
+function renderFCAccuracyTrend(){
+  const wrap=document.getElementById('fc-trend-chart');
+  if(!wrap)return;
+  const days=computeFCAccuracyTrend();
+  const totalReviews=days.reduce((a,d)=>a+d.total,0);
+  const totalEl=document.getElementById('fc-trend-total');
+  if(!totalReviews){
+    wrap.innerHTML=`<div class="empty" style="padding:16px"><p>Revise alguns flashcards pra ver a evolução do seu aproveitamento.</p></div>`;
+    if(totalEl)totalEl.textContent='';
+    return;
+  }
+  const W=Math.max(300,wrap.clientWidth||400),H=110,padL=4,padR=4,padT=14,padB=20;
+  const bw=Math.floor((W-padL-padR)/days.length);
+  const gap=3,barW=bw-gap,chartH=H-padT-padB;
+  let svgBars='',svgLabels='';
+  days.forEach((d,i)=>{
+    const x=padL+i*bw;
+    const hasData=d.pct!==null;
+    const barH=hasData?Math.max(4,Math.round(d.pct/100*chartH)):0;
+    const y=padT+chartH-barH;
+    const color=!hasData?'rgba(0,0,0,0.06)':d.pct>=70?'var(--green)':d.pct>=40?'var(--orange)':'var(--red)';
+    svgBars+=`<rect x="${x+gap/2}" y="${y}" width="${barW}" height="${barH}" rx="3" fill="${color}"
+      onmouseover="document.getElementById('fc-trend-tip').textContent='${d.label}: ${hasData?d.pct+'% ('+d.total+' revisões)':'sem revisões'}'"
+      onmouseout="document.getElementById('fc-trend-tip').textContent=''"
+      style="cursor:default"/>`;
+    svgLabels+=i%2===0?`<text x="${x+bw/2}" y="${H-4}" text-anchor="middle" font-size="8" fill="var(--muted)" font-weight="600">${d.label}</text>`:'';
+  });
+  wrap.innerHTML=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;overflow:visible">
+    <line x1="${padL}" y1="${padT+chartH}" x2="${W-padR}" y2="${padT+chartH}" stroke="var(--border)" stroke-width="1"/>
+    ${svgBars}${svgLabels}
+  </svg>
+  <div id="fc-trend-tip" style="text-align:center;font-size:10px;color:var(--accent);font-weight:800;min-height:14px;margin-top:2px"></div>`;
+  if(totalEl)totalEl.textContent=`${totalReviews} revisões nos últimos 14 dias`;
+}
+function renderAvgTimePerSubject(){
+  const el=document.getElementById('avg-time-list');
+  if(!el)return;
+  const rows=[];
+  db.kingdoms.forEach(k=>{
+    let totalSec=0,count=0;
+    (db.topics[k.id]||[]).forEach(t=>{
+      (t.subtopics||[]).forEach(s=>{
+        const sec=(db.times&&db.times[s.id])||0;
+        if(sec>0){totalSec+=sec;count++;}
+      });
+    });
+    if(count>0)rows.push({name:k.name,icon:k.icon||'🏰',color:k.color||'var(--accent)',avg:Math.round(totalSec/count),count});
+  });
+  if(!rows.length){
+    el.innerHTML=`<div class="empty" style="padding:16px"><p>Estude alguns assuntos pra ver o tempo médio por reino.</p></div>`;
+    return;
+  }
+  rows.sort((a,b)=>b.avg-a.avg);
+  const maxAvg=Math.max(...rows.map(r=>r.avg));
+  el.innerHTML=rows.map(r=>`
+    <div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:var(--text2);margin-bottom:4px">
+        <span>${r.icon} ${r.name}</span>
+        <span style="color:${r.color}">${fmtTime(r.avg)} <span style="color:var(--muted);font-weight:600">(${r.count} assunto${r.count!==1?'s':''})</span></span>
+      </div>
+      <div style="height:6px;background:var(--bg2);border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${maxAvg?Math.round(r.avg/maxAvg*100):0}%;background:${r.color};border-radius:3px;transition:width .5s"></div>
+      </div>
+    </div>`).join('');
+}
+
 function exportStudyCSV(){
   const sessions=db.sessions||{};
   const dates=Object.keys(sessions).sort();
@@ -2567,6 +2689,54 @@ function exportStudyCSV(){
   document.body.appendChild(a);a.click();document.body.removeChild(a);
   URL.revokeObjectURL(url);
   toast('📥 CSV exportado!','var(--green)');
+}
+
+// Gera um PDF sem depender de nenhuma lib externa: monta um relatório
+// e usa o "Imprimir" nativo do navegador (destino "Salvar como PDF"),
+// mantendo o app 100% offline-first sem CDN adicional.
+// Gera um PDF sem depender de nenhuma lib externa: abre uma janela nova e
+// isolada (com seu próprio HTML/CSS mínimo, sem herdar nada do app) e aciona
+// o "Imprimir" nativo do navegador nela — o usuário escolhe "Salvar como PDF"
+// como destino. Mantém o app 100% offline-first, sem CDN adicional.
+function exportHistoryPDF(){
+  const sessions=db.sessions||{};
+  const dates=Object.keys(sessions).sort();
+  const totalMin=Math.round(Object.values(sessions).reduce((a,b)=>a+b,0)/60);
+  const streak=computeStreak();
+  const totalFC=Object.keys(db.flashcards||{}).length;
+  const fcReviews=totalFlashcardReviews();
+  const rows=dates.map(d=>`<tr><td>${d}</td><td>${Math.round(sessions[d]/60)} min</td></tr>`).join('');
+  const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Relatório — Vale dos Nomeados</title>
+<style>
+  body{font-family:Arial,Helvetica,sans-serif;padding:28px;color:#111;max-width:700px;margin:0 auto;}
+  h1{font-size:20px;margin-bottom:4px;}
+  .meta{font-size:11px;color:#666;margin-bottom:22px;}
+  .stats{display:flex;gap:14px;margin-bottom:26px;flex-wrap:wrap;}
+  .stat{border:1px solid #ccc;border-radius:8px;padding:10px 16px;}
+  .stat b{font-size:16px;display:block;}
+  h2{font-size:14px;margin-bottom:8px;}
+  table{width:100%;border-collapse:collapse;font-size:12px;}
+  th{text-align:left;border-bottom:2px solid #333;padding:4px 0;}
+  td{padding:4px 0;border-bottom:1px solid #eee;}
+</style></head><body>
+  <h1>🐉 Vale dos Nomeados — Relatório de Estudos</h1>
+  <div class="meta">Gerado em ${new Date().toLocaleString('pt-BR')}</div>
+  <div class="stats">
+    <div class="stat"><b>${totalMin} min</b>Tempo total estudado</div>
+    <div class="stat"><b>${streak}</b>Dias seguidos (streak)</div>
+    <div class="stat"><b>${totalFC}</b>Flashcards criados</div>
+    <div class="stat"><b>${fcReviews}</b>Revisões de flashcards</div>
+  </div>
+  <h2>Histórico diário de estudos</h2>
+  <table>
+    <thead><tr><th>Data</th><th>Minutos estudados</th></tr></thead>
+    <tbody>${rows||'<tr><td colspan="2" style="color:#999">Nenhum estudo registrado ainda.</td></tr>'}</tbody>
+  </table>
+  <script>window.onload=function(){window.print();};<\/script>
+</body></html>`;
+  const w=window.open('','_blank');
+  if(!w){toast('⚠️ Permita pop-ups pra gerar o PDF.','var(--red)');return;}
+  w.document.open();w.document.write(html);w.document.close();
 }
 
 // ===== REVISIONS =====
@@ -3000,6 +3170,8 @@ function renderDashboard(){
   renderStudyChart();
   renderWeekStudyChart();
   renderBadges(totRevDone);
+  renderFCAccuracyTrend();
+  renderAvgTimePerSubject();
 }
 
 function setMbFilter(id,el){
@@ -4017,6 +4189,56 @@ function getAllFCForTopic(topicId){
   return Object.values(db.flashcards).filter(c=>c.mbId===topicId);
 }
 
+// ===== EXPORTAR / IMPORTAR DECK DE FLASHCARDS =====
+function fcExportDeck(){
+  if(!fcSelectedMb)return;
+  const all=getAllFCForTopic(fcSelectedMb.id);
+  if(!all.length){toast('Nenhum flashcard pra exportar neste chefão.','var(--red)');return;}
+  const deck={
+    formato:'vale-dos-nomeados-deck-v1',
+    chefao:fcSelectedMb.name,
+    exportadoEm:new Date().toISOString(),
+    cards:all.map(c=>({pergunta:c.pergunta,resposta:c.resposta,tags:c.tags||'',dificuldade:c.dificuldade||2}))
+  };
+  const blob=new Blob([JSON.stringify(deck,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`deck-${fcSelectedMb.name.toLowerCase().replace(/[^a-z0-9]+/g,'-')}.json`;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast(`📤 ${all.length} flashcards exportados!`,'var(--green)');
+}
+function fcImportDeckPrompt(){
+  if(!fcSelectedMb){toast('Selecione um chefão primeiro.','var(--red)');return;}
+  document.getElementById('fc-import-input')?.click();
+}
+function fcImportDeckFile(input){
+  const file=input.files&&input.files[0];
+  if(!file||!fcSelectedMb)return;
+  const reader=new FileReader();
+  reader.onload=(e)=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      const cards=Array.isArray(data)?data:data.cards;
+      if(!Array.isArray(cards))throw new Error('formato inválido');
+      fcInit();
+      let count=0;
+      cards.forEach(c=>{
+        if(!c||!c.pergunta||!c.resposta)return;
+        const id='fc_'+genId();
+        db.flashcards[id]={id,mbId:fcSelectedMb.id,pergunta:c.pergunta,resposta:c.resposta,tags:c.tags||'',dificuldade:c.dificuldade||2,acertos:0,erros:0,lastConf:0,criacao:new Date().toISOString(),ultimaRevisao:null};
+        count++;
+      });
+      saveDB();renderFCMbList();renderFCMain();updateFCBadge();
+      toast(`📥 ${count} flashcards importados!`,'var(--green)');
+    }catch(err){
+      toast('⚠️ Arquivo inválido. Use um JSON exportado daqui.','var(--red)');
+    }
+    input.value='';
+  };
+  reader.readAsText(file);
+}
+
 function updateFCBadge(){
   let due=0;
   if(db.flashcards){
@@ -4216,6 +4438,9 @@ function renderFCMain(){
           <button class="fc-mode-btn${fcMode==='study'?' active':''}" onclick="fcSetMode('study')"${!cards.length?' disabled':''}>▶ Estudar</button>
           <button class="fc-mode-btn${fcMode==='timeline'?' active':''}" onclick="fcSetMode('timeline')">📅 Agenda</button>
         </div>
+        <button class="btn btn-ghost btn-sm" onclick="fcExportDeck()" title="Baixar todos os cards deste chefão em JSON"><i class="fa fa-download"></i> Exportar</button>
+        <button class="btn btn-ghost btn-sm" onclick="fcImportDeckPrompt()" title="Importar cards de um arquivo JSON"><i class="fa fa-upload"></i> Importar</button>
+        <input type="file" id="fc-import-input" accept="application/json" style="display:none" onchange="fcImportDeckFile(this)">
         <button class="btn btn-primary btn-sm" onclick="fcOpenForm()"><i class="fa fa-plus"></i> Novo card</button>
       </div>
     </div>
@@ -4399,9 +4624,16 @@ function fcFlipGridCard(id){
   }
 }
 
+function logFCReview(ok){
+  if(!db.fcReviewLog)db.fcReviewLog=[];
+  db.fcReviewLog.push({date:todayStr(),ok:!!ok});
+  if(db.fcReviewLog.length>500)db.fcReviewLog=db.fcReviewLog.slice(-500);
+}
+
 function fcGridMark(cardId,acertou){
   if(!db.flashcards||!db.flashcards[cardId])return;
   const c=db.flashcards[cardId];
+  logFCReview(acertou);
   if(acertou){
     c.acertos=(c.acertos||0)+1;
     c.lastConf=3;
@@ -4543,6 +4775,7 @@ function fcStudyConf(cardId,conf){
   const c=db.flashcards[cardId];
   c.lastConf=conf;
   c.ultimaRevisao=new Date().toISOString();
+  logFCReview(conf>=3);
   if(conf>=3){c.acertos=(c.acertos||0)+1;fcScoreRight++;}
   else{c.erros=(c.erros||0)+1;fcScoreWrong++;}
   const interval=conf>=4?41:conf===3?21:conf===2?14:7;
@@ -4862,6 +5095,115 @@ function floatTimerReset(){
   ftRunning=false;ftStartedAt=null;ftAccumulated=0;ftUpdateDisplay();
   const btn=document.getElementById('ft-btn-play');if(btn)btn.textContent='▶ Iniciar';
   const st=document.getElementById('ft-status');if(st)st.textContent='';
+}
+
+// ===== MODO FOCO (POMODORO) =====
+const PMD_DURATIONS={focus:25*60,break:5*60,longbreak:15*60};
+let pmdPhase='focus',pmdRunning=false,pmdRemaining=PMD_DURATIONS.focus,pmdEndAt=null,pmdCycle=1,pmdRafId=null;
+
+function ftSetMode(mode){
+  const isLivre=mode==='livre';
+  document.getElementById('ft-mode-livre').style.display=isLivre?'block':'none';
+  document.getElementById('ft-mode-pomodoro').style.display=isLivre?'none':'block';
+  const tabLivre=document.getElementById('ft-tab-livre'),tabPomo=document.getElementById('ft-tab-pomodoro');
+  if(tabLivre){tabLivre.style.background=isLivre?'rgba(255,255,255,0.9)':'none';tabLivre.style.color=isLivre?'#4c1d95':'rgba(255,255,255,0.7)';}
+  if(tabPomo){tabPomo.style.background=!isLivre?'rgba(255,255,255,0.9)':'none';tabPomo.style.color=!isLivre?'#4c1d95':'rgba(255,255,255,0.7)';}
+  if(!isLivre){
+    const sel=document.getElementById('pmd-reino');
+    if(sel&&!sel.dataset.filled){
+      sel.innerHTML='<option value="" style="background:#4c1d95;color:#fff">🏰 Todos os Reinos (Geral)</option>';
+      db.kingdoms.forEach(k=>{sel.innerHTML+='<option value="'+k.id+'" style="background:#4c1d95;color:#fff">'+(k.icon||'🏰')+' '+k.name+'</option>';});
+      sel.dataset.filled='1';
+    }
+    pmdUpdateUI();
+  }
+}
+function pmdGetRemaining(){
+  if(!pmdRunning||!pmdEndAt)return pmdRemaining;
+  return Math.max(0,Math.round((pmdEndAt-Date.now())/1000));
+}
+function pmdUpdateDisplay(rem){
+  const el=document.getElementById('pmd-display');
+  if(el)el.textContent=String(Math.floor(rem/60)).padStart(2,'0')+':'+String(rem%60).padStart(2,'0');
+}
+function pmdPhaseLabel(){
+  return pmdPhase==='focus'?'🎯 Foco':pmdPhase==='break'?'☕ Pausa':'🌴 Pausa longa';
+}
+function pmdUpdateUI(){
+  const lbl=document.getElementById('pmd-phase-label');if(lbl)lbl.textContent=pmdPhaseLabel();
+  const cyc=document.getElementById('pmd-cycles');if(cyc)cyc.textContent=`Ciclo ${pmdCycle} · ${'🍅'.repeat(Math.min(pmdCycle,4))}`;
+  pmdUpdateDisplay(pmdGetRemaining());
+}
+function pmdTick(){
+  const rem=pmdGetRemaining();
+  pmdUpdateDisplay(rem);
+  if(rem<=0&&pmdRunning){pmdPhaseComplete();return;}
+  if(pmdRunning)pmdRafId=requestAnimationFrame(pmdTick);
+}
+function pmdToggle(){
+  const btn=document.getElementById('pmd-btn-play');
+  if(pmdRunning){
+    pmdRemaining=pmdGetRemaining();pmdEndAt=null;pmdRunning=false;
+    if(pmdRafId){cancelAnimationFrame(pmdRafId);pmdRafId=null;}
+    if(btn)btn.textContent='▶ Retomar';
+  }else{
+    pmdEndAt=Date.now()+pmdRemaining*1000;pmdRunning=true;
+    if(btn)btn.textContent='⏸ Pausar';
+    pmdRafId=requestAnimationFrame(pmdTick);
+  }
+}
+function pmdPhaseComplete(){
+  if(pmdRafId){cancelAnimationFrame(pmdRafId);pmdRafId=null;}
+  pmdRunning=false;
+  // Se terminou uma fase de FOCO, registra o tempo estudado de verdade (mesma trilha do cronômetro livre)
+  if(pmdPhase==='focus'){
+    const reinoId=document.getElementById('pmd-reino')?.value||'';
+    const reinoName=reinoId?(db.kingdoms.find(k=>k.id===reinoId)?.name||'Geral'):'Geral';
+    const secs=PMD_DURATIONS.focus;
+    logStudySeconds(secs);
+    if(reinoId){if(!db.kingdomSeconds)db.kingdomSeconds={};db.kingdomSeconds[reinoId]=(db.kingdomSeconds[reinoId]||0)+secs;}
+    db.lifetimeSeconds=(db.lifetimeSeconds||0)+secs;
+    if(!db.freeSessions)db.freeSessions=[];
+    db.freeSessions.push({tipo:'pomodoro',reinoId,reinoName,segundos:secs,data:todayStr(),hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})});
+    if(db.freeSessions.length>50)db.freeSessions=db.freeSessions.slice(-50);
+    saveDB();gainXP(Math.floor(secs/60));
+    const sc=document.querySelector('.screen.active')?.id;if(sc==='screen-dashboard')renderDashboard();
+  }
+  pmdNotifyPhaseEnd();
+  if(pmdPhase==='focus'){
+    pmdPhase=(pmdCycle%4===0)?'longbreak':'break';
+  }else{
+    pmdCycle++;
+    pmdPhase='focus';
+  }
+  pmdRemaining=PMD_DURATIONS[pmdPhase];
+  pmdUpdateUI();
+  const st=document.getElementById('pmd-status');
+  if(st)st.textContent=pmdPhase==='focus'?'Hora de focar! Clique em Iniciar.':'Hora da pausa. Descanse um pouco.';
+  const btn=document.getElementById('pmd-btn-play');if(btn)btn.textContent='▶ Iniciar';
+}
+function pmdNotifyPhaseEnd(){
+  toast(pmdPhase==='focus'?'🍅 Foco concluído! Hora da pausa.':'⏰ Pausa concluída! Hora de focar.','var(--accent)');
+  if('Notification' in window&&Notification.permission==='granted'){
+    try{
+      new Notification('🍅 Vale dos Nomeados',{
+        body:pmdPhase==='focus'?'Sessão de foco concluída — hora da pausa!':'Pausa concluída — hora de focar!',
+        icon:'icons/icon192.png'
+      });
+    }catch(e){}
+  }
+}
+function pmdSkip(){
+  if(pmdRafId){cancelAnimationFrame(pmdRafId);pmdRafId=null;}
+  pmdRunning=false;pmdRemaining=0;
+  pmdPhaseComplete();
+}
+function pmdReset(){
+  if(pmdRafId){cancelAnimationFrame(pmdRafId);pmdRafId=null;}
+  pmdRunning=false;pmdPhase='focus';pmdCycle=1;pmdEndAt=null;pmdRemaining=PMD_DURATIONS.focus;
+  pmdUpdateUI();
+  const btn=document.getElementById('pmd-btn-play');if(btn)btn.textContent='▶ Iniciar';
+  const st=document.getElementById('pmd-status');if(st)st.textContent='25min foco · 5min pausa · pausa longa a cada 4';
 }
 // ===== HISTÓRICO DE SESSÕES =====
 let histTab='day';

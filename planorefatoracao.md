@@ -7,8 +7,19 @@
 - ✅ **Fase 0** — sincronização das correções + bug de `EIXOS_DEFAULT` (travava o loading quando o Firebase/CDN falha) corrigido.
 - ✅ **Fase 1** — design tokens, responsivo mobile real (bottom nav, corrigido bug de texto vazando dos botões de navegação), modo claro/escuro persistido, skeleton loading + animações de entrada. Testado em 375px/1440px, claro/escuro, nas 7 telas principais.
 - 🔶 **Fase 2** — parcial (2a feita). Tratamento de erros amigável — toasts para perda de conexão com o Firebase após o carregamento inicial, falha ao salvar (`saveDB`) e erros JS não tratados, com debounce contra spam. **Decisão de escopo**: a modularização ES6 completa prevista originalmente na Fase 2 foi adiada — é uma mudança de alto risco (165 funções globais entrelaçadas, 137 `onclick` inline) sem rede de testes automatizados, então não compensa arriscar sem necessidade concreta. Valor entregue prioriza o que reduz risco real ao usuário (perda silenciosa de dados) sobre reorganização interna do código.
-- 🔶 **Fase 3** — parcial (3a, 3b, 3c feitas). Streak de dias consecutivos (🔥, calculado a partir de `db.sessions`, sem zerar se o dia ainda não acabou), meta diária de estudo configurável com anel de progresso animado, e 6 conquistas iniciais (primeiro estudo, 7/30 dias de streak, 10 revisões feitas, 100 flashcards revisados, 3 reinos com estudo) exibidas como chips que acendem quando desbloqueadas. Testado com dados simulados (streak, % da meta, badges) em claro/escuro/mobile. Ainda faltam da Fase 3: notificações locais, exportar CSV, busca global.
-- ⬜ Fases 4–6 — não iniciadas.
+- ✅ **Fase 3** — completa. Streak de dias consecutivos (🔥), meta diária com anel de progresso, 6 conquistas, notificações locais de revisões atrasadas (Web Notifications API, com botão de opt-in e limite de 1 aviso/dia), exportar CSV do histórico de estudos, e busca global (assuntos, flashcards, temas de repertório, redações) com debounce, acessível pela sidebar.
+- ✅ **Fase 4** — completa. Ícones em 5 resoluções (192/512/512-maskable/180-apple/32-favicon), `manifest.json`, `sw.js` (service worker cache-first pro shell estático, nunca intercepta o Firebase — que usa WebSocket, fora do alcance do `fetch` de qualquer forma). Testado: registro do SW, cache do shell, e recarregamento 100% offline funcionando.
+- ✅ **Fase 5** — completa. Exportar/importar decks de flashcards em JSON (por chefão); modo foco Pomodoro integrado ao cronômetro flutuante (ciclos 25/5min, pausa longa a cada 4, registra tempo de estudo real igual ao cronômetro livre); analytics avançado no Painel do Herói (taxa de acerto de flashcards ao longo do tempo + tempo médio por assunto por reino); exportar PDF do histórico via janela de impressão isolada (sem lib externa, mantendo o app livre de dependências extras).
+- ⬜ Fase 6 — não iniciada (SaaS multiusuário — maior risco, precisa de decisão explícita antes de começar, ver seção da Fase 6 abaixo).
+
+## 6. Nota técnica: bug real encontrado e corrigido na Fase 5
+Ao implementar o export de PDF, um `</script>` literal dentro de uma string JS (usado pra montar o HTML da janela de impressão) quebrou o parser de HTML da página inteira — o navegador encerra a tag `<script>` no primeiro `</script>` que encontra no código-fonte, mesmo dentro de uma string, então isso derrubava a aplicação inteira ao carregar. Corrigido escapando pra `<\/script>`. Fica registrado aqui como lição: qualquer HTML gerado dinamicamente que inclua a palavra "script" precisa desse cuidado.
+
+## 5. Novos arquivos desta fase
+- `manifest.json` — metadados de instalação (nome, ícones, cores, display standalone)
+- `sw.js` — service worker
+- `icons/icon-192.png`, `icons/icon-512.png`, `icons/icon-512-maskable.png`, `icons/apple-touch-icon.png`, `icons/favicon-32.png`
+- Ao subir manualmente pelo GitHub: arraste a **pasta** `icons` inteira (não os arquivos soltos) pro upload, senão os caminhos relativos (`icons/icon-192.png` etc.) quebram.
 
 ## 1. Mapeamento do estado atual
 
