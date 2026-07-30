@@ -1272,7 +1272,7 @@ nav{
       <div id="fc-trend-total" style="text-align:center;font-size:10px;color:var(--muted);margin-top:6px;font-weight:700"></div>
     </div>
     <div class="section-card" style="margin-bottom:0">
-      <div class="sec-title" style="margin-bottom:10px">⏱️ TEMPO MÉDIO POR ASSUNTO</div>
+      <div class="sec-title" style="margin-bottom:10px">⚠️ REINOS QUE PRECISAM DE ATENÇÃO</div>
       <div id="avg-time-list"></div>
     </div>
   </div>
@@ -3288,35 +3288,36 @@ function renderFCAccuracyTrend(){
   <div id="fc-trend-tip" style="text-align:center;font-size:10px;color:var(--accent);font-weight:800;min-height:14px;margin-top:2px"></div>`;
   if(totalEl)totalEl.textContent=`${totalReviews} revisões nos últimos 14 dias`;
 }
-function renderAvgTimePerSubject(){
+// Substitui o antigo "tempo médio por assunto" (número solto, sem ação) por um
+// ranking de reinos que realmente precisam de atenção agora: revisões atrasadas
+// e pior aproveitamento em flashcards, os dois sinais mais acionáveis que já temos.
+function renderKingdomsNeedingAttention(){
   const el=document.getElementById('avg-time-list');
   if(!el)return;
+  const today=todayStr();
   const rows=[];
   db.kingdoms.forEach(k=>{
-    let totalSec=0,count=0;
+    let overdue=0,acertos=0,erros=0;
     (db.topics[k.id]||[]).forEach(t=>{
-      (t.subtopics||[]).forEach(s=>{
-        const sec=(db.times&&db.times[s.id])||0;
-        if(sec>0){totalSec+=sec;count++;}
-      });
+      (t.subtopics||[]).forEach(s=>{overdue+=countOverdue(s,today);});
+      getAllFCForTopic(t.id).forEach(c=>{acertos+=(c.acertos||0);erros+=(c.erros||0);});
     });
-    if(count>0)rows.push({name:k.name,icon:k.icon||'🏰',color:k.color||'var(--accent)',avg:Math.round(totalSec/count),count});
+    const total=acertos+erros;
+    const pct=total>0?Math.round(acertos/total*100):null;
+    if(overdue>0||pct!==null)rows.push({name:k.name,icon:k.icon||'🏰',overdue,pct});
   });
   if(!rows.length){
-    el.innerHTML=`<div class="empty" style="padding:16px"><p>Estude alguns assuntos pra ver o tempo médio por reino.</p></div>`;
+    el.innerHTML=`<div class="empty" style="padding:16px"><p>Nenhum reino com revisões atrasadas ou flashcards revisados ainda.</p></div>`;
     return;
   }
-  rows.sort((a,b)=>b.avg-a.avg);
-  const maxAvg=Math.max(...rows.map(r=>r.avg));
-  el.innerHTML=rows.map(r=>`
-    <div style="margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:var(--text2);margin-bottom:4px">
-        <span>${r.icon} ${r.name}</span>
-        <span style="color:${r.color}">${fmtTime(r.avg)} <span style="color:var(--muted);font-weight:600">(${r.count} assunto${r.count!==1?'s':''})</span></span>
-      </div>
-      <div style="height:6px;background:var(--bg2);border-radius:3px;overflow:hidden">
-        <div style="height:100%;width:${maxAvg?Math.round(r.avg/maxAvg*100):0}%;background:${r.color};border-radius:3px;transition:width .5s"></div>
-      </div>
+  // Prioriza quem tem mais revisões atrasadas; empate desempata pelo pior aproveitamento
+  rows.sort((a,b)=>b.overdue-a.overdue||(a.pct??100)-(b.pct??100));
+  el.innerHTML=rows.slice(0,6).map((r,i)=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:9px 0;${i<rows.length-1?'border-bottom:1px solid var(--border)':''}">
+      <span style="font-size:18px;flex-shrink:0">${r.icon}</span>
+      <div style="flex:1;min-width:0;font-size:12px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.name}</div>
+      ${r.overdue>0?`<span style="background:rgba(220,38,38,0.1);color:var(--red);border-radius:8px;padding:2px 8px;font-size:10px;font-weight:900;flex-shrink:0">🔔 ${r.overdue} atrasada${r.overdue!==1?'s':''}</span>`:''}
+      ${r.pct!==null?`<span style="background:${r.pct>=70?'rgba(22,163,74,0.1)':r.pct>=40?'rgba(234,88,12,0.1)':'rgba(220,38,38,0.1)'};color:${r.pct>=70?'var(--green)':r.pct>=40?'var(--orange)':'var(--red)'};border-radius:8px;padding:2px 8px;font-size:10px;font-weight:900;flex-shrink:0">🎯 ${r.pct}%</span>`:''}
     </div>`).join('');
 }
 
@@ -3847,7 +3848,7 @@ function renderDashboard(){
   renderWeekStudyChart();
   renderBadges();
   renderFCAccuracyTrend();
-  renderAvgTimePerSubject();
+  renderKingdomsNeedingAttention();
 }
 
 function setMbFilter(id,el){
@@ -5018,29 +5019,32 @@ function renderFCMain(){
       });
     });
     const urgentes=Object.values(byBoss).filter(b=>b.due>0).sort((a,b)=>b.due-a.due).slice(0,5);
-    const comNovos=Object.values(byBoss).filter(b=>b.novo>0&&b.due===0).sort((a,b)=>b.novo-a.novo).slice(0,3);
+    const todosChefoes=Object.values(byBoss).sort((a,b)=>a.kingdom.localeCompare(b.kingdom)||a.name.localeCompare(b.name));
 
     el.innerHTML=`
       <div style="padding:4px 0">
         <!-- Título -->
-        <div style="margin-bottom:20px">
+        <div style="margin-bottom:16px">
           <div style="font-size:20px;font-weight:900;color:var(--text)">🃏 Seus Flashcards</div>
           <div style="font-size:12px;color:var(--muted);margin-top:4px">${total} cards no total — selecione um chefão para estudar ou criar cards</div>
         </div>
 
-        <!-- Pills de status -->
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px">
-          <div style="background:rgba(220,38,38,0.06);border:1.5px solid rgba(220,38,38,0.2);border-radius:14px;padding:16px;text-align:center;cursor:pointer" onclick="fcOverviewClick('due')">
-            <div style="font-size:28px;font-weight:900;color:var(--red)">${vencidos.length}</div>
-            <div style="font-size:10px;font-weight:800;color:var(--red);text-transform:uppercase;margin-top:4px">🔥 Revisar agora</div>
+        <!-- Stats compactas -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px">
+          <div class="stat-card" style="cursor:pointer;background:rgba(220,38,38,0.04);border-color:rgba(220,38,38,0.15)" onclick="fcOverviewClick('due')">
+            <span class="stat-icon">🔥</span>
+            <div class="stat-val" style="color:var(--red)">${vencidos.length}</div>
+            <div class="stat-lbl" style="color:var(--red)">Revisar agora</div>
           </div>
-          <div style="background:rgba(108,71,255,0.06);border:1.5px solid rgba(108,71,255,0.2);border-radius:14px;padding:16px;text-align:center;cursor:pointer" onclick="fcOverviewClick('new')">
-            <div style="font-size:28px;font-weight:900;color:var(--accent)">${novos.length}</div>
-            <div style="font-size:10px;font-weight:800;color:var(--accent);text-transform:uppercase;margin-top:4px">✨ Novos</div>
+          <div class="stat-card" style="cursor:pointer;background:rgba(108,71,255,0.04);border-color:rgba(108,71,255,0.15)" onclick="fcOverviewClick('new')">
+            <span class="stat-icon">✨</span>
+            <div class="stat-val" style="color:var(--accent)">${novos.length}</div>
+            <div class="stat-lbl" style="color:var(--accent)">Novos</div>
           </div>
-          <div style="background:rgba(22,163,74,0.06);border:1.5px solid rgba(22,163,74,0.2);border-radius:14px;padding:16px;text-align:center;cursor:pointer" onclick="fcOverviewClick('ok')">
-            <div style="font-size:28px;font-weight:900;color:var(--green)">${emDia.length}</div>
-            <div style="font-size:10px;font-weight:800;color:var(--green);text-transform:uppercase;margin-top:4px">✅ Em dia</div>
+          <div class="stat-card" style="cursor:pointer;background:rgba(22,163,74,0.04);border-color:rgba(22,163,74,0.15)" onclick="fcOverviewClick('ok')">
+            <span class="stat-icon">✅</span>
+            <div class="stat-val" style="color:var(--green)">${emDia.length}</div>
+            <div class="stat-lbl" style="color:var(--green)">Em dia</div>
           </div>
         </div>
 
@@ -5061,37 +5065,29 @@ function renderFCMain(){
           </div>
         </div>`:''}
 
-        <!-- Novos para estudar -->
-        ${comNovos.length?`
-        <div style="margin-bottom:20px">
-          <div style="font-size:12px;font-weight:900;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">✨ Chefões com cards novos</div>
-          <div style="display:flex;flex-direction:column;gap:6px">
-            ${comNovos.map(b=>`
-              <div onclick="selectFCBoss('${b.topicId}')" style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--panel);border:1.5px solid rgba(108,71,255,0.2);border-left:4px solid var(--accent);border-radius:12px;cursor:pointer;transition:all .15s" onmouseover="this.style.transform='translateX(4px)'" onmouseout="this.style.transform='translateX(0)'">
-                <span style="font-size:22px">${b.kIcon}</span>
-                <div style="flex:1">
-                  <div style="font-size:13px;font-weight:800;color:${b.kColor}">${b.name}</div>
-                  <div style="font-size:10px;color:var(--muted)">${b.kingdom} · ${b.total} cards</div>
+        <!-- Todos os chefões (sempre visível, sem depender de ter algo "urgente") -->
+        ${todosChefoes.length?`
+        <div>
+          <div style="font-size:12px;font-weight:900;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">📚 Todos os chefões com flashcards</div>
+          <div class="rep-overview-grid">
+            ${todosChefoes.map(b=>`
+              <div class="rep-overview-card" onclick="selectFCBoss('${b.topicId}')" style="border-color:${b.kColor}25">
+                <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${b.kColor};border-radius:16px 16px 0 0"></div>
+                <div class="rep-overview-card-nome">${b.kIcon} ${b.name}</div>
+                <div class="rep-overview-card-eixo">${b.kingdom} · ${b.total} card${b.total!==1?'s':''}</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap">
+                  ${b.due>0?`<span style="background:rgba(220,38,38,0.1);color:var(--red);border-radius:20px;padding:2px 8px;font-size:9px;font-weight:900">🔥 ${b.due}</span>`:''}
+                  ${b.novo>0?`<span style="background:rgba(108,71,255,0.1);color:var(--accent);border-radius:20px;padding:2px 8px;font-size:9px;font-weight:900">✨ ${b.novo}</span>`:''}
+                  ${b.due===0&&b.novo===0?`<span style="background:rgba(22,163,74,0.1);color:var(--green);border-radius:20px;padding:2px 8px;font-size:9px;font-weight:900">✅ Em dia</span>`:''}
                 </div>
-                <span style="background:rgba(108,71,255,0.1);color:var(--accent);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:900">${b.novo} novo${b.novo!==1?'s':''}</span>
               </div>`).join('')}
           </div>
-        </div>`:''}
-
-        <!-- Se não tiver nada -->
-        ${!urgentes.length&&!comNovos.length&&total===0?`
+        </div>`:`
         <div style="text-align:center;padding:40px 20px;color:var(--muted)">
           <div style="font-size:48px;margin-bottom:12px">🃏</div>
           <div style="font-size:14px;font-weight:700">Nenhum flashcard ainda!</div>
-          <div style="font-size:12px;margin-top:6px">Selecione um chefão na sidebar e crie seu primeiro card.</div>
-        </div>`:''}
-
-        ${!urgentes.length&&!comNovos.length&&total>0?`
-        <div style="text-align:center;padding:30px;background:rgba(22,163,74,0.04);border:1.5px solid rgba(22,163,74,0.2);border-radius:16px">
-          <div style="font-size:36px;margin-bottom:8px">🎉</div>
-          <div style="font-size:15px;font-weight:900;color:var(--green)">Tudo em dia!</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:4px">Todos os ${total} flashcards estão revisados. Volte amanhã!</div>
-        </div>`:''}
+          <div style="font-size:12px;margin-top:6px">Selecione um chefão na sidebar e crie seu primeiro card (ou importe um PDF).</div>
+        </div>`}
       </div>`;
     return;
   }
@@ -5641,16 +5637,59 @@ function loadPDFjs(){
   });
 }
 
-// Extrair texto do PDF usando PDF.js (100% local, sem CORS)
-async function extractPDFText(file){
+// Carrega o Tesseract.js dinamicamente — só quando alguma página do PDF não tem
+// camada de texto real (slide "achatado" em imagem), pra não pesar o caso comum.
+function loadTesseract(){
+  return new Promise((res,rej)=>{
+    if(window.Tesseract){res();return;}
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+    s.onload=()=>res();
+    s.onerror=rej;
+    document.head.appendChild(s);
+  });
+}
+
+// Renderiza uma página do PDF num canvas e roda OCR nela — fallback para páginas
+// sem texto extraível (imagens de slide, prints, PDFs escaneados).
+async function ocrPDFPage(page){
+  const viewport=page.getViewport({scale:2});
+  const canvas=document.createElement('canvas');
+  canvas.width=viewport.width;canvas.height=viewport.height;
+  const ctx=canvas.getContext('2d');
+  await page.render({canvasContext:ctx,viewport}).promise;
+  await loadTesseract();
+  const worker=await Tesseract.createWorker('por');
+  try{
+    const {data}=await worker.recognize(canvas);
+    return (data.text||'').trim();
+  } finally {
+    await worker.terminate();
+  }
+}
+
+// Extrair texto do PDF usando PDF.js (100% local, sem CORS). Quando uma página não
+// tem camada de texto real — comum em slides exportados como imagem —, cai pra OCR
+// (Tesseract.js) nessa página específica, em vez de falhar o PDF inteiro.
+async function extractPDFText(file,onProgress){
   await loadPDFjs();
   const arrayBuffer=await file.arrayBuffer();
   const pdf=await pdfjsLib.getDocument({data:arrayBuffer}).promise;
   let fullText='';
   for(let i=1;i<=pdf.numPages;i++){
+    if(onProgress)onProgress(i,pdf.numPages,'texto');
     const page=await pdf.getPage(i);
     const content=await page.getTextContent();
-    const pageText=content.items.map(item=>item.str).join(' ');
+    let pageText=content.items.map(item=>item.str).join(' ').trim();
+    if(pageText.length<20){
+      if(onProgress)onProgress(i,pdf.numPages,'ocr');
+      try{
+        const ocrText=await ocrPDFPage(page);
+        if(ocrText.length>pageText.length)pageText=ocrText;
+      }catch(e){
+        console.warn('OCR falhou na página '+i+':',e);
+      }
+    }
     fullText+=`\n--- Página ${i} ---\n${pageText}`;
   }
   return fullText.trim();
@@ -5667,10 +5706,15 @@ async function fcHandlePDF(file){
 
   try{
     if(statusTxt)statusTxt.textContent='Extraindo texto do PDF...';
-    const texto=await extractPDFText(file);
+    const texto=await extractPDFText(file,(pageNum,total,modo)=>{
+      if(!statusTxt)return;
+      statusTxt.textContent=modo==='ocr'
+        ?`Página ${pageNum}/${total} sem texto direto — lendo por OCR (pode demorar)...`
+        :`Lendo página ${pageNum}/${total}...`;
+    });
 
     if(!texto||texto.length<50){
-      throw new Error('Não foi possível extrair texto. O PDF pode ser uma imagem escaneada.');
+      throw new Error('Não foi possível extrair texto, nem com OCR. O PDF pode estar em baixa qualidade ou ser majoritariamente imagens/diagramas.');
     }
 
     if(statusTxt)statusTxt.textContent=`IA gerando flashcards (${texto.length} caracteres lidos)...`;
