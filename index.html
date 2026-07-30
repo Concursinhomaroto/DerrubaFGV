@@ -495,9 +495,28 @@ nav{
 .conq-progress-fill{height:100%;border-radius:4px;background:var(--accent);transition:width 0.5s ease;}
 .conq-next-text{font-size:11px;color:var(--text2);font-weight:600;}
 .conq-maxed{color:var(--gold);font-weight:800;}
+.conq-card-desc{font-size:10.5px;color:var(--muted);font-weight:600;margin:2px 0 4px;line-height:1.4;}
+.conq-rarity-badge{font-size:8.5px;font-weight:900;text-transform:uppercase;letter-spacing:0.5px;color:var(--rarity-color,var(--muted));margin-top:3px;}
+.conq-diff-badge{position:absolute;top:14px;right:14px;font-size:8.5px;font-weight:900;text-transform:uppercase;letter-spacing:0.4px;opacity:0.85;}
+.conq-card{position:relative;}
+.conq-card-secret{opacity:0.6;filter:grayscale(0.4);}
+.conq-card-secret .conq-card-icon{filter:grayscale(1);opacity:0.6;}
+.conq-card-nomeado{
+  border-color:transparent;
+  background:linear-gradient(135deg,rgba(245,158,11,0.12),rgba(168,85,247,0.1),rgba(245,158,11,0.12));
+  background-size:200% 200%;
+  animation:nomeadoGlow 3s ease infinite;
+  box-shadow:0 0 0 1.5px #f59e0b,0 8px 30px rgba(245,158,11,0.3);
+}
+@keyframes nomeadoGlow{0%,100%{background-position:0% 50%;}50%{background-position:100% 50%;}}
+
+.conq-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.conq-filter-sel{font-size:11.5px;padding:7px 10px;min-width:auto;}
 
 @media(max-width:768px){
   .conq-grid{grid-template-columns:1fr;}
+  .conq-filters{flex-direction:column;}
+  .conq-filter-sel{width:100%;}
 }
 
 /* ===== PRIORITY CHART ===== */
@@ -1408,7 +1427,7 @@ nav{
     <h2>🏅 Conquistas</h2>
     <p id="conquistas-summary" class="conq-summary-text"></p>
   </div>
-  <div class="conq-grid" id="conquistas-grid"></div>
+  <div id="conquistas-grid"></div>
 </div>
 
 <div id="loading-overlay" class="loading-overlay">
@@ -1643,6 +1662,28 @@ function applyDefaults(){
   if(!db.fcReviewLog)db.fcReviewLog=[];
   if(typeof db.longestStreak!=='number')db.longestStreak=0;
   if(!db.goalHitDays)db.goalHitDays=[];
+
+  // ===== Contadores para o sistema de conquistas (v2) =====
+  if(!db.createdAt)db.createdAt=todayStr();
+  if(typeof db.fcCreatedTotal!=='number')db.fcCreatedTotal=0;
+  if(typeof db.redacoesCreatedTotal!=='number')db.redacoesCreatedTotal=0;
+  if(typeof db.subtopicsCreatedTotal!=='number')db.subtopicsCreatedTotal=0;
+  if(!db.temasFilledIds)db.temasFilledIds=[];
+  if(!db.cardsMaturedIds)db.cardsMaturedIds=[];
+  if(typeof db.fcCurrentStreak!=='number')db.fcCurrentStreak=0;
+  if(typeof db.fcLongestStreak!=='number')db.fcLongestStreak=0;
+  if(typeof db.longestSingleSessionSec!=='number')db.longestSingleSessionSec=0;
+  if(typeof db.totalSessionsCount!=='number')db.totalSessionsCount=0;
+  if(!db.sessionEvents)db.sessionEvents=[];
+  if(!db.dailyActivity)db.dailyActivity={};
+  if(!db.madrugadaDates)db.madrugadaDates=[];
+  if(!db.vigiliaDates)db.vigiliaDates=[];
+  if(!db.achievementsState)db.achievementsState={};
+  if(!db.secretsUnlocked)db.secretsUnlocked={};
+  if(typeof db.streakHadDrop!=='boolean')db.streakHadDrop=false;
+  if(typeof db.streakRecoveries!=='number')db.streakRecoveries=0;
+  if(!db.revsCompletedPerDay)db.revsCompletedPerDay={};
+  if(!db.redacoesPerDay)db.redacoesPerDay={};
 
   // Limpar revisões inválidas (date=undefined ou extras além de 4)
   const INTERVALOS_MAX=4;
@@ -2349,6 +2390,7 @@ function addSubtopic(topicId){
   topic.subtopics.push(s);
   // Revisões NÃO são criadas agora — serão geradas ao primeiro estudo (toggleTimer)
   db.revisions[s.id]=[];
+  db.subtopicsCreatedTotal=(db.subtopicsCreatedTotal||0)+1;
   saveDB();nameEl.value='';
   refreshSubs(topic,topicId);renderMap();updateRevBadge();
   toast('👾 Miniboss invocado! Inicie o estudo para liberar as revisões.','var(--cyan)');
@@ -2472,6 +2514,7 @@ function saveTimer(subId,topicId){
     if(!db.kingdomSeconds)db.kingdomSeconds={};
     db.kingdomSeconds[kId]=(db.kingdomSeconds[kId]||0)+secondsToBank;
   }
+  logSessionEvent('miniboss',secondsToBank,kId);
 
   // Reset this miniboss's own timer to zero and close the panel
   db.times[subId]=0;
@@ -2483,6 +2526,45 @@ function saveTimer(subId,topicId){
     || (function(){for(const k of db.kingdoms){const f=(db.topics[k.id]||[]).find(tp=>tp.subtopics?.some(s=>s.id===subId));if(f){currentKingdom=k;return f;}}return null;})();
   if(topic)refreshSubs(topic,topicId);
   renderMap();
+}
+
+// Registra um evento de sessão de estudo — alimenta várias conquistas (total de
+// sessões, maior sessão contínua, madrugada/vigília, atividade diária por reino).
+function logSessionEvent(tipo,segundos,kingdomId){
+  const now=new Date();
+  const h=now.getHours();
+  const hora=String(h).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  const today=todayStr();
+  db.totalSessionsCount=(db.totalSessionsCount||0)+1;
+  if(segundos>(db.longestSingleSessionSec||0))db.longestSingleSessionSec=segundos;
+  if(!db.sessionEvents)db.sessionEvents=[];
+  db.sessionEvents.push({date:today,hora,tipo,segundos});
+  if(db.sessionEvents.length>300)db.sessionEvents=db.sessionEvents.slice(-300);
+  if(h<5){
+    if(!db.madrugadaDates)db.madrugadaDates=[];
+    if(!db.madrugadaDates.includes(today))db.madrugadaDates.push(today);
+  }
+  if(h===0){
+    if(!db.vigiliaDates)db.vigiliaDates=[];
+    if(!db.vigiliaDates.includes(today))db.vigiliaDates.push(today);
+  }
+  const periodo=h<6?'madrugada':h<12?'manha':h<18?'tarde':'noite';
+  markDailyActivity(today,kingdomId,'estudo',periodo);
+}
+// Marca o registro diário de atividade (usado pelas conquistas de amplitude: reinos
+// diferentes no mesmo dia, tríade flashcard+redação+repertório, períodos do dia). ~60 dias.
+function markDailyActivity(dateStr,kingdomId,modulo,periodo){
+  if(!db.dailyActivity)db.dailyActivity={};
+  if(!db.dailyActivity[dateStr])db.dailyActivity[dateStr]={kingdoms:[],flashcard:false,redacao:false,repertorio:false,periodos:[]};
+  const day=db.dailyActivity[dateStr];
+  if(!day.periodos)day.periodos=[];
+  if(kingdomId&&!day.kingdoms.includes(kingdomId))day.kingdoms.push(kingdomId);
+  if(modulo==='flashcard')day.flashcard=true;
+  if(modulo==='redacao')day.redacao=true;
+  if(modulo==='repertorio')day.repertorio=true;
+  if(periodo&&!day.periodos.includes(periodo))day.periodos.push(periodo);
+  const keys=Object.keys(db.dailyActivity).sort();
+  if(keys.length>60)keys.slice(0,keys.length-60).forEach(k=>delete db.dailyActivity[k]);
 }
 
 // Logs seconds studied today into db.sessions (used by heatmap)
@@ -2563,43 +2645,315 @@ function countTemasPreenchidos(){
   ).length;
 }
 
-// Conquistas progressivas: cada categoria tem vários níveis (não é um flag
-// binário) — sempre há uma próxima meta desafiadora pra perseguir.
-const TIER_LABELS=['Bronze','Prata','Ouro','Platina','Diamante','Lendário'];
-const TIER_COLORS=['#b45309','#94a3b8','#eab308','#22d3ee','#a78bfa','#f43f5e'];
-const ACHIEVEMENT_CATEGORIES=[
-  {id:'revisoes',icon:'🔔',name:'Revisões concluídas',unit:'revisões',unitSingular:'revisão',getValue:()=>computeTotalRevisionsDone(),tiers:[5,15,30,60,100,200]},
-  {id:'tempo',icon:'⏱️',name:'Tempo total estudado',unit:'horas estudadas',unitSingular:'hora estudada',getValue:()=>Math.floor((db.lifetimeSeconds||0)/3600),tiers:[1,5,15,30,60,100]},
-  {id:'streak',icon:'🔥',name:'Sequência de dias (recorde)',unit:'dias seguidos',unitSingular:'dia seguido',getValue:()=>db.longestStreak||0,tiers:[3,7,14,30,60,100]},
-  {id:'metadiaria',icon:'🎯',name:'Metas diárias batidas',unit:'metas batidas',unitSingular:'meta batida',getValue:()=>(db.goalHitDays||[]).length,tiers:[1,5,15,30,60,100]},
-  {id:'flashcards',icon:'🃏',name:'Flashcards revisados',unit:'cards revisados',unitSingular:'card revisado',getValue:()=>totalFlashcardReviews(),tiers:[25,100,250,500,1000,2000]},
-  {id:'reinos',icon:'🗺️',name:'Reinos explorados',unit:'reinos com estudo',unitSingular:'reino com estudo',getValue:()=>db.kingdoms.filter(k=>((db.kingdomSeconds||{})[k.id]||0)>0).length,tiers:[1,2,3,5,8]},
-  {id:'redacoes',icon:'📝',name:'Redações escritas',unit:'redações',unitSingular:'redação',getValue:()=>Object.keys(db.redacoes?.textos||{}).length,tiers:[1,5,10,25,50]},
-  {id:'repertorio',icon:'🧠',name:'Temas de repertório preenchidos',unit:'temas preenchidos',unitSingular:'tema preenchido',getValue:()=>countTemasPreenchidos(),tiers:[5,15,30,50,80]},
-];
-function achievementStatus(cat){
-  const val=cat.getValue();
-  let tierIdx=-1;
-  for(let i=0;i<cat.tiers.length;i++){if(val>=cat.tiers[i])tierIdx=i;}
-  const nextIdx=tierIdx+1;
-  const nextThreshold=nextIdx<cat.tiers.length?cat.tiers[nextIdx]:null;
-  const prevThreshold=tierIdx>=0?cat.tiers[tierIdx]:0;
-  const pctToNext=nextThreshold?Math.max(0,Math.min(100,Math.round((val-prevThreshold)/(nextThreshold-prevThreshold)*100))):100;
-  return{val,tierIdx,nextThreshold,pctToNext,maxed:!nextThreshold};
+// ===== HELPERS DERIVADOS (calculados sobre o histórico já salvo — sem novas fontes de dado) =====
+function countPerfectWeeks(){
+  const sessions=db.sessions||{};
+  const goalSec=(db.dailyGoalMinutes||60)*60;
+  const dateKeys=Object.keys(sessions);
+  if(!dateKeys.length)return 0;
+  const minDate=dateKeys.sort()[0];
+  const dow=new Date(minDate+'T00:00:00').getDay();
+  let weekStart=addDays(minDate,-(dow===0?6:dow-1));
+  const today=todayStr();
+  let count=0;
+  while(weekStart<today){
+    let ok=true;
+    for(let i=0;i<7;i++){if(!((sessions[addDays(weekStart,i)]||0)>=goalSec)){ok=false;break;}}
+    if(ok)count++;
+    weekStart=addDays(weekStart,7);
+  }
+  return count;
 }
+function countPerfectMonths(){
+  const sessions=db.sessions||{};
+  const goalSec=(db.dailyGoalMinutes||60)*60;
+  const dateKeys=Object.keys(sessions);
+  if(!dateKeys.length)return 0;
+  const months=new Set(dateKeys.map(d=>d.slice(0,7)));
+  const todayYm=todayStr().slice(0,7);
+  let count=0;
+  months.forEach(ym=>{
+    if(ym>=todayYm)return;
+    const [y,m]=ym.split('-').map(Number);
+    const daysInMonth=new Date(y,m,0).getDate();
+    let ok=true;
+    for(let d=1;d<=daysInMonth;d++){if(!((sessions[ym+'-'+String(d).padStart(2,'0')]||0)>=goalSec)){ok=false;break;}}
+    if(ok)count++;
+  });
+  return count;
+}
+function hasFullCalendarMonth(){
+  const sessions=db.sessions||{};
+  const dateKeys=Object.keys(sessions);
+  if(!dateKeys.length)return false;
+  const months=new Set(dateKeys.map(d=>d.slice(0,7)));
+  const todayYm=todayStr().slice(0,7);
+  let found=false;
+  months.forEach(ym=>{
+    if(found||ym>=todayYm)return;
+    const [y,m]=ym.split('-').map(Number);
+    const daysInMonth=new Date(y,m,0).getDate();
+    let ok=true;
+    for(let d=1;d<=daysInMonth;d++){if(!((sessions[ym+'-'+String(d).padStart(2,'0')]||0)>0)){ok=false;break;}}
+    if(ok)found=true;
+  });
+  return found;
+}
+function countWeekendWarriorWeekends(){
+  const sessions=db.sessions||{};
+  return Object.keys(sessions).filter(d=>(sessions[d]||0)>0&&new Date(d+'T00:00:00').getDay()===6&&(sessions[addDays(d,1)]||0)>0).length;
+}
+const HOLIDAYS_FIXED=['01-01','04-21','05-01','09-07','10-12','11-02','11-15','12-25'];
+function countHolidayStudyDays(){
+  const sessions=db.sessions||{};
+  return Object.keys(sessions).filter(d=>(sessions[d]||0)>0&&HOLIDAYS_FIXED.includes(d.slice(5))).length;
+}
+function maxKingdomsInOneDay(){
+  const days=Object.values(db.dailyActivity||{});
+  return days.length?Math.max(...days.map(d=>(d.kingdoms||[]).length)):0;
+}
+function countTriadeDays(){
+  return Object.values(db.dailyActivity||{}).filter(d=>d.flashcard&&d.redacao&&d.repertorio).length;
+}
+function countReinosCobertura(){
+  const n=db.kingdoms.length||1;
+  return Math.round(db.kingdoms.filter(k=>((db.kingdomSeconds||{})[k.id]||0)>0).length/n*100);
+}
+function countEixosCobertura(){
+  repInit();
+  const eixos=db.repertorio.eixos||[];
+  if(!eixos.length)return 0;
+  const temas=Object.values(db.repertorio.temas||{});
+  return Math.round(eixos.filter(e=>temas.some(t=>t.eixoId===e.id&&repCompletude(t)===100)).length/eixos.length*100);
+}
+function countRedacoesNPDAlto(limiar){
+  return Object.values(db.redacoes?.textos||{}).filter(r=>r.npd!==null&&r.npd!==undefined&&r.npd>=limiar).length;
+}
+function reinoDominadoTiers(){
+  const n=db.kingdoms.length||1;
+  return [...new Set([1,Math.min(3,n),Math.max(1,n-1),n])].sort((a,b)=>a-b);
+}
+function countReinosDominados(){
+  let count=0;
+  db.kingdoms.forEach(k=>{
+    let allCards=[];
+    (db.topics[k.id]||[]).forEach(t=>{allCards=allCards.concat(getAllFCForTopic(t.id));});
+    if(allCards.length&&allCards.every(c=>(c.lastConf||0)>=4))count++;
+  });
+  return count;
+}
+function hasComeback14Days(){
+  const dates=Object.keys(db.sessions||{}).filter(d=>(db.sessions[d]||0)>0).sort();
+  for(let i=1;i<dates.length;i++){if(daysDiff(dates[i-1],dates[i])>=14)return true;}
+  return false;
+}
+function hasStudiedOnMonthDay(mds){
+  const sessions=db.sessions||{};
+  return Object.keys(sessions).some(d=>(sessions[d]||0)>0&&mds.includes(d.slice(5)));
+}
+function studiedOnSignupAnniversary(){
+  if(!db.createdAt)return false;
+  const md=db.createdAt.slice(5);
+  const sessions=db.sessions||{};
+  return Object.keys(sessions).some(d=>(sessions[d]||0)>0&&d.slice(5)===md&&d!==db.createdAt);
+}
+function hasAllNighter(){
+  const byDate={};
+  (db.sessionEvents||[]).forEach(e=>{(byDate[e.date]=byDate[e.date]||[]).push(e.hora);});
+  return Object.values(byDate).some(horas=>horas.some(h=>h<'02:00')&&horas.some(h=>h>='04:00'&&h<'06:00'));
+}
+function hasFullDayAllPeriods(){
+  return Object.values(db.dailyActivity||{}).some(d=>{
+    const p=d.periodos||[];
+    return p.includes('manha')&&p.includes('tarde')&&p.includes('noite');
+  });
+}
+function maxRevsInOneDay(){
+  const vals=Object.values(db.revsCompletedPerDay||{});
+  return vals.length?Math.max(...vals):0;
+}
+function hasConsecutiveDates(datesArr,n){
+  const set=new Set(datesArr);
+  for(const d of datesArr){
+    let ok=true;
+    for(let i=0;i<n;i++){if(!set.has(addDays(d,i))){ok=false;break;}}
+    if(ok)return true;
+  }
+  return false;
+}
+function maxRedacoesInOneDay(){
+  const vals=Object.values(db.redacoesPerDay||{});
+  return vals.length?Math.max(...vals):0;
+}
+function hasMidnightPreciseSession(){
+  return (db.sessionEvents||[]).some(e=>e.hora>='00:00'&&e.hora<='00:05');
+}
+function has4ConsecutiveSundays(){
+  const sundays=[...new Set(Object.keys(db.sessions||{}).filter(d=>(db.sessions[d]||0)>0&&new Date(d+'T00:00:00').getDay()===0))].sort();
+  for(const d of sundays){
+    let ok=true;
+    for(let j=1;j<4;j++){if(!sundays.includes(addDays(d,7*j))){ok=false;break;}}
+    if(ok)return true;
+  }
+  return false;
+}
+
+// ===== RARIDADE / DIFICULDADE / TIERS =====
+const TIER_LABELS=['Bronze','Prata','Ouro','Platina','Diamante','Mestre','Lenda'];
+const TIER_COLORS=['#b45309','#94a3b8','#eab308','#22d3ee','#a78bfa','#ef4444','#f59e0b'];
+const DIFF_LABEL={facil:'Fácil',medio:'Médio',dificil:'Difícil',dificilimo:'Dificílimo'};
+const DIFF_COLOR={facil:'#22c55e',medio:'#f59e0b',dificil:'#ef4444',dificilimo:'#a855f7'};
+const RARITY_BY_DIFF={facil:'Comum',medio:'Incomum',dificil:'Rara',dificilimo:'Lendária'};
+const RARITY_COLOR={Comum:'#94a3b8',Incomum:'#22c55e',Rara:'#3b82f6','Épica':'#a855f7','Lendária':'#f59e0b'};
+
+// ===== REGISTRO CENTRAL DE CONQUISTAS =====
+// Data-driven: adicionar uma conquista nova = adicionar um objeto aqui. A UI (renderBadges/
+// renderConquistasScreen) renderiza 100% a partir deste array — nada de lógica de tela hardcoded.
+// Conquistas de cobertura (countReinosCobertura, countEixosCobertura, reinoDominadoTiers) leem o
+// conteúdo vivo do Firebase a cada render — auto-escalam quando reinos/eixos são adicionados/removidos.
+const ACHIEVEMENTS_REGISTRY=[
+  // --- A) VOLUME / ESFORÇO ACUMULADO ---
+  {id:'revisoes',categoria:'volume',titulo:'O Revisor',descricao:'Cada card revisado é um tijolo na sua aprovação.',icone:'🔁',dificuldade:'dificil',getValue:()=>computeTotalRevisionsDone(),tiers:[5,15,30,60,100,200]},
+  {id:'flashcards_criados',categoria:'volume',titulo:'O Forjador de Cartas',descricao:'Quem constrói o próprio baralho domina o conteúdo antes de decorar.',icone:'🛠️',dificuldade:'dificil',getValue:()=>db.fcCreatedTotal||0,tiers:[20,100,300,700,1500,3000,6000]},
+  {id:'redacoes_escritas',categoria:'volume',titulo:'O Escriba',descricao:'Cada redação é um treino pra hora da prova.',icone:'✍️',dificuldade:'dificil',getValue:()=>db.redacoesCreatedTotal||0,tiers:[3,10,25,50,100,200,365]},
+  {id:'repertorio_preenchido',categoria:'volume',titulo:'Arquiteto do Repertório',descricao:'Cada tema preenchido é munição pra redação.',icone:'🏗️',dificuldade:'dificil',getValue:()=>(db.temasFilledIds||[]).length,tiers:[3,10,25,50,100,175,300]},
+  {id:'assuntos_cadastrados',categoria:'volume',titulo:'Cartógrafo do Edital',descricao:'Mapear o edital inteiro é meio caminho andado.',icone:'🗺️',dificuldade:'dificil',getValue:()=>db.subtopicsCreatedTotal||0,tiers:[5,25,60,120,250,500,1000]},
+  {id:'horas_totais',categoria:'volume',titulo:'Guardião das Horas',descricao:'Tempo investido nunca é tempo perdido.',icone:'⏳',dificuldade:'dificil',getValue:()=>Math.floor((db.lifetimeSeconds||0)/3600),tiers:[5,30,100,300,600,1000,2000]},
+
+  // --- B) CONSISTÊNCIA / DISCIPLINA ---
+  {id:'streak',categoria:'consistencia',titulo:'Chama Eterna',descricao:'A ofensiva que separa aprovado de desistente.',icone:'🔥',dificuldade:'dificil',getValue:()=>db.longestStreak||0,tiers:[3,7,30,60,100,180,365]},
+  {id:'metas_batidas',categoria:'consistencia',titulo:'Cumpridor de Metas',descricao:'Bater a meta todo dia é o que separa quem sonha de quem passa.',icone:'🎯',dificuldade:'dificil',getValue:()=>(db.goalHitDays||[]).length,tiers:[5,20,60,150,300,500,1000]},
+  {id:'semanas_perfeitas',categoria:'consistencia',titulo:'Semana Impecável',descricao:'7 de 7 dias batendo a meta.',icone:'📆',dificuldade:'dificil',getValue:()=>countPerfectWeeks(),tiers:[1,4,12,26,52]},
+  {id:'meses_perfeitos',categoria:'consistencia',titulo:'Mês Lendário',descricao:'Um mês inteiro sem falhar a meta em nenhum dia.',icone:'🌕',dificuldade:'dificilimo',getValue:()=>countPerfectMonths(),tiers:[1,3,6,12]},
+  {id:'fds_guerreiro',categoria:'consistencia',titulo:'Guerreiro de Fim de Semana',descricao:'Estudar sábado E domingo no mesmo fim de semana.',icone:'⚔️',dificuldade:'medio',getValue:()=>countWeekendWarriorWeekends(),tiers:[4,12,26,52]},
+  {id:'feriados',categoria:'consistencia',titulo:'Sem Feriado pra Nomeado',descricao:'Estudar em dia de feriado nacional.',icone:'🎌',dificuldade:'medio',getValue:()=>countHolidayStudyDays(),tiers:[1,5,12,25]},
+  {id:'madrugador',categoria:'consistencia',titulo:'Antes do Galo',descricao:'Sessão iniciada antes das 5h da manhã.',icone:'🐓',dificuldade:'medio',getValue:()=>(db.madrugadaDates||[]).length,tiers:[1,10,30,75]},
+  {id:'coruja',categoria:'consistencia',titulo:'Vigília da Meia-Noite',descricao:'Sessão iniciada logo depois da meia-noite.',icone:'🦉',dificuldade:'medio',getValue:()=>(db.vigiliaDates||[]).length,tiers:[1,10,30,75]},
+
+  // --- C) DOMÍNIO / MAESTRIA ---
+  {id:'retencao',categoria:'dominio',titulo:'Memória de Elefante',descricao:'Não é revisar muito, é acertar muito.',icone:'🐘',dificuldade:'dificil',getValue:()=>{const t=totalFlashcardReviews();if(t<20)return 0;return Math.round(Object.values(db.flashcards||{}).reduce((a,c)=>a+(c.acertos||0),0)/t*100);},tiers:[70,80,90,95]},
+  {id:'cards_maduros',categoria:'dominio',titulo:'Cards Blindados',descricao:'Cards que já provaram que você nunca mais vai esquecer.',icone:'🛡️',dificuldade:'dificil',getValue:()=>(db.cardsMaturedIds||[]).length,tiers:[25,100,300,700,1500,3000]},
+  {id:'combo',categoria:'dominio',titulo:'Combo Perfeito',descricao:'Maior sequência de acertos consecutivos em flashcards.',icone:'💯',dificuldade:'dificil',getValue:()=>db.fcLongestStreak||0,tiers:[20,50,100,250,500]},
+  {id:'npd_alto',categoria:'dominio',titulo:'Redator Nota Mil',descricao:'Redações com NPD no topo da faixa (≥25).',icone:'🏅',dificuldade:'dificilimo',getValue:()=>countRedacoesNPDAlto(25),tiers:[1,5,15,30]},
+  {id:'reino_dominado',categoria:'dominio',titulo:'Reino Dominado',descricao:'Um reino inteiro com 100% dos cards maduros.',icone:'👑',dificuldade:'dificilimo',getValue:()=>countReinosDominados(),tiers:reinoDominadoTiers},
+
+  // --- D) AMPLITUDE / EXPLORAÇÃO ---
+  {id:'senhor_reinos',categoria:'amplitude',titulo:'Senhor dos Reinos',descricao:'Cobrir todos os reinos com pelo menos um estudo.',icone:'🌍',dificuldade:'medio',getValue:()=>countReinosCobertura(),tiers:[50,75,100]},
+  {id:'andarilho',categoria:'amplitude',titulo:'Andarilho dos Reinos',descricao:'Vários reinos diferentes estudados no mesmo dia.',icone:'🚶',dificuldade:'medio',getValue:()=>maxKingdomsInOneDay(),tiers:[2,3,5,8]},
+  {id:'triade',categoria:'amplitude',titulo:'Tríade Completa',descricao:'Flashcard + redação + repertório no mesmo dia.',icone:'🔺',dificuldade:'medio',getValue:()=>countTriadeDays(),tiers:[1,7,21,50]},
+  {id:'repertorio_universal',categoria:'amplitude',titulo:'Repertório Universal',descricao:'Cobrir todos os eixos temáticos do repertório.',icone:'🧭',dificuldade:'dificil',getValue:()=>countEixosCobertura(),tiers:[50,80,100]},
+
+  // --- E) TEMPO / MARATONA ---
+  {id:'maratonista',categoria:'tempo',titulo:'Maratonista',descricao:'Sessão única contínua sem parar o cronômetro.',icone:'🏃',dificuldade:'dificil',getValue:()=>Math.floor((db.longestSingleSessionSec||0)/3600),tiers:[1,2,3,4,6]},
+  {id:'dia_epico',categoria:'tempo',titulo:'Dia Épico',descricao:'Maior tempo estudado em um único dia.',icone:'🌟',dificuldade:'dificil',getValue:()=>{const vals=Object.values(db.sessions||{});return vals.length?Math.floor(Math.max(...vals)/3600):0;},tiers:[3,5,8,10]},
+  {id:'sessoes_totais',categoria:'tempo',titulo:'Frequentador Assíduo',descricao:'Total de sessões de estudo registradas.',icone:'📋',dificuldade:'facil',getValue:()=>db.totalSessionsCount||0,tiers:[10,50,150,400,800]},
+
+  // --- F) META-CONQUISTAS / PRESTÍGIO ---
+  {id:'mestre_categoria',categoria:'meta',titulo:'Mestre da Categoria',descricao:'Destravar todas as conquistas de uma dimensão inteira.',icone:'🎖️',dificuldade:'dificil',
+    getValue:()=>{
+      const cats=['volume','consistencia','dominio','amplitude','tempo'];
+      const items=ACHIEVEMENTS_REGISTRY.filter(a=>!['meta','secreta'].includes(a.categoria));
+      return cats.some(cat=>{const list=items.filter(a=>a.categoria===cat);return list.length>0&&list.every(a=>achievementStatus(a).maxed);})?1:0;
+    },tiers:[1]},
+  {id:'domador_dificuldade',categoria:'meta',titulo:'Domador de Dificuldade',descricao:'Completar 100% de uma faixa de dificuldade inteira.',icone:'⚡',dificuldade:'dificilimo',
+    getValue:()=>{
+      const diffs=['facil','medio','dificil','dificilimo'];
+      const items=ACHIEVEMENTS_REGISTRY.filter(a=>!['meta','secreta'].includes(a.categoria));
+      return diffs.filter(d=>{const list=items.filter(a=>a.dificuldade===d);return list.length>0&&list.every(a=>achievementStatus(a).maxed);}).length;
+    },tiers:[1,2,3,4]},
+  {id:'colecionador',categoria:'meta',titulo:'Colecionador',descricao:'Percentual total de níveis de conquistas desbloqueados.',icone:'📦',dificuldade:'dificilimo',
+    getValue:()=>{
+      const items=ACHIEVEMENTS_REGISTRY.filter(a=>a.id!=='colecionador'&&a.id!=='nomeado');
+      let unlocked=0,total=0;
+      items.forEach(a=>{const st=achievementStatus(a);unlocked+=st.tierIdx+1;total+=st.tierList.length;});
+      return total?Math.round(unlocked/total*100):0;
+    },tiers:[25,50,75,90,99]},
+  {id:'nomeado',categoria:'meta',titulo:'★ NOMEADO ★',descricao:'Destravar 100% de TODAS as conquistas. O ápice: você não estava só estudando, estava sendo nomeado.',icone:'👑',dificuldade:'dificilimo',
+    getValue:()=>{
+      const items=ACHIEVEMENTS_REGISTRY.filter(a=>a.id!=='nomeado');
+      return items.every(a=>achievementStatus(a).maxed)?1:0;
+    },tiers:[1]},
+
+  // --- G) SECRETAS / EASTER EGGS ---
+  {id:'o_retorno',categoria:'secreta',secreta:true,titulo:'O Retorno',descricao:'Voltar a estudar depois de 14+ dias sumido.',icone:'🌅',dificuldade:'facil',getValue:()=>hasComeback14Days()?1:0,tiers:[1]},
+  {id:'reveillon',categoria:'secreta',secreta:true,titulo:'Réveillon do Nomeado',descricao:'Estudar em 31/12 ou 01/01.',icone:'🎆',dificuldade:'medio',getValue:()=>hasStudiedOnMonthDay(['12-31','01-01'])?1:0,tiers:[1]},
+  {id:'aniversario_guerra',categoria:'secreta',secreta:true,titulo:'Aniversário de Guerra',descricao:'Estudar no aniversário do seu cadastro na plataforma.',icone:'🎂',dificuldade:'dificil',getValue:()=>studiedOnSignupAnniversary()?1:0,tiers:[1]},
+  {id:'virei_a_noite',categoria:'secreta',secreta:true,titulo:'Virei a Noite',descricao:'Sessão de madrugada seguida de outra ainda antes de amanhecer.',icone:'🌙',dificuldade:'dificil',getValue:()=>hasAllNighter()?1:0,tiers:[1]},
+  {id:'manha_tarde_noite',categoria:'secreta',secreta:true,titulo:'Manhã, Tarde e Noite',descricao:'Estudar nos 3 períodos do mesmo dia.',icone:'🌗',dificuldade:'medio',getValue:()=>hasFullDayAllPeriods()?1:0,tiers:[1]},
+  {id:'centuriao',categoria:'secreta',secreta:true,titulo:'Centurião',descricao:'100 revisões concluídas em um único dia.',icone:'🏛️',dificuldade:'dificil',getValue:()=>maxRevsInOneDay()>=100?1:0,tiers:[1]},
+  {id:'fila_zerada',categoria:'secreta',secreta:true,titulo:'Fila Zerada',descricao:'Zerar toda a fila de revisões pendentes do dia.',icone:'✅',dificuldade:'medio',getValue:()=>db.secretsUnlocked?.fila_zerada?1:0,tiers:[1]},
+  {id:'cirurgiao',categoria:'secreta',secreta:true,titulo:'Cirurgião',descricao:'50 acertos seguidos sem um único erro.',icone:'🔪',dificuldade:'dificil',getValue:()=>(db.fcLongestStreak||0)>=50?1:0,tiers:[1]},
+  {id:'mes_inteiro',categoria:'secreta',secreta:true,titulo:'Mês Inteiro',descricao:'Estudar em todos os dias de um mês calendário.',icone:'📅',dificuldade:'dificilimo',getValue:()=>hasFullCalendarMonth()?1:0,tiers:[1]},
+  {id:'madrugador_insano',categoria:'secreta',secreta:true,titulo:'O Madrugador Insano',descricao:'3 madrugadas seguidas.',icone:'☕',dificuldade:'dificil',getValue:()=>hasConsecutiveDates(db.madrugadaDates||[],3)?1:0,tiers:[1]},
+  {id:'poliglota_reinos',categoria:'secreta',secreta:true,titulo:'Poliglota de Reinos',descricao:'6+ reinos diferentes num só dia.',icone:'🗣️',dificuldade:'dificil',getValue:()=>maxKingdomsInOneDay()>=6?1:0,tiers:[1]},
+  {id:'escritor_compulsivo',categoria:'secreta',secreta:true,titulo:'Escritor Compulsivo',descricao:'3 redações no mesmo dia.',icone:'📜',dificuldade:'dificil',getValue:()=>maxRedacoesInOneDay()>=3?1:0,tiers:[1]},
+  {id:'colecionador_chamas',categoria:'secreta',secreta:true,titulo:'Colecionador de Chamas',descricao:'Recuperar o streak perdido e chegar a 30 de novo.',icone:'🕯️',dificuldade:'medio',getValue:()=>(db.streakRecoveries||0)>=1?1:0,tiers:[1]},
+  {id:'meia_noite_ponto',categoria:'secreta',secreta:true,titulo:'Meia-Noite em Ponto',descricao:'Iniciar sessão entre 00:00 e 00:05.',icone:'🕛',dificuldade:'medio',getValue:()=>hasMidnightPreciseSession()?1:0,tiers:[1]},
+  {id:'sprint_dos_7',categoria:'secreta',secreta:true,titulo:'Sprint dos 7',descricao:'Bater a meta diária 7 dias seguidos sem falhar.',icone:'🏁',dificuldade:'medio',getValue:()=>hasConsecutiveDates(db.goalHitDays||[],7)?1:0,tiers:[1]},
+  {id:'fundo_do_bau',categoria:'secreta',secreta:true,titulo:'Fundo do Baú',descricao:'Revisar um card parado há 60+ dias.',icone:'📦',dificuldade:'medio',getValue:()=>db.secretsUnlocked?.fundo_do_bau?1:0,tiers:[1]},
+  {id:'domingo_de_ferro',categoria:'secreta',secreta:true,titulo:'Domingo de Ferro',descricao:'4 domingos seguidos estudando.',icone:'⛓️',dificuldade:'medio',getValue:()=>has4ConsecutiveSundays()?1:0,tiers:[1]},
+  {id:'contra_o_relogio',categoria:'secreta',secreta:true,titulo:'Contra o Relógio',descricao:'Sessão de 2h+ num único fôlego, sem pausar.',icone:'⏱️',dificuldade:'dificil',getValue:()=>(db.longestSingleSessionSec||0)>=7200?1:0,tiers:[1]},
+  {id:'enciclopedia_viva',categoria:'secreta',secreta:true,titulo:'Enciclopédia Viva',descricao:'Preencher o repertório em todos os eixos temáticos.',icone:'📚',dificuldade:'dificil',getValue:()=>countEixosCobertura()>=100?1:0,tiers:[1]},
+  {id:'lendario_silencioso',categoria:'secreta',secreta:true,titulo:'Lendário Silencioso',descricao:'Destravar 10 conquistas secretas — a secreta das secretas.',icone:'🥷',dificuldade:'dificilimo',
+    getValue:()=>ACHIEVEMENTS_REGISTRY.filter(a=>a.secreta&&a.id!=='lendario_silencioso').filter(a=>achievementStatus(a).tierIdx>=0).length,tiers:[10]},
+];
+
+function achievementStatus(a){
+  const tierList=typeof a.tiers==='function'?a.tiers():a.tiers;
+  const val=a.getValue();
+  let tierIdx=-1;
+  for(let i=0;i<tierList.length;i++){if(val>=tierList[i])tierIdx=i;}
+  const nextIdx=tierIdx+1;
+  const nextThreshold=nextIdx<tierList.length?tierList[nextIdx]:null;
+  const prevThreshold=tierIdx>=0?tierList[tierIdx]:0;
+  const pctToNext=nextThreshold?Math.max(0,Math.min(100,Math.round((val-prevThreshold)/(nextThreshold-prevThreshold)*100))):100;
+  return{val,tierIdx,tierList,nextThreshold,pctToNext,maxed:!nextThreshold};
+}
+function achievementRarity(a){
+  if(a.id==='nomeado')return'Lendária';
+  if(a.categoria==='meta')return'Épica';
+  return RARITY_BY_DIFF[a.dificuldade]||'Comum';
+}
+
+// Compara o nível atual de cada conquista com o último salvo — dispara toast de
+// desbloqueio em tempo real e persiste o novo estado (unlockedAt implícito, nunca regride).
+function checkAchievementUnlocks(){
+  if(!db.achievementsState)db.achievementsState={};
+  let changed=false;
+  ACHIEVEMENTS_REGISTRY.forEach(a=>{
+    const st=achievementStatus(a);
+    const prevTier=db.achievementsState[a.id]??-1;
+    if(st.tierIdx>prevTier){
+      db.achievementsState[a.id]=st.tierIdx;
+      changed=true;
+      if(a.secreta){
+        toast(`🔓 Conquista secreta revelada: ${a.titulo}!`,'var(--gold)');
+      } else {
+        const label=TIER_LABELS[st.tierIdx]||'';
+        toast(`🏆 ${a.titulo} — Nível ${label}!`,'var(--gold)');
+      }
+    }
+  });
+  if(changed)saveDB();
+}
+
 function renderBadges(){
   const el=document.getElementById('dash-badges');
   if(!el)return;
+  checkAchievementUnlocks();
   let unlockedTotal=0,maxTotal=0;
-  el.innerHTML=ACHIEVEMENT_CATEGORIES.map(cat=>{
-    const st=achievementStatus(cat);
-    unlockedTotal+=st.tierIdx+1;
-    maxTotal+=cat.tiers.length;
+  const statuses=ACHIEVEMENTS_REGISTRY.map(a=>({a,st:achievementStatus(a)}));
+  statuses.forEach(({st})=>{unlockedTotal+=st.tierIdx+1;maxTotal+=st.tierList.length;});
+  // Destaques: conquistas visíveis mais perto do próximo nível (secretas ainda bloqueadas ficam de fora)
+  const highlights=statuses
+    .filter(({a,st})=>!st.maxed&&!(a.secreta&&st.tierIdx<0))
+    .sort((x,y)=>y.st.pctToNext-x.st.pctToNext)
+    .slice(0,6);
+  el.innerHTML=highlights.map(({a,st})=>{
     const label=st.tierIdx>=0?TIER_LABELS[st.tierIdx]:'—';
     const color=st.tierIdx>=0?TIER_COLORS[st.tierIdx]:null;
-    const title=`${cat.name}: ${st.val} ${cat.unit}${st.tierIdx>=0?` · Nível ${label}`:''}${st.maxed?' (máximo!)':st.nextThreshold?` · Próximo: ${st.nextThreshold} ${cat.unit}`:''}`;
-    return`<div class="badge-chip${st.tierIdx>=0?' unlocked':''}" style="${color?`--tier-color:${color}`:''}" title="${title}">
-      <span class="badge-icon">${cat.icon}</span><span class="badge-name">${label}</span>
+    return`<div class="badge-chip${st.tierIdx>=0?' unlocked':''}" style="${color?`--tier-color:${color}`:''}" title="${a.titulo}: ${st.pctToNext}% até o próximo nível">
+      <span class="badge-icon">${a.icone}</span><span class="badge-name">${label}</span>
     </div>`;
   }).join('');
   const summaryEl=document.getElementById('dash-badges-summary');
@@ -2607,44 +2961,105 @@ function renderBadges(){
 }
 
 // ===== TELA DE CONQUISTAS =====
+let conqFilterCat='all',conqFilterDiff='all',conqFilterRarity='all',conqFilterStatus='all';
+function conqSetFilter(tipo,val){
+  if(tipo==='cat')conqFilterCat=val;
+  if(tipo==='diff')conqFilterDiff=val;
+  if(tipo==='rarity')conqFilterRarity=val;
+  if(tipo==='status')conqFilterStatus=val;
+  renderConquistasScreen();
+}
+const CONQ_CAT_LABELS={all:'Todas as categorias',volume:'📦 Volume',consistencia:'🔥 Consistência',dominio:'🎯 Domínio',amplitude:'🌍 Amplitude',tempo:'⏱️ Tempo',meta:'🎖️ Prestígio',secreta:'❓ Secretas'};
 function renderConquistasScreen(){
   const el=document.getElementById('conquistas-grid');
   if(!el)return;
-  let unlockedTotal=0,maxTotal=0;
-  el.innerHTML=ACHIEVEMENT_CATEGORIES.map(cat=>{
-    const st=achievementStatus(cat);
-    unlockedTotal+=st.tierIdx+1;
-    maxTotal+=cat.tiers.length;
-    const pips=cat.tiers.map((thr,i)=>{
+  checkAchievementUnlocks();
+  let unlockedTotal=0,maxTotal=0,gamerscore=0;
+  let list=ACHIEVEMENTS_REGISTRY.map(a=>({a,st:achievementStatus(a)}));
+  list.forEach(({st})=>{unlockedTotal+=st.tierIdx+1;maxTotal+=st.tierList.length;gamerscore+=(st.tierIdx+1)*10;});
+
+  if(conqFilterCat!=='all')list=list.filter(({a})=>a.categoria===conqFilterCat);
+  if(conqFilterDiff!=='all')list=list.filter(({a})=>a.dificuldade===conqFilterDiff);
+  if(conqFilterRarity!=='all')list=list.filter(({a})=>achievementRarity(a)===conqFilterRarity);
+  if(conqFilterStatus==='desbloqueada')list=list.filter(({st})=>st.tierIdx>=0);
+  else if(conqFilterStatus==='progresso')list=list.filter(({st})=>st.tierIdx>=0&&!st.maxed);
+  else if(conqFilterStatus==='bloqueada')list=list.filter(({st})=>st.tierIdx<0);
+  else if(conqFilterStatus==='secreta')list=list.filter(({a})=>a.secreta);
+
+  // Ordenação inteligente: completas primeiro, depois em progresso (mais perto primeiro), depois bloqueadas
+  list.sort((x,y)=>{
+    const rank=({a,st})=>st.maxed?0:(st.tierIdx>=0?1:(a.secreta?3:2));
+    const rx=rank(x),ry=rank(y);
+    if(rx!==ry)return rx-ry;
+    return y.st.pctToNext-x.st.pctToNext;
+  });
+
+  const diffOpts=['facil','medio','dificil','dificilimo'];
+  const rarityOpts=['Comum','Incomum','Rara','Épica','Lendária'];
+  const catOpts=['all','volume','consistencia','dominio','amplitude','tempo','meta','secreta'];
+  const filtrosHTML=`<div class="conq-filters">
+    <select class="inp conq-filter-sel" onchange="conqSetFilter('cat',this.value)">${catOpts.map(c=>`<option value="${c}"${conqFilterCat===c?' selected':''}>${CONQ_CAT_LABELS[c]}</option>`).join('')}</select>
+    <select class="inp conq-filter-sel" onchange="conqSetFilter('diff',this.value)"><option value="all"${conqFilterDiff==='all'?' selected':''}>Toda dificuldade</option>${diffOpts.map(d=>`<option value="${d}"${conqFilterDiff===d?' selected':''}>${DIFF_LABEL[d]}</option>`).join('')}</select>
+    <select class="inp conq-filter-sel" onchange="conqSetFilter('rarity',this.value)"><option value="all"${conqFilterRarity==='all'?' selected':''}>Toda raridade</option>${rarityOpts.map(r=>`<option value="${r}"${conqFilterRarity===r?' selected':''}>${r}</option>`).join('')}</select>
+    <select class="inp conq-filter-sel" onchange="conqSetFilter('status',this.value)">
+      <option value="all"${conqFilterStatus==='all'?' selected':''}>Todos os status</option>
+      <option value="desbloqueada"${conqFilterStatus==='desbloqueada'?' selected':''}>Desbloqueadas</option>
+      <option value="progresso"${conqFilterStatus==='progresso'?' selected':''}>Em progresso</option>
+      <option value="bloqueada"${conqFilterStatus==='bloqueada'?' selected':''}>Bloqueadas</option>
+      <option value="secreta"${conqFilterStatus==='secreta'?' selected':''}>Secretas</option>
+    </select>
+  </div>`;
+
+  const cardsHTML=list.map(({a,st})=>{
+    const isHiddenSecret=a.secreta&&st.tierIdx<0;
+    if(isHiddenSecret){
+      return`<div class="conq-card conq-card-secret">
+        <div class="conq-card-head">
+          <span class="conq-card-icon">❓</span>
+          <div class="conq-card-title-wrap">
+            <div class="conq-card-title">??? — Conquista secreta</div>
+            <div class="conq-card-desc">Continue jogando para descobrir.</div>
+          </div>
+        </div>
+      </div>`;
+    }
+    const rarity=achievementRarity(a);
+    const rarityColor=RARITY_COLOR[rarity]||'#94a3b8';
+    const pips=st.tierList.map((thr,i)=>{
       const unlocked=i<=st.tierIdx;
       const isCurrent=i===st.tierIdx;
       const color=unlocked?TIER_COLORS[i]:null;
-      return`<div class="conq-pip${unlocked?' unlocked':''}${isCurrent?' current':''}" style="${color?`--tier-color:${color}`:''}" title="${TIER_LABELS[i]}: ${thr} ${cat.unit}">
+      return`<div class="conq-pip${unlocked?' unlocked':''}${isCurrent?' current':''}" style="${color?`--tier-color:${color}`:''}" title="${TIER_LABELS[i]}: ${thr}">
         <span class="conq-pip-num">${i+1}</span>
       </div>`;
     }).join('');
-    const remaining=st.nextThreshold-st.val;
+    const remaining=st.nextThreshold!==null?st.nextThreshold-st.val:0;
     const nextText=st.maxed
       ?`<span class="conq-maxed">🏆 Nível máximo alcançado!</span>`
-      :remaining===1
-        ?`<span>Falta <b>1</b> ${cat.unitSingular||cat.unit} para o próximo nível</span>`
-        :`<span>Faltam <b>${remaining}</b> ${cat.unit} para o próximo nível</span>`;
-    return`<div class="conq-card">
+      :`<span>Faltam <b>${remaining}</b> para o próximo nível</span>`;
+    return`<div class="conq-card${a.id==='nomeado'&&st.maxed?' conq-card-nomeado':''}">
       <div class="conq-card-head">
-        <span class="conq-card-icon">${cat.icon}</span>
+        <span class="conq-card-icon">${a.icone}</span>
         <div class="conq-card-title-wrap">
-          <div class="conq-card-title">${cat.name}</div>
-          <div class="conq-card-val">${st.val} <small>${cat.unit}</small></div>
+          <div class="conq-card-title">${a.titulo}</div>
+          <div class="conq-card-desc">${a.descricao}</div>
+          <div class="conq-card-val">${st.val}</div>
         </div>
-        <div class="conq-card-tier" style="${st.tierIdx>=0?`color:${TIER_COLORS[st.tierIdx]}`:''}">${st.tierIdx>=0?TIER_LABELS[st.tierIdx]:'Sem nível'}</div>
+        <div style="text-align:right;flex-shrink:0">
+          <div class="conq-card-tier" style="${st.tierIdx>=0?`color:${TIER_COLORS[st.tierIdx]}`:''}">${st.tierIdx>=0?TIER_LABELS[st.tierIdx]:'Sem nível'}</div>
+          <div class="conq-rarity-badge" style="--rarity-color:${rarityColor}">${rarity}</div>
+        </div>
       </div>
       <div class="conq-pips-row">${pips}</div>
       <div class="conq-progress-bar"><div class="conq-progress-fill" style="width:${st.pctToNext}%;${st.tierIdx>=0?`background:${TIER_COLORS[Math.min(st.tierIdx+1,TIER_COLORS.length-1)]}`:''}"></div></div>
       <div class="conq-next-text">${nextText}</div>
+      <div class="conq-diff-badge" style="color:${DIFF_COLOR[a.dificuldade]}">${DIFF_LABEL[a.dificuldade]}</div>
     </div>`;
   }).join('');
+
+  el.innerHTML=filtrosHTML+`<div class="conq-grid">${cardsHTML||'<div class="empty" style="grid-column:1/-1"><p>Nenhuma conquista neste filtro.</p></div>'}</div>`;
   const summaryEl=document.getElementById('conquistas-summary');
-  if(summaryEl)summaryEl.textContent=`${unlockedTotal} de ${maxTotal} níveis desbloqueados no total`;
+  if(summaryEl)summaryEl.textContent=`${unlockedTotal} de ${maxTotal} níveis · ${list.length}/${ACHIEVEMENTS_REGISTRY.length} conquistas exibidas · 🏆 ${gamerscore} pontos`;
 }
 
 function resetTimer(subId,topicId){
@@ -3058,6 +3473,18 @@ function completeRev(subId,idx,fromList){
     toast('✅ Revisão concluída! +100 XP','var(--green)');
   }
 
+  // Contador diário de revisões concluídas (usado por conquistas secretas: "Centurião", "Fila Zerada")
+  const td=todayStr();
+  if(!db.revsCompletedPerDay)db.revsCompletedPerDay={};
+  db.revsCompletedPerDay[td]=(db.revsCompletedPerDay[td]||0)+1;
+  const rpdKeys=Object.keys(db.revsCompletedPerDay).sort();
+  if(rpdKeys.length>60)rpdKeys.slice(0,rpdKeys.length-60).forEach(k=>delete db.revsCompletedPerDay[k]);
+  const overdueLeft=getAllRevItems().filter(i=>!i.completed&&!i.locked&&i.studied&&i.date<=td).length;
+  if(overdueLeft===0){
+    if(!db.secretsUnlocked)db.secretsUnlocked={};
+    db.secretsUnlocked.fila_zerada=true;
+  }
+
   gainXP(100);saveDB();
   updateRevBadge();renderMap();renderHeader();
   if(fromList)renderRevisions();else closeModal();
@@ -3361,6 +3788,9 @@ function renderDashboard(){
     if(!db.goalHitDays)db.goalHitDays=[];
     if(!db.goalHitDays.includes(today)){db.goalHitDays.push(today);achievementsDirty=true;}
   }
+  // "Colecionador de Chamas": recuperar o streak até 30 depois de tê-lo perdido.
+  if(streak===0&&(db.longestStreak||0)>0&&!db.streakHadDrop){db.streakHadDrop=true;achievementsDirty=true;}
+  if(streak>=30&&db.streakHadDrop){db.streakHadDrop=false;db.streakRecoveries=(db.streakRecoveries||0)+1;achievementsDirty=true;}
   if(achievementsDirty)saveDB();
 
   // Stats
@@ -3883,6 +4313,11 @@ function repSaveTema(){
     if(el)t[s.id]=el.value;
   });
   repSelectedTema=t;
+  if([t.panorama,t.causas,t.consequencias,t.resolucoes,t.repertorio].some(v=>v&&v.trim())){
+    if(!db.temasFilledIds)db.temasFilledIds=[];
+    if(!db.temasFilledIds.includes(t.id))db.temasFilledIds.push(t.id);
+  }
+  markDailyActivity(todayStr(),null,'repertorio');
   saveDB();repEditMode=false;repRenderSidebar();repRenderMain();
   toast('✅ Tema salvo!','var(--green)');
 }
@@ -4362,8 +4797,13 @@ function rdSaveRedacao(){
   } else {
     const id='rd_'+genId();
     db.redacoes.textos[id]={id,topicId:rdSelectedTopic.id,titulo,nc:ncN,ne:neN,tl:tlN,npd,texto,obs,criacao:new Date().toISOString()};
+    db.redacoesCreatedTotal=(db.redacoesCreatedTotal||0)+1;
+    const rtd=todayStr();
+    if(!db.redacoesPerDay)db.redacoesPerDay={};
+    db.redacoesPerDay[rtd]=(db.redacoesPerDay[rtd]||0)+1;
     toast(`📝 Redação salva!${npd!==null?' NPD: '+npd.toFixed(2):''}`,npd===null?'var(--accent)':npd>=15?'var(--green)':'var(--red)');
   }
+  markDailyActivity(todayStr(),null,'redacao');
   saveDB();rdCloseForm();rdRenderTopics();rdRenderMain();
 }
 
@@ -4475,6 +4915,7 @@ function fcImportDeckFile(input){
         db.flashcards[id]={id,mbId:fcSelectedMb.id,pergunta:c.pergunta,resposta:c.resposta,tags:c.tags||'',dificuldade:c.dificuldade||2,acertos:0,erros:0,lastConf:0,criacao:new Date().toISOString(),ultimaRevisao:null};
         count++;
       });
+      db.fcCreatedTotal=(db.fcCreatedTotal||0)+count;
       saveDB();renderFCMbList();renderFCMain();updateFCBadge();
       toast(`📥 ${count} flashcards importados!`,'var(--green)');
     }catch(err){
@@ -4876,9 +5317,30 @@ function logFCReview(ok){
   if(db.fcReviewLog.length>500)db.fcReviewLog=db.fcReviewLog.slice(-500);
 }
 
+// Combo de acertos e maturidade de cards — usados pelas conquistas "Combo Perfeito"
+// e "Cards Blindados" (nunca regridem: uma vez maduro, o card conta pra sempre).
+function trackFCReviewOutcome(cardId,ok,prevTouch){
+  if(ok){
+    db.fcCurrentStreak=(db.fcCurrentStreak||0)+1;
+    if(db.fcCurrentStreak>(db.fcLongestStreak||0))db.fcLongestStreak=db.fcCurrentStreak;
+  } else {
+    db.fcCurrentStreak=0;
+  }
+  const c=db.flashcards[cardId];
+  if(c&&c.lastConf>=4){
+    if(!db.cardsMaturedIds)db.cardsMaturedIds=[];
+    if(!db.cardsMaturedIds.includes(cardId))db.cardsMaturedIds.push(cardId);
+  }
+  if(prevTouch&&daysDiff(prevTouch.slice(0,10),todayStr())>=60){
+    if(!db.secretsUnlocked)db.secretsUnlocked={};
+    db.secretsUnlocked.fundo_do_bau=true;
+  }
+  markDailyActivity(todayStr(),null,'flashcard');
+}
 function fcGridMark(cardId,acertou){
   if(!db.flashcards||!db.flashcards[cardId])return;
   const c=db.flashcards[cardId];
+  const prevTouch=c.ultimaRevisao||c.criacao;
   logFCReview(acertou);
   if(acertou){
     c.acertos=(c.acertos||0)+1;
@@ -4888,6 +5350,7 @@ function fcGridMark(cardId,acertou){
     c.lastConf=1;
   }
   c.ultimaRevisao=new Date().toISOString();
+  trackFCReviewOutcome(cardId,acertou,prevTouch);
   saveDB();
   // Feedback visual no card
   const card=document.getElementById('fccard-'+cardId);
@@ -5019,12 +5482,14 @@ function fcStudyFlip(){
 function fcStudyConf(cardId,conf){
   if(!db.flashcards||!db.flashcards[cardId])return;
   const c=db.flashcards[cardId];
+  const prevTouch=c.ultimaRevisao||c.criacao;
   c.lastConf=conf;
   c.ultimaRevisao=new Date().toISOString();
   logFCReview(conf>=3);
   if(conf>=3){c.acertos=(c.acertos||0)+1;fcScoreRight++;}
   else{c.erros=(c.erros||0)+1;fcScoreWrong++;}
   const interval=conf>=4?41:conf===3?21:conf===2?14:7;
+  trackFCReviewOutcome(cardId,conf>=3,prevTouch);
   saveDB();
   fcStudyIdx=(fcStudyIdx+1)%fcStudyCards.length;
   fcStudyFlipped=false;
@@ -5130,6 +5595,7 @@ function fcSaveCard(){
   } else {
     const id='fc_'+genId();
     db.flashcards[id]={id,mbId:fcSelectedMb.id,pergunta,resposta,tags,dificuldade:fcDiff,acertos:0,erros:0,lastConf:0,criacao:new Date().toISOString(),ultimaRevisao:null};
+    db.fcCreatedTotal=(db.fcCreatedTotal||0)+1;
     toast('🃏 Flashcard criado!','var(--accent)');
   }
   saveDB();fcCloseForm();renderFCMbList();renderFCMain();updateFCBadge();
@@ -5331,6 +5797,7 @@ function floatTimerSave(){
   if(!db.freeSessions)db.freeSessions=[];
   db.freeSessions.push({tipo,reinoId,reinoName,segundos:total,data:todayStr(),hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})});
   if(db.freeSessions.length>50)db.freeSessions=db.freeSessions.slice(-50);
+  logSessionEvent('livre',total,reinoId);
   saveDB();gainXP(Math.floor(total/60));
   toast('✅ '+fmtTime(total)+' de '+(tl[tipo]||tipo)+(reinoId?' ('+reinoName+')':'')+' registrado!','var(--green)');
   floatTimerReset();floatTimerClose();
@@ -5413,6 +5880,7 @@ function pmdPhaseComplete(){
     if(!db.freeSessions)db.freeSessions=[];
     db.freeSessions.push({tipo:'pomodoro',reinoId,reinoName,segundos:secs,data:todayStr(),hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})});
     if(db.freeSessions.length>50)db.freeSessions=db.freeSessions.slice(-50);
+    logSessionEvent('pomodoro',secs,reinoId);
     saveDB();gainXP(Math.floor(secs/60));
     const sc=document.querySelector('.screen.active')?.id;if(sc==='screen-dashboard')renderDashboard();
   }
