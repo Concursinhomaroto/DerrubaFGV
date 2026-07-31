@@ -974,6 +974,7 @@ nav{
   }
   #toast{top:calc(var(--mobile-topbar-h) + var(--sp-2));right:var(--sp-3);max-width:calc(100vw - 32px);}
   #float-timer{bottom:calc(var(--mobile-navbar-h) + var(--sp-3))!important;}
+  #float-timer-mini{bottom:calc(var(--mobile-navbar-h) + var(--sp-3))!important;}
 
   #kingdoms-container{grid-template-columns:1fr 1fr;}
   .screen{padding:var(--sp-4) var(--sp-3);}
@@ -1565,6 +1566,11 @@ nav{
 <div id="toast"></div>
 
 <!-- CRONÔMETRO FLUTUANTE -->
+<div id="float-timer-mini" style="display:none;position:fixed;bottom:20px;right:20px;z-index:500;background:linear-gradient(135deg,#4c1d95,#6d28d9);border-radius:999px;padding:7px 8px 7px 14px;box-shadow:0 6px 20px rgba(76,29,149,0.4);align-items:center;gap:8px;cursor:pointer" onclick="floatTimerExpand()" title="Abrir cronômetro">
+  <span id="ftm-icon" style="font-size:14px">⏱️</span>
+  <span id="ftm-time" style="font-variant-numeric:tabular-nums;font-weight:900;color:#fff;font-size:13px;min-width:44px;text-align:center">00:00</span>
+  <button id="ftm-toggle" onclick="event.stopPropagation();ftmToggle()" style="background:rgba(255,255,255,0.9);color:#4c1d95;border:none;border-radius:50%;width:26px;height:26px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">⏸</button>
+</div>
 <div id="float-timer" style="display:none;position:fixed;bottom:80px;right:20px;z-index:500;background:linear-gradient(135deg,#4c1d95,#6d28d9);border-radius:20px;padding:14px 18px;box-shadow:0 8px 32px rgba(76,29,149,0.4);min-width:230px">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
     <div style="font-size:10px;font-weight:900;color:rgba(255,255,255,0.7);letter-spacing:1px;text-transform:uppercase">⏱️ Sessão de Estudo</div>
@@ -6570,6 +6576,7 @@ let ftRunning=false,ftStartedAt=null,ftAccumulated=0,ftRafId=null;
 function ftGetElapsed(){if(!ftRunning||!ftStartedAt)return ftAccumulated;return ftAccumulated+Math.floor((Date.now()-ftStartedAt)/1000);}
 function ftTick(){ftUpdateDisplay();if(ftRunning)ftRafId=requestAnimationFrame(ftTick);}
 function floatTimerOpen(){
+  floatTimerHideMini();
   const sel=document.getElementById('ft-reino');
   if(sel){sel.innerHTML='<option value="" style="background:#4c1d95;color:#fff">🏰 Todos os Reinos (Geral)</option>';db.kingdoms.forEach(k=>{sel.innerHTML+='<option value="'+k.id+'" style="background:#4c1d95;color:#fff">'+(k.icon||'🏰')+' '+k.name+'</option>';});}
   document.getElementById('float-timer').style.display='block';
@@ -6579,11 +6586,60 @@ function floatTimerOpen(){
   if(ftRunning)ftRafId=requestAnimationFrame(ftTick);
   document.getElementById('main-content')?.classList.add('has-float-timer');
 }
+// Fechar o painel não pode simplesmente sumir se tem sessão rodando/pausada com progresso —
+// vira um pill pequeno flutuante (não atrapalha o conteúdo) em vez de voltar pro ícone puro.
 function floatTimerClose(){
   document.getElementById('float-timer').style.display='none';
-  const btn=document.getElementById('float-timer-btn');if(btn){btn.style.display='flex';btn.style.visibility='visible';}
   if(ftRafId){cancelAnimationFrame(ftRafId);ftRafId=null;}
   document.getElementById('main-content')?.classList.remove('has-float-timer');
+  if(ftHasActiveSession()){
+    floatTimerShowMini();
+  }else{
+    const btn=document.getElementById('float-timer-btn');if(btn){btn.style.display='flex';btn.style.visibility='visible';}
+  }
+}
+function floatTimerExpand(){
+  floatTimerOpen();
+}
+function ftHasActiveSession(){
+  return ftRunning||pmdRunning||ftAccumulated>0||pmdRemaining!==PMD_DURATIONS[pmdPhase];
+}
+let ftMiniInterval=null;
+function floatTimerShowMini(){
+  const mini=document.getElementById('float-timer-mini');
+  if(!mini)return;
+  mini.style.display='flex';
+  const btn=document.getElementById('float-timer-btn');if(btn)btn.style.visibility='hidden';
+  ftmUpdate();
+  if(ftMiniInterval)clearInterval(ftMiniInterval);
+  ftMiniInterval=setInterval(ftmUpdate,1000);
+}
+function floatTimerHideMini(){
+  const mini=document.getElementById('float-timer-mini');
+  if(mini)mini.style.display='none';
+  if(ftMiniInterval){clearInterval(ftMiniInterval);ftMiniInterval=null;}
+}
+function ftmUpdate(){
+  const icon=document.getElementById('ftm-icon'),time=document.getElementById('ftm-time'),toggle=document.getElementById('ftm-toggle');
+  const isPomodoro=pmdRunning||(pmdRemaining!==PMD_DURATIONS[pmdPhase]&&!ftRunning&&ftAccumulated===0);
+  if(isPomodoro){
+    if(icon)icon.textContent='🍅';
+    const rem=pmdGetRemaining();
+    if(time)time.textContent=String(Math.floor(rem/60)).padStart(2,'0')+':'+String(rem%60).padStart(2,'0');
+    if(toggle)toggle.textContent=pmdRunning?'⏸':'▶';
+  }else{
+    if(icon)icon.textContent='⏱️';
+    const total=ftGetElapsed();
+    const h=Math.floor(total/3600);
+    if(time)time.textContent=(h?String(h).padStart(2,'0')+':':'')+String(Math.floor((total%3600)/60)).padStart(2,'0')+':'+String(total%60).padStart(2,'0');
+    if(toggle)toggle.textContent=ftRunning?'⏸':'▶';
+  }
+  if(!ftHasActiveSession())floatTimerHideMini();
+}
+function ftmToggle(){
+  const isPomodoro=pmdRunning||(pmdRemaining!==PMD_DURATIONS[pmdPhase]&&!ftRunning&&ftAccumulated===0);
+  if(isPomodoro)pmdToggle();else floatTimerToggle();
+  ftmUpdate();
 }
 function floatTimerToggle(){
   const btn=document.getElementById('ft-btn-play');const st=document.getElementById('ft-status');
