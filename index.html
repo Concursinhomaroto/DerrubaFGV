@@ -450,6 +450,26 @@ nav{
 
 /* ===== GAMIFICAÇÃO: STREAK / META DIÁRIA / BADGES ===== */
 /* Streak, meta e badges dividem a mesma linha (badges ocupam o espaço restante ao lado). */
+/* ===== O QUE ESTUDAR AGORA ===== */
+.next-steps-card{margin-bottom:18px;}
+.next-step-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;border:1.5px solid var(--border2);margin-bottom:8px;cursor:pointer;transition:all 0.15s;background:var(--panel2);}
+.next-step-item:hover{border-color:var(--accent);transform:translateX(2px);}
+.next-step-item:last-child{margin-bottom:0;}
+.next-step-rank{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#4f46e5);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12px;flex-shrink:0;}
+.next-step-info{flex:1;min-width:0;}
+.next-step-name{font-size:12.5px;font-weight:800;color:var(--text);}
+.next-step-sub{font-size:10px;color:var(--muted);font-weight:600;margin-top:2px;}
+.next-step-reason{font-size:10.5px;font-weight:700;color:var(--accent);white-space:nowrap;flex-shrink:0;}
+@media(max-width:600px){
+  .next-step-item{flex-wrap:wrap;}
+  .next-step-reason{margin-left:38px;}
+}
+.sim-global-card{margin-bottom:18px;}
+.sim-global-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
+@media(max-width:768px){
+  .sim-global-grid{grid-template-columns:repeat(2,1fr);}
+}
+
 .dash-gamify-row{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:18px;align-items:stretch;}
 .gamify-card{display:flex;align-items:center;gap:10px;margin-bottom:0;flex:1 1 165px;padding:14px 16px;}
 .gamify-goal{cursor:pointer;transition:all 0.2s;}
@@ -1244,6 +1264,19 @@ nav{
 <!-- ===== DASHBOARD ===== -->
 <div class="screen active" id="screen-dashboard">
   <div class="sec-title">🏆 Painel do Herói</div>
+
+  <!-- O que estudar agora -->
+  <div class="section-card next-steps-card">
+    <div class="sec-title" style="margin-bottom:4px">🧭 O QUE ESTUDAR AGORA</div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:10px;font-weight:600">Prioridade do miniboss conta mais, depois revisão atrasada, depois desempenho fraco em simulados</div>
+    <div id="next-steps-list"></div>
+  </div>
+
+  <!-- Desempenho em simulados -->
+  <div class="section-card sim-global-card">
+    <div class="sec-title" style="margin-bottom:10px">🎯 DESEMPENHO EM SIMULADOS</div>
+    <div id="sim-global-stats" class="sim-global-grid"></div>
+  </div>
 
   <!-- Streak + Meta diária + Conquistas -->
   <div class="dash-gamify-row">
@@ -3257,7 +3290,7 @@ function simPanelHTML(s){
   return`
     <div class="sim-header"><div class="sim-title"><i class="fa fa-list-check"></i> Simulado rápido</div></div>
     ${stats?`<div style="text-align:center"><span class="sim-stat-badge"><i class="fa fa-chart-simple"></i> Histórico: ${stats.acertosTotal}/${stats.questoesTotal} acertos (${Math.round(stats.acertosTotal/stats.questoesTotal*100)}%) em ${stats.tentativas} simulado${stats.tentativas>1?'s':''}</span></div>`:''}
-    <div class="sim-empty">Gere questões de múltipla escolha (dificuldade moderada a alta) pra treinar este assunto.</div>
+    <div class="sim-empty">Gere questões de múltipla escolha (dificuldade moderada a alta) pra treinar este assunto.${(s.note||'').trim()?' <b style="color:var(--pink)">Vai usar sua anotação como referência.</b>':' <span title="Adicione uma anotação neste miniboss pra deixar as questões mais precisas ao seu recorte de estudo">Sem anotação — a IA vai gerar com base só no nome do assunto.</span>'}</div>
     <div class="sim-config-row">
       <label style="font-size:11px;color:var(--muted);font-weight:700">Quantidade:</label>
       <select id="sim-qtd-${s.id}" class="inp" style="width:auto;padding:6px 10px">
@@ -3337,6 +3370,7 @@ async function generateSimulado(subId){
 
   const qtdSel=document.getElementById('sim-qtd-'+subId);
   const quantidade=parseInt(qtdSel?.value||'10',10);
+  const nota=(sub.note||'').trim();
 
   simGenerating.add(subId);
   openSim.add(subId);
@@ -3351,7 +3385,7 @@ TAREFA: Gere ${quantidade} questões de múltipla escolha inéditas sobre o assu
 REINO/ÁREA: ${kingdom.name}
 CHEFÃO/TÓPICO: ${topic.name}
 MINIBOSS/ASSUNTO ESPECÍFICO: ${sub.name}
-
+${nota?`\nANOTAÇÃO DO ALUNO SOBRE ESTE ASSUNTO (use como referência principal do recorte a cobrar — as questões devem ser sobre o que está anotado aqui, não só sobre o nome genérico do assunto):\n${nota}\n`:''}
 REGRAS:
 - Cada questão tem exatamente 5 alternativas (A a E), com apenas uma correta.
 - Evite pegadinhas de português; o foco é o conteúdo técnico do assunto.
@@ -4559,6 +4593,105 @@ function getAllRevItems(){
   return items;
 }
 
+// Recomendação de estudo: prioridade do miniboss pesa mais que revisão atrasada,
+// que pesa mais que desempenho fraco em simulados (nessa ordem de desempate).
+function computeStudyRecommendations(){
+  const today=todayStr();
+  const items=[];
+  db.kingdoms.forEach(k=>{
+    (db.topics[k.id]||[]).forEach(t=>{
+      (t.subtopics||[]).forEach(s=>{
+        const revs=db.revisions[s.id]||[];
+        let overdueCount=0;
+        revs.forEach((r,i)=>{
+          const prevDone=revs.slice(0,i).every(p=>p.completed);
+          if(!r.completed&&prevDone&&s.studied&&r.date<today)overdueCount++;
+        });
+        const notStudied=!s.studied;
+        let weakPct=null;
+        if(s.simStats&&s.simStats.questoesTotal>0){
+          weakPct=Math.round(s.simStats.acertosTotal/s.simStats.questoesTotal*100);
+        }
+        const isWeak=weakPct!==null&&weakPct<60;
+        if(!overdueCount&&!notStudied&&!isWeak)return;
+
+        let reason,reasonIcon,reasonBonus;
+        if(overdueCount>0){
+          reason=`${overdueCount} revisão${overdueCount>1?'ões':''} atrasada${overdueCount>1?'s':''}`;
+          reasonIcon='🔔';reasonBonus=300+overdueCount*5;
+        }else if(notStudied){
+          reason='Ainda não estudado';reasonIcon='📖';reasonBonus=200;
+        }else{
+          reason=`Desempenho fraco (${weakPct}% de acerto)`;reasonIcon='🎯';reasonBonus=100+(60-weakPct);
+        }
+
+        items.push({
+          subId:s.id,subName:s.name,topicName:t.name,
+          kingdomName:k.name,kingdomIcon:k.icon,priority:s.priority,
+          reason,reasonIcon,score:s.priority*1000+reasonBonus
+        });
+      });
+    });
+  });
+  items.sort((a,b)=>b.score-a.score);
+  return items.slice(0,5);
+}
+// Agrega s.simStats de todos os minibosses — cada simulado corrigido soma aqui,
+// então "simulados feitos" cresce a cada vez que o usuário gera E responde um.
+function computeSimuladoStats(){
+  let tentativas=0,questoes=0,acertos=0;
+  db.kingdoms.forEach(k=>{
+    (db.topics[k.id]||[]).forEach(t=>{
+      (t.subtopics||[]).forEach(s=>{
+        if(s.simStats){
+          tentativas+=s.simStats.tentativas||0;
+          questoes+=s.simStats.questoesTotal||0;
+          acertos+=s.simStats.acertosTotal||0;
+        }
+      });
+    });
+  });
+  const erros=questoes-acertos;
+  const pct=questoes>0?Math.round(acertos/questoes*100):0;
+  return{tentativas,questoes,acertos,erros,pct};
+}
+function renderSimGlobalStats(){
+  const el=document.getElementById('sim-global-stats');
+  if(!el)return;
+  const st=computeSimuladoStats();
+  if(!st.tentativas){
+    el.innerHTML=`<div class="empty" style="padding:16px;grid-column:1/-1"><i class="fa fa-list-check"></i><p>Nenhum simulado respondido ainda. Gere um em qualquer miniboss (botão "Simulado") pra começar a acompanhar aqui.</p></div>`;
+    return;
+  }
+  el.innerHTML=[
+    {icon:'🎲',val:st.tentativas,lbl:'Simulados feitos',color:'var(--pink)'},
+    {icon:'📝',val:st.questoes,lbl:'Questões respondidas',color:'var(--accent)'},
+    {icon:'✅',val:st.acertos,lbl:'Acertos',color:'var(--green)'},
+    {icon:'❌',val:st.erros,lbl:'Erros',color:'var(--red)'},
+    {icon:'🎯',val:st.pct+'%',lbl:'Aproveitamento geral',color:st.pct>=60?'var(--green)':'var(--red)'},
+  ].map(s=>`<div class="stat-card"><span class="stat-icon">${s.icon}</span><div class="stat-val" style="color:${s.color}">${s.val}</div><div class="stat-lbl">${s.lbl}</div></div>`).join('');
+}
+function renderNextSteps(){
+  const el=document.getElementById('next-steps-list');
+  if(!el)return;
+  const items=computeStudyRecommendations();
+  if(!items.length){
+    el.innerHTML=`<div class="empty" style="padding:16px"><i class="fa fa-champagne-glasses"></i><p>Tudo em dia! Sem pendências prioritárias agora. 🎉</p></div>`;
+    return;
+  }
+  const priLbl={30:'🟢 Comum',70:'🟠 Raro',100:'🔴 Lendário'};
+  el.innerHTML=items.map((it,i)=>`
+    <div class="next-step-item" onclick="goToSubtopic('${it.subId}')">
+      <div class="next-step-rank">${i+1}</div>
+      <div class="next-step-info">
+        <div class="next-step-name">${it.subName}</div>
+        <div class="next-step-sub">${it.kingdomIcon} ${it.kingdomName} · ${it.topicName} · ${priLbl[it.priority]||''}</div>
+      </div>
+      <div class="next-step-reason">${it.reasonIcon} ${it.reason}</div>
+    </div>
+  `).join('');
+}
+
 function goToSubtopic(subId){
   // Encontrar reino e chefão do subtópico
   let targetKingdom=null, targetTopicId=null;
@@ -4848,6 +4981,10 @@ function renderDashboard(){
       </div>`;
     }).join('');
   }
+
+  // O que estudar agora
+  renderNextSteps();
+  renderSimGlobalStats();
 
   // Plano semanal
   renderWeeklyPlan();
