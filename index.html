@@ -4130,10 +4130,12 @@ function completeRev(subId,idx,fromList){
   if(sub&&!sub.studied){toast('⚠️ Estude o conteúdo antes de revisar!','var(--red)');return;}
   if(!db.revisions[subId])return;
 
-  // Limpar revisões inválidas e manter só as 4 válidas
+  // Limpar só as entradas com data inválida — NÃO truncar pra 4 aqui: alguém que já tem
+  // uma 5ª revisão "sobrando" (ex.: bug antigo do botão Intensivo, já corrigido) precisa
+  // conseguir concluí-la; truncar antes de checar o índice fazia o clique em "Concluir"
+  // não fazer nada silenciosamente pra revisões além da 4ª.
   db.revisions[subId]=db.revisions[subId]
-    .filter(r=>r.date&&typeof r.date==='string'&&r.date.length===10)
-    .slice(0,4);
+    .filter(r=>r.date&&typeof r.date==='string'&&r.date.length===10);
 
   if(!db.revisions[subId][idx])return;
   db.revisions[subId][idx].completed=true;
