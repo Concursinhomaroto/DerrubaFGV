@@ -372,6 +372,16 @@ nav{
 .sim-score-banner.sim-bad{background:rgba(220,38,38,0.1);color:var(--red);border:1.5px solid rgba(220,38,38,0.3);}
 .sim-disclaimer{font-size:9.5px;color:var(--muted);margin-top:10px;padding-top:8px;border-top:1px dashed var(--border);display:flex;align-items:center;gap:5px;}
 
+/* ===== BANCO DE ERROS ===== */
+.err-item{background:var(--panel);border:1.5px solid var(--border2);border-radius:14px;padding:14px;margin-bottom:12px;}
+.err-item.err-reviewed{opacity:0.6;}
+.err-header{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
+.err-breadcrumb{font-size:10.5px;font-weight:700;color:var(--muted);}
+.err-breadcrumb b{color:var(--text2);}
+.err-date{font-size:9.5px;color:var(--muted);font-weight:600;}
+.err-q-text{font-size:13px;font-weight:800;color:var(--text);line-height:1.5;margin-bottom:10px;}
+.err-skipped{font-size:11px;color:var(--orange);margin-top:8px;font-weight:700;}
+
 /* ===== FEEDBACK DE REDAÇÃO (IA) ===== */
 .rd-ai-panel{background:rgba(108,71,255,0.04);border:1.5px solid rgba(108,71,255,0.25);border-radius:14px;padding:14px;margin-bottom:14px;}
 .rd-ai-title{font-size:11px;font-weight:900;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
@@ -1171,6 +1181,10 @@ nav{
       <span class="nav-icon">🔔</span><span class="nav-label">REVISÕES</span>
       <span class="nav-badge" id="rev-badge" style="display:none">0</span>
     </button>
+    <button class="nav-btn" id="nav-erros">
+      <span class="nav-icon">📕</span><span class="nav-label">BANCO DE ERROS</span>
+      <span class="nav-badge" id="erros-badge" style="display:none">0</span>
+    </button>
     <button class="nav-btn" id="nav-editais">
       <span class="nav-icon">📋</span><span class="nav-label">EDITAIS</span>
       <span class="nav-badge" id="editais-badge" style="display:none">0</span>
@@ -1259,6 +1273,18 @@ nav{
     <button class="chip" onclick="filterRevs('all',this)">📋 Todas</button>
   </div>
   <div id="revisions-list"></div>
+</div>
+
+<!-- ===== BANCO DE ERROS ===== -->
+<div class="screen" id="screen-erros">
+  <div class="sec-title">📕 Banco de Erros</div>
+  <div style="font-size:11px;color:var(--muted);margin-bottom:14px;font-weight:600">Questões que você errou nos simulados, reunidas aqui pra você bater de novo até acertar.</div>
+  <div class="filter-row">
+    <button class="chip active" onclick="filterErros('pending',this)">🔴 Pendentes</button>
+    <button class="chip" onclick="filterErros('reviewed',this)">✅ Revisados</button>
+    <button class="chip" onclick="filterErros('all',this)">📋 Todos</button>
+  </div>
+  <div id="erros-list"></div>
 </div>
 
 <!-- ===== DASHBOARD ===== -->
@@ -2101,6 +2127,7 @@ let simGenerating=new Set(); // subIds com geração de simulado em andamento
 let simActive={}; // subId -> {questoes,quantidade,corrected} do simulado em andamento (não salvo até corrigir)
 let revFilter='overdue';
 let mbFilter='all';
+let errFilter='pending';
 
 // ===== INIT =====
 loadDB(()=>{
@@ -2108,6 +2135,7 @@ loadDB(()=>{
   renderMap();
   updateRevBadge();
   updateEditaisBadge();
+  updateErrosBadge();
   updateFCBadge();
   updateNotifBtn();
   checkOverdueNotifications();
@@ -2161,6 +2189,7 @@ function showScreen(name){
   if(name==='repertorio')renderRepertorioScreen();
   if(name==='conquistas')renderConquistasScreen();
   if(name==='vale')renderValeMap();
+  if(name==='erros'){renderErrosScreen();updateErrosBadge();}
 }
 
 // ===== MAP =====
@@ -3341,6 +3370,7 @@ function simCorrigir(subId){
   sub.simHistorico.unshift({id:genId(),data:new Date().toISOString(),quantidade:total,acertos,erros:total-acertos,questoes:active.questoes});
   sub.simHistorico=sub.simHistorico.slice(0,5);
   saveDB();
+  updateErrosBadge();
   const btn=document.getElementById('sim-btn-'+subId);
   if(btn)btn.className='btn btn-sm btn-pink';
   const wrap=document.getElementById('sim-'+subId);
@@ -4591,6 +4621,97 @@ function getAllRevItems(){
     });
   });
   return items;
+}
+
+// ===== BANCO DE ERROS (questões erradas em simulados) =====
+// Identifica cada questão errada por (subId, histId, índice dentro do histórico),
+// já que as questões geradas por IA não têm um id próprio — esse trio já é estável
+// porque simHistorico nunca reordena os itens depois de salvo.
+function getErrorBank(){
+  const items=[];
+  db.kingdoms.forEach(k=>{
+    (db.topics[k.id]||[]).forEach(t=>{
+      (t.subtopics||[]).forEach(s=>{
+        (s.simHistorico||[]).forEach(hist=>{
+          (hist.questoes||[]).forEach((q,qIdx)=>{
+            if(q.userAnswer!==q.correta){
+              items.push({
+                subId:s.id,subName:s.name,topicName:t.name,
+                kingdomName:k.name,kingdomIcon:k.icon,
+                histId:hist.id,qIdx,data:hist.data,
+                questao:q.questao,alternativas:q.alternativas,
+                correta:q.correta,userAnswer:q.userAnswer,
+                explicacao:q.explicacao,revisado:q.revisado===true
+              });
+            }
+          });
+        });
+      });
+    });
+  });
+  items.sort((a,b)=>b.data.localeCompare(a.data));
+  return items;
+}
+function toggleErroRevisado(subId,histId,qIdx){
+  const sub=simFindSub(subId);
+  if(!sub)return;
+  const hist=(sub.simHistorico||[]).find(h=>h.id===histId);
+  if(!hist||!hist.questoes[qIdx])return;
+  hist.questoes[qIdx].revisado=!hist.questoes[qIdx].revisado;
+  saveDB();
+  renderErrosScreen();
+  updateErrosBadge();
+}
+function filterErros(f,el){
+  errFilter=f;
+  document.querySelectorAll('#screen-erros .filter-row .chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  renderErrosScreen();
+}
+function renderErrosScreen(){
+  const container=document.getElementById('erros-list');
+  if(!container)return;
+  let items=getErrorBank();
+  if(errFilter==='pending')items=items.filter(i=>!i.revisado);
+  else if(errFilter==='reviewed')items=items.filter(i=>i.revisado);
+  if(!items.length){
+    const msg=errFilter==='pending'?'Nenhum erro pendente! Você já revisou tudo que errou. 🎉'
+      :errFilter==='reviewed'?'Nenhum erro marcado como revisado ainda.'
+      :'Nenhum erro registrado ainda — responda simulados pra alimentar seu banco de erros.';
+    container.innerHTML=`<div class="empty"><i class="fa fa-champagne-glasses"></i><p>${msg}</p></div>`;
+    return;
+  }
+  container.innerHTML=items.map(it=>`
+    <div class="err-item${it.revisado?' err-reviewed':''}">
+      <div class="err-header">
+        <div class="err-breadcrumb">${it.kingdomIcon} ${it.kingdomName} · ${it.topicName} · <b>${it.subName}</b></div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="err-date">${new Date(it.data).toLocaleDateString('pt-BR')}</span>
+          <button class="btn btn-xs ${it.revisado?'btn-green-s':'btn-ghost'}" onclick="toggleErroRevisado('${it.subId}','${it.histId}',${it.qIdx})">
+            ${it.revisado?'<i class="fa fa-check"></i> Revisado':'Marcar como revisado'}
+          </button>
+        </div>
+      </div>
+      <div class="err-q-text">${it.questao}</div>
+      <div class="sim-alts">
+        ${(it.alternativas||[]).map(alt=>{
+          let cls='';
+          if(alt.letra===it.correta)cls=' sim-correct';
+          else if(alt.letra===it.userAnswer)cls=' sim-wrong';
+          return`<div class="sim-alt${cls}"><b>${alt.letra})</b> ${alt.texto}</div>`;
+        }).join('')}
+      </div>
+      ${!it.userAnswer?`<div class="err-skipped"><i class="fa fa-circle-exclamation"></i> Você não respondeu esta questão no simulado.</div>`:''}
+      ${it.explicacao?`<div class="sim-explain"><i class="fa fa-circle-info"></i> ${it.explicacao}</div>`:''}
+      <button class="btn btn-xs btn-ghost" style="margin-top:8px" onclick="goToSubtopic('${it.subId}')"><i class="fa fa-location-arrow"></i> Ir para o assunto</button>
+    </div>
+  `).join('');
+}
+function updateErrosBadge(){
+  const b=document.getElementById('erros-badge');
+  if(!b)return;
+  const pending=getErrorBank().filter(i=>!i.revisado).length;
+  if(pending>0){b.textContent=pending;b.style.display='inline';}else{b.style.display='none';}
 }
 
 // Recomendação de estudo: prioridade do miniboss pesa mais que revisão atrasada,
@@ -7425,6 +7546,7 @@ function removeRevFromPlan(subId,revIdx,ds){
 function bindStaticEvents(){
   document.getElementById('nav-vale')?.addEventListener('click',()=>showScreen('vale'));
   document.getElementById('nav-revisions')?.addEventListener('click',()=>showScreen('revisions'));
+  document.getElementById('nav-erros')?.addEventListener('click',()=>showScreen('erros'));
   document.getElementById('nav-dashboard')?.addEventListener('click',()=>showScreen('dashboard'));
   document.getElementById('nav-editais')?.addEventListener('click',()=>showScreen('editais'));
   document.getElementById('nav-flashcards')?.addEventListener('click',()=>showScreen('flashcards'));
