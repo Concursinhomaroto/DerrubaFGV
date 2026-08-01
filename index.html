@@ -464,6 +464,11 @@ nav{
   .next-step-item{flex-wrap:wrap;}
   .next-step-reason{margin-left:38px;}
 }
+.sim-global-card{margin-bottom:18px;}
+.sim-global-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
+@media(max-width:768px){
+  .sim-global-grid{grid-template-columns:repeat(2,1fr);}
+}
 
 .dash-gamify-row{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:18px;align-items:stretch;}
 .gamify-card{display:flex;align-items:center;gap:10px;margin-bottom:0;flex:1 1 165px;padding:14px 16px;}
@@ -1265,6 +1270,12 @@ nav{
     <div class="sec-title" style="margin-bottom:4px">🧭 O QUE ESTUDAR AGORA</div>
     <div style="font-size:10px;color:var(--muted);margin-bottom:10px;font-weight:600">Prioridade do miniboss conta mais, depois revisão atrasada, depois desempenho fraco em simulados</div>
     <div id="next-steps-list"></div>
+  </div>
+
+  <!-- Desempenho em simulados -->
+  <div class="section-card sim-global-card">
+    <div class="sec-title" style="margin-bottom:10px">🎯 DESEMPENHO EM SIMULADOS</div>
+    <div id="sim-global-stats" class="sim-global-grid"></div>
   </div>
 
   <!-- Streak + Meta diária + Conquistas -->
@@ -4625,6 +4636,41 @@ function computeStudyRecommendations(){
   items.sort((a,b)=>b.score-a.score);
   return items.slice(0,5);
 }
+// Agrega s.simStats de todos os minibosses — cada simulado corrigido soma aqui,
+// então "simulados feitos" cresce a cada vez que o usuário gera E responde um.
+function computeSimuladoStats(){
+  let tentativas=0,questoes=0,acertos=0;
+  db.kingdoms.forEach(k=>{
+    (db.topics[k.id]||[]).forEach(t=>{
+      (t.subtopics||[]).forEach(s=>{
+        if(s.simStats){
+          tentativas+=s.simStats.tentativas||0;
+          questoes+=s.simStats.questoesTotal||0;
+          acertos+=s.simStats.acertosTotal||0;
+        }
+      });
+    });
+  });
+  const erros=questoes-acertos;
+  const pct=questoes>0?Math.round(acertos/questoes*100):0;
+  return{tentativas,questoes,acertos,erros,pct};
+}
+function renderSimGlobalStats(){
+  const el=document.getElementById('sim-global-stats');
+  if(!el)return;
+  const st=computeSimuladoStats();
+  if(!st.tentativas){
+    el.innerHTML=`<div class="empty" style="padding:16px;grid-column:1/-1"><i class="fa fa-list-check"></i><p>Nenhum simulado respondido ainda. Gere um em qualquer miniboss (botão "Simulado") pra começar a acompanhar aqui.</p></div>`;
+    return;
+  }
+  el.innerHTML=[
+    {icon:'🎲',val:st.tentativas,lbl:'Simulados feitos',color:'var(--pink)'},
+    {icon:'📝',val:st.questoes,lbl:'Questões respondidas',color:'var(--accent)'},
+    {icon:'✅',val:st.acertos,lbl:'Acertos',color:'var(--green)'},
+    {icon:'❌',val:st.erros,lbl:'Erros',color:'var(--red)'},
+    {icon:'🎯',val:st.pct+'%',lbl:'Aproveitamento geral',color:st.pct>=60?'var(--green)':'var(--red)'},
+  ].map(s=>`<div class="stat-card"><span class="stat-icon">${s.icon}</span><div class="stat-val" style="color:${s.color}">${s.val}</div><div class="stat-lbl">${s.lbl}</div></div>`).join('');
+}
 function renderNextSteps(){
   const el=document.getElementById('next-steps-list');
   if(!el)return;
@@ -4938,6 +4984,7 @@ function renderDashboard(){
 
   // O que estudar agora
   renderNextSteps();
+  renderSimGlobalStats();
 
   // Plano semanal
   renderWeeklyPlan();
