@@ -426,8 +426,10 @@ nav{
 #goal-card.goal-complete .gamify-val,#goal-card.goal-complete .goal-ring-pct{color:#fff;}
 #goal-card.goal-complete .gamify-lbl{color:rgba(255,255,255,0.85);}
 
-.badges-row{display:flex;gap:8px;flex-wrap:wrap;align-content:center;flex:2 1 320px;}
-.badge-chip{display:flex;align-items:center;gap:6px;background:var(--panel);border:1.5px solid var(--border);border-radius:20px;padding:6px 12px 6px 8px;opacity:0.4;filter:grayscale(1);transition:all 0.2s;}
+.gamify-badges-card{flex:2 1 340px;margin-bottom:0;display:flex;flex-direction:column;justify-content:center;}
+.gamify-badges-title{font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;}
+.badges-row{display:flex;gap:8px;flex-wrap:wrap;align-content:center;}
+.badge-chip{display:flex;align-items:center;gap:6px;background:var(--bg2);border:1.5px solid var(--border);border-radius:20px;padding:6px 12px 6px 8px;opacity:0.4;filter:grayscale(1);transition:all 0.2s;}
 .badge-chip.unlocked{
   opacity:1;filter:none;border-color:transparent;
   background:linear-gradient(135deg,rgba(124,58,237,0.16),rgba(196,181,253,0.1));
@@ -438,7 +440,7 @@ nav{
 
 @media(max-width:768px){
   .dash-gamify-row{flex-direction:column;}
-  .gamify-card,.badges-row{flex:1 1 100%;}
+  .gamify-card,.gamify-badges-card{flex:1 1 100%;}
   .badges-row{gap:6px;}
   .badge-name{display:none;}
   .badge-chip{padding:8px;border-radius:50%;}
@@ -1125,7 +1127,10 @@ nav{
         <div class="gamify-lbl" id="goal-lbl">0 / 60 min</div>
       </div>
     </div>
-    <div class="badges-row" id="dash-badges"></div>
+    <div class="section-card gamify-badges-card">
+      <div class="gamify-badges-title">🏅 CONQUISTAS</div>
+      <div class="badges-row" id="dash-badges"></div>
+    </div>
   </div>
 
   <!-- Stats 3+3 + Gráfico ao lado -->
