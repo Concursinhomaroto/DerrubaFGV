@@ -6835,34 +6835,39 @@ const FC_INTERVALS=[7,14,21,41];
 
 function fcInit(){if(!db.flashcards)db.flashcards={};}
 
-// Calcular próxima revisão baseada no nível de confiança (SRS com intervalos fixos 7/14/21/41)
+// Próxima revisão via SM-2 de verdade (mesmo algoritmo/mesma sm2Next() usado nas revisões de
+// assunto): o intervalo cresce a cada acerto seguido, multiplicado pelo fator de facilidade
+// daquele card específico, em vez de sempre reiniciar do mesmo bucket fixo 7/14/21/41.
+function fcNextInterval(card){
+  return (card.sm2&&card.sm2.interval)||1;
+}
 function fcNextReview(card){
-  const conf=card.lastConf||0; // 1=errei,2=difícil,3=ok,4=fácil
   const last=card.ultimaRevisao||card.criacao;
   if(!last)return null;
-  const interval=conf>=4?41:conf===3?21:conf===2?14:7;
-  const d=new Date(last);d.setDate(d.getDate()+interval);
+  const d=new Date(last);d.setDate(d.getDate()+fcNextInterval(card));
   return d.toISOString().slice(0,10);
 }
 
-function fcNextInterval(card){
-  const conf=card.lastConf||0;
-  return conf>=4?41:conf===3?21:conf===2?14:7;
-}
-
+// Agrupa o intervalo real (que agora varia livremente, tipo 1,6,9,15,37,90...) nos mesmos 4
+// buckets que a UI (filtros, timeline) já usa, só pra manter a categorização visual.
 function fcStatus(card){
   const today=todayStr();
   const total=(card.acertos||0)+(card.erros||0);
   if(!total)return 'new';
   const next=fcNextReview(card);
   if(!next||next<=today)return 'due';
-  // Qual intervalo está agendado
   const interval=fcNextInterval(card);
-  return String(interval); // '7','14','21','41'
+  if(interval<=10)return '7';
+  if(interval<=20)return '14';
+  if(interval<=35)return '21';
+  return '41';
 }
 
-function fcStatusLabel(st){
-  return st==='new'?'✨ Novo':st==='due'?'🔥 Revisar':st==='7'?'📅 7d':st==='14'?'📅 14d':st==='21'?'📅 21d':'📅 41d';
+function fcStatusLabel(st,card){
+  if(st==='new')return '✨ Novo';
+  if(st==='due')return '🔥 Revisar';
+  const days=card?fcNextInterval(card):null;
+  return days?`📅 ${days}d`:'📅';
 }
 
 function fcStatusColor(st){
@@ -7226,7 +7231,7 @@ function fcGridHTML(cards){
     const pct=total?Math.round((c.acertos||0)/total*100):null;
     return`<div class="fc-grid-card fc-card-${st==='due'?'due':st==='new'?'new':'ok'}" id="fccard-${c.id}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px" onclick="fcFlipGridCard('${c.id}')">
-        <div style="font-size:9px;font-weight:900;color:${color}">${fcStatusLabel(st)}</div>
+        <div style="font-size:9px;font-weight:900;color:${color}">${fcStatusLabel(st,c)}</div>
         <div class="fc-card-diff">${[1,2,3,4,5].map(n=>`<div class="fc-card-diff-dot" style="background:${n<=(c.dificuldade||3)?DIFF_COLORS[c.dificuldade||3]:'var(--border)'}"></div>`).join('')}</div>
       </div>
       <div class="fc-card-q" id="fcgc-${c.id}" onclick="fcFlipGridCard('${c.id}')" style="cursor:pointer">${c.pergunta}</div>
@@ -7367,6 +7372,8 @@ function fcGridMark(cardId,acertou){
     c.erros=(c.erros||0)+1;
     c.lastConf=1;
   }
+  if(!c.sm2)c.sm2={ef:2.5,reps:0,interval:1};
+  c.sm2=sm2Next(c.sm2,acertou?4:1);
   c.ultimaRevisao=new Date().toISOString();
   trackFCReviewOutcome(cardId,acertou,prevTouch);
   saveDB();
@@ -7456,6 +7463,9 @@ function fcStudyHTML(cards){
   const c=sorted[fcStudyIdx];
   const pct=Math.round((fcStudyIdx/sorted.length)*100);
   const st=fcStatus(c);
+  // Prévia dos intervalos de cada botão ANTES de escolher — mesma ideia do Anki (again/hard/good/easy
+  // mostram quanto tempo falta ANTES de você clicar), calculada em cima do sm2 atual desse card.
+  const previewFor=(q)=>sm2Next(c.sm2||{ef:2.5,reps:0,interval:1},q).interval;
   return`
     <div class="fc-progress-bar"><div class="fc-progress-fill" style="width:${pct}%"></div></div>
     <div class="fc-study-nav">
@@ -7469,7 +7479,7 @@ function fcStudyHTML(cards){
         <div class="fc-face fc-front">
           <div class="fc-face-hint">📋 Pergunta · clique para ver a resposta</div>
           <div class="fc-face-text" style="white-space:pre-wrap">${c.pergunta}</div>
-          <div style="margin-top:12px;font-size:9px;font-weight:800;color:rgba(255,255,255,0.6)">${fcStatusLabel(st)}</div>
+          <div style="margin-top:12px;font-size:9px;font-weight:800;color:rgba(255,255,255,0.6)">${fcStatusLabel(st,c)}</div>
           <div class="fc-diff-dots">${[1,2,3,4,5].map(n=>`<div class="fc-diff-dot" style="background:${n<=(c.dificuldade||3)?DIFF_COLORS[c.dificuldade||3]:'rgba(255,255,255,0.2)'}"></div>`).join('')}</div>
         </div>
         <div class="fc-face fc-back">
@@ -7480,10 +7490,10 @@ function fcStudyHTML(cards){
       </div>
     </div>
     ${fcStudyFlipped?`<div class="fc-conf-row">
-      <button class="fc-conf-btn fc-conf-1" onclick="fcStudyConf('${c.id}',1)">✗ Não lembrei<br><small>→ 7 dias</small></button>
-      <button class="fc-conf-btn fc-conf-2" onclick="fcStudyConf('${c.id}',2)">😅 Difícil<br><small>→ 14 dias</small></button>
-      <button class="fc-conf-btn fc-conf-3" onclick="fcStudyConf('${c.id}',3)">😊 Lembrei<br><small>→ 21 dias</small></button>
-      <button class="fc-conf-btn fc-conf-4" onclick="fcStudyConf('${c.id}',4)">⭐ Fácil!<br><small>→ 41 dias</small></button>
+      <button class="fc-conf-btn fc-conf-1" onclick="fcStudyConf('${c.id}',1)">✗ Não lembrei<br><small>→ ${previewFor(1)}d</small></button>
+      <button class="fc-conf-btn fc-conf-2" onclick="fcStudyConf('${c.id}',2)">😅 Difícil<br><small>→ ${previewFor(3)}d</small></button>
+      <button class="fc-conf-btn fc-conf-3" onclick="fcStudyConf('${c.id}',3)">😊 Lembrei<br><small>→ ${previewFor(4)}d</small></button>
+      <button class="fc-conf-btn fc-conf-4" onclick="fcStudyConf('${c.id}',4)">⭐ Fácil!<br><small>→ ${previewFor(5)}d</small></button>
     </div>`:'<div style="text-align:center;font-size:11px;color:var(--muted);margin-top:8px">Clique no card para revelar a resposta</div>'}
   `;
 }
@@ -7506,13 +7516,19 @@ function fcStudyConf(cardId,conf){
   logFCReview(conf>=3);
   if(conf>=3){c.acertos=(c.acertos||0)+1;fcScoreRight++;}
   else{c.erros=(c.erros||0)+1;fcScoreWrong++;}
-  const interval=conf>=4?41:conf===3?21:conf===2?14:7;
+  // Mesmo SM-2 das revisões de assunto: o intervalo cresce com o fator de facilidade do card
+  // (sobe quando você lembra bem, cai/reseta quando esquece), em vez de sempre voltar pro
+  // mesmo bucket fixo — é isso que torna a repetição espaçada "de verdade", tipo Anki.
+  const quality={1:1,2:3,3:4,4:5}[conf];
+  if(!c.sm2)c.sm2={ef:2.5,reps:0,interval:1};
+  c.sm2=sm2Next(c.sm2,quality);
   trackFCReviewOutcome(cardId,conf>=3,prevTouch);
   saveDB();
   fcStudyIdx=(fcStudyIdx+1)%fcStudyCards.length;
   fcStudyFlipped=false;
   renderFCMbList();renderFCMain();updateFCBadge();
-  const msgs={1:'✗ Agendado para 7 dias',2:'😅 Agendado para 14 dias',3:'😊 Agendado para 21 dias',4:'⭐ Agendado para 41 dias!'};
+  const d=c.sm2.interval;
+  const msgs={1:`✗ Agendado para ${d} dia${d>1?'s':''}`,2:`😅 Agendado para ${d} dia${d>1?'s':''}`,3:`😊 Agendado para ${d} dia${d>1?'s':''}`,4:`⭐ Agendado para ${d} dia${d>1?'s':''}!`};
   toast(msgs[conf]||'Revisão registrada',conf>=3?'var(--green)':'var(--orange)');
 }
 
