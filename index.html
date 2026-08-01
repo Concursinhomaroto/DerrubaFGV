@@ -371,10 +371,13 @@ nav{
 .sim-score-banner.sim-good{background:rgba(21,128,61,0.1);color:var(--green);border:1.5px solid rgba(21,128,61,0.3);}
 .sim-score-banner.sim-bad{background:rgba(220,38,38,0.1);color:var(--red);border:1.5px solid rgba(220,38,38,0.3);}
 .sim-disclaimer{font-size:9.5px;color:var(--muted);margin-top:10px;padding-top:8px;border-top:1px dashed var(--border);display:flex;align-items:center;gap:5px;}
+.sim-q-flagged{opacity:0.65;}
+.sim-flagged-banner{font-size:11px;font-weight:800;color:var(--red);background:rgba(220,38,38,0.08);border:1px solid rgba(220,38,38,0.25);border-radius:8px;padding:7px 10px;margin-top:8px;display:flex;align-items:center;gap:6px;}
 
 /* ===== BANCO DE ERROS ===== */
 .err-item{background:var(--panel);border:1.5px solid var(--border2);border-radius:14px;padding:14px;margin-bottom:12px;}
 .err-item.err-reviewed{opacity:0.6;}
+.err-item.err-problematic{border-color:rgba(220,38,38,0.35);}
 .err-header{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
 .err-breadcrumb{font-size:10.5px;font-weight:700;color:var(--muted);}
 .err-breadcrumb b{color:var(--text2);}
@@ -3338,7 +3341,7 @@ function simPanelHTML(s){
       </div>
       <div class="sim-score-banner ${good?'sim-good':'sim-bad'}">${acertos}/${total} acertos (${pct}%)</div>
       ${active.questoes.map((q,i)=>`
-        <div class="sim-q">
+        <div class="sim-q${q.problematico?' sim-q-flagged':''}">
           <div class="sim-q-text">${i+1}. ${q.questao}</div>
           <div class="sim-alts">
             ${(q.alternativas||[]).map(alt=>{
@@ -3349,6 +3352,8 @@ function simPanelHTML(s){
             }).join('')}
           </div>
           ${q.explicacao?`<div class="sim-explain"><i class="fa fa-circle-info"></i> ${q.explicacao}</div>`:''}
+          ${q.problematico?'<div class="sim-flagged-banner"><i class="fa fa-flag"></i> Marcada como problemática — não conta nas suas estatísticas.</div>':''}
+          <button class="btn btn-xs btn-ghost" style="margin-top:8px" onclick="toggleQuestaoProblematica('${s.id}','${active.histId}',${i})">${q.problematico?'<i class="fa fa-rotate"></i> Remover marcação':'<i class="fa fa-flag"></i> Reportar questão com problema'}</button>
         </div>
       `).join('')}
       <div class="sim-disclaimer"><i class="fa fa-triangle-exclamation"></i> Questões geradas por IA para treino — não são questões oficiais de banca.</div>
@@ -3406,7 +3411,9 @@ function simCorrigir(subId){
   sub.simStats.questoesTotal+=total;
   sub.simStats.acertosTotal+=acertos;
   sub.simHistorico=sub.simHistorico||[];
-  sub.simHistorico.unshift({id:genId(),data:new Date().toISOString(),quantidade:total,acertos,erros:total-acertos,questoes:active.questoes});
+  const histId=genId();
+  active.histId=histId;
+  sub.simHistorico.unshift({id:histId,data:new Date().toISOString(),quantidade:total,acertos,erros:total-acertos,questoes:active.questoes});
   sub.simHistorico=sub.simHistorico.slice(0,5);
   saveDB();
   updateErrosBadge();
@@ -3750,7 +3757,13 @@ function simGeralCorrigir(){
     sub.simStats.questoesTotal+=qs.length;
     sub.simStats.acertosTotal+=acertosSub;
     sub.simHistorico=sub.simHistorico||[];
-    sub.simHistorico.unshift({id:genId(),data:new Date().toISOString(),quantidade:qs.length,acertos:acertosSub,erros:qs.length-acertosSub,questoes:qs,geral:true});
+    const histId=genId();
+    // Marca cada questão com onde ela foi parar (subId/histórico/índice) pra o botão
+    // "reportar problema" na tela de resultado saber endereçar de volta — como são as
+    // mesmas referências de objeto usadas em simGeralActive.questoes, isso já fica
+    // visível ali também sem precisar de nenhuma outra sincronização.
+    qs.forEach((q,idx)=>{q._histId=histId;q._qIdxInHist=idx;});
+    sub.simHistorico.unshift({id:histId,data:new Date().toISOString(),quantidade:qs.length,acertos:acertosSub,erros:qs.length-acertosSub,questoes:qs,geral:true});
     sub.simHistorico=sub.simHistorico.slice(0,5);
     assuntosResumo.push({subId,subName:sub.name,acertos:acertosSub,total:qs.length});
   });
@@ -3800,7 +3813,7 @@ function simGeralResultsHTML(){
     <button class="btn btn-sm btn-primary" style="width:100%;justify-content:center;margin:14px 0" onclick="simGeralReset()"><i class="fa fa-rotate"></i> Novo Simulado Geral</button>
     <div style="display:flex;flex-direction:column;gap:8px">
       ${active.questoes.map((q,i)=>`
-        <div class="sim-q">
+        <div class="sim-q${q.problematico?' sim-q-flagged':''}">
           <div class="sg-q-tag">${q.kingdomIcon} ${q.kingdomName} · ${q.topicName} · ${q.subName}</div>
           <div class="sim-q-text">${i+1}. ${q.questao}</div>
           <div class="sim-alts">
@@ -3812,6 +3825,8 @@ function simGeralResultsHTML(){
             }).join('')}
           </div>
           ${q.explicacao?`<div class="sim-explain"><i class="fa fa-circle-info"></i> ${q.explicacao}</div>`:''}
+          ${q.problematico?'<div class="sim-flagged-banner"><i class="fa fa-flag"></i> Marcada como problemática — não conta nas suas estatísticas.</div>':''}
+          <button class="btn btn-xs btn-ghost" style="margin-top:8px" onclick="toggleQuestaoProblematica('${q.subId}','${q._histId}',${q._qIdxInHist})">${q.problematico?'<i class="fa fa-rotate"></i> Remover marcação':'<i class="fa fa-flag"></i> Reportar questão com problema'}</button>
         </div>
       `).join('')}
     </div>
@@ -5075,7 +5090,8 @@ function getErrorBank(){
                 histId:hist.id,qIdx,data:hist.data,
                 questao:q.questao,alternativas:q.alternativas,
                 correta:q.correta,userAnswer:q.userAnswer,
-                explicacao:q.explicacao,revisado:q.revisado===true
+                explicacao:q.explicacao,revisado:q.revisado===true,
+                problematico:q.problematico===true
               });
             }
           });
@@ -5096,6 +5112,35 @@ function toggleErroRevisado(subId,histId,qIdx){
   renderErrosScreen();
   updateErrosBadge();
 }
+// Marca/desmarca uma questão gerada por IA como "com problema" (gabarito errado, mal
+// formulada etc.) — ela some do que conta contra o usuário (simStats/Banco de Erros
+// pendentes) sem apagar o registro, então dá pra desfazer se foi engano. Ajusta
+// simStats incrementalmente (não recalcula do zero) porque simHistorico só guarda as
+// últimas 5 tentativas por assunto, mas simStats acumula a vida toda — um recálculo
+// completo a partir do histórico truncado apagaria tentativas antigas da conta.
+function toggleQuestaoProblematica(subId,histId,qIdx){
+  const sub=simFindSub(subId);
+  if(!sub)return;
+  const hist=(sub.simHistorico||[]).find(h=>h.id===histId);
+  if(!hist||!hist.questoes[qIdx])return;
+  const q=hist.questoes[qIdx];
+  const marking=!q.problematico;
+  q.problematico=marking;
+
+  if(!sub.simStats)sub.simStats={tentativas:0,questoesTotal:0,acertosTotal:0};
+  const wasCorrect=q.userAnswer===q.correta;
+  const sign=marking?-1:1;
+  sub.simStats.questoesTotal=Math.max(0,sub.simStats.questoesTotal+sign);
+  if(wasCorrect)sub.simStats.acertosTotal=Math.max(0,sub.simStats.acertosTotal+sign);
+
+  saveDB();
+  updateErrosBadge();
+  renderErrosScreen();
+  const simWrap=document.getElementById('sim-'+subId);
+  if(simWrap)simWrap.innerHTML=simPanelHTML(sub);
+  if(simGeralActive&&simGeralActive.corrected)renderSimGeralScreen();
+  toast(marking?'🚩 Questão marcada como problemática — não conta mais nas suas estatísticas.':'↺ Marcação removida — questão volta a contar normalmente.','var(--accent)');
+}
 function filterErros(f,el){
   errFilter=f;
   document.querySelectorAll('#screen-erros .filter-row .chip').forEach(c=>c.classList.remove('active'));
@@ -5106,7 +5151,7 @@ function renderErrosScreen(){
   const container=document.getElementById('erros-list');
   if(!container)return;
   let items=getErrorBank();
-  if(errFilter==='pending')items=items.filter(i=>!i.revisado);
+  if(errFilter==='pending')items=items.filter(i=>!i.revisado&&!i.problematico);
   else if(errFilter==='reviewed')items=items.filter(i=>i.revisado);
   if(!items.length){
     const msg=errFilter==='pending'?'Nenhum erro pendente! Você já revisou tudo que errou. 🎉'
@@ -5116,16 +5161,20 @@ function renderErrosScreen(){
     return;
   }
   container.innerHTML=items.map(it=>`
-    <div class="err-item${it.revisado?' err-reviewed':''}">
+    <div class="err-item${it.revisado?' err-reviewed':''}${it.problematico?' err-problematic':''}">
       <div class="err-header">
         <div class="err-breadcrumb">${it.kingdomIcon} ${it.kingdomName} · ${it.topicName} · <b>${it.subName}</b></div>
-        <div style="display:flex;align-items:center;gap:8px">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <span class="err-date">${new Date(it.data).toLocaleDateString('pt-BR')}</span>
           <button class="btn btn-xs ${it.revisado?'btn-green-s':'btn-ghost'}" onclick="toggleErroRevisado('${it.subId}','${it.histId}',${it.qIdx})">
             ${it.revisado?'<i class="fa fa-check"></i> Revisado':'Marcar como revisado'}
           </button>
+          <button class="btn btn-xs ${it.problematico?'btn-danger':'btn-ghost'}" onclick="toggleQuestaoProblematica('${it.subId}','${it.histId}',${it.qIdx})">
+            ${it.problematico?'<i class="fa fa-rotate"></i> Remover marcação':'<i class="fa fa-flag"></i> Reportar problema'}
+          </button>
         </div>
       </div>
+      ${it.problematico?'<div class="sim-flagged-banner"><i class="fa fa-flag"></i> Marcada como problemática — não conta nas suas estatísticas.</div>':''}
       <div class="err-q-text">${it.questao}</div>
       <div class="sim-alts">
         ${(it.alternativas||[]).map(alt=>{
@@ -5144,7 +5193,7 @@ function renderErrosScreen(){
 function updateErrosBadge(){
   const b=document.getElementById('erros-badge');
   if(!b)return;
-  const pending=getErrorBank().filter(i=>!i.revisado).length;
+  const pending=getErrorBank().filter(i=>!i.revisado&&!i.problematico).length;
   if(pending>0){b.textContent=pending;b.style.display='inline';}else{b.style.display='none';}
 }
 
