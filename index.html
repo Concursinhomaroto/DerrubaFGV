@@ -450,6 +450,21 @@ nav{
 
 /* ===== GAMIFICAÇÃO: STREAK / META DIÁRIA / BADGES ===== */
 /* Streak, meta e badges dividem a mesma linha (badges ocupam o espaço restante ao lado). */
+/* ===== O QUE ESTUDAR AGORA ===== */
+.next-steps-card{margin-bottom:18px;}
+.next-step-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;border:1.5px solid var(--border2);margin-bottom:8px;cursor:pointer;transition:all 0.15s;background:var(--panel2);}
+.next-step-item:hover{border-color:var(--accent);transform:translateX(2px);}
+.next-step-item:last-child{margin-bottom:0;}
+.next-step-rank{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#4f46e5);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12px;flex-shrink:0;}
+.next-step-info{flex:1;min-width:0;}
+.next-step-name{font-size:12.5px;font-weight:800;color:var(--text);}
+.next-step-sub{font-size:10px;color:var(--muted);font-weight:600;margin-top:2px;}
+.next-step-reason{font-size:10.5px;font-weight:700;color:var(--accent);white-space:nowrap;flex-shrink:0;}
+@media(max-width:600px){
+  .next-step-item{flex-wrap:wrap;}
+  .next-step-reason{margin-left:38px;}
+}
+
 .dash-gamify-row{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:18px;align-items:stretch;}
 .gamify-card{display:flex;align-items:center;gap:10px;margin-bottom:0;flex:1 1 165px;padding:14px 16px;}
 .gamify-goal{cursor:pointer;transition:all 0.2s;}
@@ -1244,6 +1259,13 @@ nav{
 <!-- ===== DASHBOARD ===== -->
 <div class="screen active" id="screen-dashboard">
   <div class="sec-title">🏆 Painel do Herói</div>
+
+  <!-- O que estudar agora -->
+  <div class="section-card next-steps-card">
+    <div class="sec-title" style="margin-bottom:4px">🧭 O QUE ESTUDAR AGORA</div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:10px;font-weight:600">Prioridade do miniboss conta mais, depois revisão atrasada, depois desempenho fraco em simulados</div>
+    <div id="next-steps-list"></div>
+  </div>
 
   <!-- Streak + Meta diária + Conquistas -->
   <div class="dash-gamify-row">
@@ -4560,6 +4582,70 @@ function getAllRevItems(){
   return items;
 }
 
+// Recomendação de estudo: prioridade do miniboss pesa mais que revisão atrasada,
+// que pesa mais que desempenho fraco em simulados (nessa ordem de desempate).
+function computeStudyRecommendations(){
+  const today=todayStr();
+  const items=[];
+  db.kingdoms.forEach(k=>{
+    (db.topics[k.id]||[]).forEach(t=>{
+      (t.subtopics||[]).forEach(s=>{
+        const revs=db.revisions[s.id]||[];
+        let overdueCount=0;
+        revs.forEach((r,i)=>{
+          const prevDone=revs.slice(0,i).every(p=>p.completed);
+          if(!r.completed&&prevDone&&s.studied&&r.date<today)overdueCount++;
+        });
+        const notStudied=!s.studied;
+        let weakPct=null;
+        if(s.simStats&&s.simStats.questoesTotal>0){
+          weakPct=Math.round(s.simStats.acertosTotal/s.simStats.questoesTotal*100);
+        }
+        const isWeak=weakPct!==null&&weakPct<60;
+        if(!overdueCount&&!notStudied&&!isWeak)return;
+
+        let reason,reasonIcon,reasonBonus;
+        if(overdueCount>0){
+          reason=`${overdueCount} revisão${overdueCount>1?'ões':''} atrasada${overdueCount>1?'s':''}`;
+          reasonIcon='🔔';reasonBonus=300+overdueCount*5;
+        }else if(notStudied){
+          reason='Ainda não estudado';reasonIcon='📖';reasonBonus=200;
+        }else{
+          reason=`Desempenho fraco (${weakPct}% de acerto)`;reasonIcon='🎯';reasonBonus=100+(60-weakPct);
+        }
+
+        items.push({
+          subId:s.id,subName:s.name,topicName:t.name,
+          kingdomName:k.name,kingdomIcon:k.icon,priority:s.priority,
+          reason,reasonIcon,score:s.priority*1000+reasonBonus
+        });
+      });
+    });
+  });
+  items.sort((a,b)=>b.score-a.score);
+  return items.slice(0,5);
+}
+function renderNextSteps(){
+  const el=document.getElementById('next-steps-list');
+  if(!el)return;
+  const items=computeStudyRecommendations();
+  if(!items.length){
+    el.innerHTML=`<div class="empty" style="padding:16px"><i class="fa fa-champagne-glasses"></i><p>Tudo em dia! Sem pendências prioritárias agora. 🎉</p></div>`;
+    return;
+  }
+  const priLbl={30:'🟢 Comum',70:'🟠 Raro',100:'🔴 Lendário'};
+  el.innerHTML=items.map((it,i)=>`
+    <div class="next-step-item" onclick="goToSubtopic('${it.subId}')">
+      <div class="next-step-rank">${i+1}</div>
+      <div class="next-step-info">
+        <div class="next-step-name">${it.subName}</div>
+        <div class="next-step-sub">${it.kingdomIcon} ${it.kingdomName} · ${it.topicName} · ${priLbl[it.priority]||''}</div>
+      </div>
+      <div class="next-step-reason">${it.reasonIcon} ${it.reason}</div>
+    </div>
+  `).join('');
+}
+
 function goToSubtopic(subId){
   // Encontrar reino e chefão do subtópico
   let targetKingdom=null, targetTopicId=null;
@@ -4849,6 +4935,9 @@ function renderDashboard(){
       </div>`;
     }).join('');
   }
+
+  // O que estudar agora
+  renderNextSteps();
 
   // Plano semanal
   renderWeeklyPlan();
