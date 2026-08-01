@@ -493,7 +493,7 @@ nav{
 /* ===== GAMIFICAÇÃO: STREAK / META DIÁRIA / BADGES ===== */
 /* Streak, meta e badges dividem a mesma linha (badges ocupam o espaço restante ao lado). */
 /* ===== O QUE ESTUDAR AGORA ===== */
-.next-steps-card{margin-bottom:18px;}
+.next-steps-card{margin-bottom:0;}
 .next-step-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;border:1.5px solid var(--border2);margin-bottom:8px;cursor:pointer;transition:all 0.15s;background:var(--panel2);}
 .next-step-item:hover{border-color:var(--accent);transform:translateX(2px);}
 .next-step-item:last-child{margin-bottom:0;}
@@ -506,10 +506,11 @@ nav{
   .next-step-item{flex-wrap:wrap;}
   .next-step-reason{margin-left:38px;}
 }
-.sim-global-card{margin-bottom:18px;}
-.sim-global-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
-@media(max-width:768px){
-  .sim-global-grid{grid-template-columns:repeat(2,1fr);}
+.sim-global-card{margin-bottom:0;}
+.sim-global-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px;}
+.dash-sim-next-row{display:grid;grid-template-columns:1fr 1.35fr;gap:16px;align-items:start;margin-bottom:18px;}
+@media(max-width:900px){
+  .dash-sim-next-row{grid-template-columns:1fr;}
 }
 
 .dash-gamify-row{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:18px;align-items:stretch;}
@@ -1353,17 +1354,18 @@ nav{
     </div>
   </div>
 
-  <!-- Desempenho em simulados -->
-  <div class="section-card sim-global-card">
-    <div class="sec-title" style="margin-bottom:10px">🎯 DESEMPENHO EM SIMULADOS</div>
-    <div id="sim-global-stats" class="sim-global-grid"></div>
-  </div>
+  <!-- Desempenho em simulados + O que estudar agora, lado a lado -->
+  <div class="dash-sim-next-row">
+    <div class="section-card sim-global-card">
+      <div class="sec-title" style="margin-bottom:10px">🎯 DESEMPENHO EM SIMULADOS</div>
+      <div id="sim-global-stats" class="sim-global-grid"></div>
+    </div>
 
-  <!-- O que estudar agora -->
-  <div class="section-card next-steps-card">
-    <div class="sec-title" style="margin-bottom:4px">🧭 O QUE ESTUDAR AGORA</div>
-    <div style="font-size:10px;color:var(--muted);margin-bottom:10px;font-weight:600">Prioridade do miniboss conta mais, depois revisão atrasada, depois desempenho fraco em simulados</div>
-    <div id="next-steps-list"></div>
+    <div class="section-card next-steps-card">
+      <div class="sec-title" style="margin-bottom:4px">🧭 O QUE ESTUDAR AGORA</div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:10px;font-weight:600">Prioridade do miniboss conta mais, depois revisão atrasada, depois desempenho fraco em simulados</div>
+      <div id="next-steps-list"></div>
+    </div>
   </div>
 
   <!-- Stats 3+3 + Gráfico ao lado -->
