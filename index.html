@@ -371,10 +371,13 @@ nav{
 .sim-score-banner.sim-good{background:rgba(21,128,61,0.1);color:var(--green);border:1.5px solid rgba(21,128,61,0.3);}
 .sim-score-banner.sim-bad{background:rgba(220,38,38,0.1);color:var(--red);border:1.5px solid rgba(220,38,38,0.3);}
 .sim-disclaimer{font-size:9.5px;color:var(--muted);margin-top:10px;padding-top:8px;border-top:1px dashed var(--border);display:flex;align-items:center;gap:5px;}
+.sim-q-flagged{opacity:0.65;}
+.sim-flagged-banner{font-size:11px;font-weight:800;color:var(--red);background:rgba(220,38,38,0.08);border:1px solid rgba(220,38,38,0.25);border-radius:8px;padding:7px 10px;margin-top:8px;display:flex;align-items:center;gap:6px;}
 
 /* ===== BANCO DE ERROS ===== */
 .err-item{background:var(--panel);border:1.5px solid var(--border2);border-radius:14px;padding:14px;margin-bottom:12px;}
 .err-item.err-reviewed{opacity:0.6;}
+.err-item.err-problematic{border-color:rgba(220,38,38,0.35);}
 .err-header{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
 .err-breadcrumb{font-size:10.5px;font-weight:700;color:var(--muted);}
 .err-breadcrumb b{color:var(--text2);}
@@ -1324,19 +1327,6 @@ nav{
 <div class="screen active" id="screen-dashboard">
   <div class="sec-title">🏆 Painel do Herói</div>
 
-  <!-- O que estudar agora -->
-  <div class="section-card next-steps-card">
-    <div class="sec-title" style="margin-bottom:4px">🧭 O QUE ESTUDAR AGORA</div>
-    <div style="font-size:10px;color:var(--muted);margin-bottom:10px;font-weight:600">Prioridade do miniboss conta mais, depois revisão atrasada, depois desempenho fraco em simulados</div>
-    <div id="next-steps-list"></div>
-  </div>
-
-  <!-- Desempenho em simulados -->
-  <div class="section-card sim-global-card">
-    <div class="sec-title" style="margin-bottom:10px">🎯 DESEMPENHO EM SIMULADOS</div>
-    <div id="sim-global-stats" class="sim-global-grid"></div>
-  </div>
-
   <!-- Streak + Meta diária + Conquistas -->
   <div class="dash-gamify-row">
     <div class="section-card gamify-card" id="streak-card">
@@ -1357,6 +1347,19 @@ nav{
       <div class="gamify-badges-title">🏅 CONQUISTAS <span id="dash-badges-summary" class="gamify-badges-summary"></span></div>
       <div class="badges-row" id="dash-badges"></div>
     </div>
+  </div>
+
+  <!-- Desempenho em simulados -->
+  <div class="section-card sim-global-card">
+    <div class="sec-title" style="margin-bottom:10px">🎯 DESEMPENHO EM SIMULADOS</div>
+    <div id="sim-global-stats" class="sim-global-grid"></div>
+  </div>
+
+  <!-- O que estudar agora -->
+  <div class="section-card next-steps-card">
+    <div class="sec-title" style="margin-bottom:4px">🧭 O QUE ESTUDAR AGORA</div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:10px;font-weight:600">Prioridade do miniboss conta mais, depois revisão atrasada, depois desempenho fraco em simulados</div>
+    <div id="next-steps-list"></div>
   </div>
 
   <!-- Stats 3+3 + Gráfico ao lado -->
@@ -3338,7 +3341,7 @@ function simPanelHTML(s){
       </div>
       <div class="sim-score-banner ${good?'sim-good':'sim-bad'}">${acertos}/${total} acertos (${pct}%)</div>
       ${active.questoes.map((q,i)=>`
-        <div class="sim-q">
+        <div class="sim-q${q.problematico?' sim-q-flagged':''}">
           <div class="sim-q-text">${i+1}. ${q.questao}</div>
           <div class="sim-alts">
             ${(q.alternativas||[]).map(alt=>{
@@ -3349,6 +3352,8 @@ function simPanelHTML(s){
             }).join('')}
           </div>
           ${q.explicacao?`<div class="sim-explain"><i class="fa fa-circle-info"></i> ${q.explicacao}</div>`:''}
+          ${q.problematico?'<div class="sim-flagged-banner"><i class="fa fa-flag"></i> Marcada como problemática — não conta nas suas estatísticas.</div>':''}
+          <button class="btn btn-xs btn-ghost" style="margin-top:8px" onclick="toggleQuestaoProblematica('${s.id}','${active.histId}',${i})">${q.problematico?'<i class="fa fa-rotate"></i> Remover marcação':'<i class="fa fa-flag"></i> Reportar questão com problema'}</button>
         </div>
       `).join('')}
       <div class="sim-disclaimer"><i class="fa fa-triangle-exclamation"></i> Questões geradas por IA para treino — não são questões oficiais de banca.</div>
@@ -3406,8 +3411,11 @@ function simCorrigir(subId){
   sub.simStats.questoesTotal+=total;
   sub.simStats.acertosTotal+=acertos;
   sub.simHistorico=sub.simHistorico||[];
-  sub.simHistorico.unshift({id:genId(),data:new Date().toISOString(),quantidade:total,acertos,erros:total-acertos,questoes:active.questoes});
+  const histId=genId();
+  active.histId=histId;
+  sub.simHistorico.unshift({id:histId,data:new Date().toISOString(),quantidade:total,acertos,erros:total-acertos,questoes:active.questoes});
   sub.simHistorico=sub.simHistorico.slice(0,5);
+  db.simSessionsCount=(db.simSessionsCount||0)+1;
   saveDB();
   updateErrosBadge();
   const btn=document.getElementById('sim-btn-'+subId);
@@ -3636,7 +3644,7 @@ async function generateSimuladoGeral(){
     if(container)container.innerHTML=`<div class="section-card"><div class="empty"><i class="fa fa-spinner fa-spin"></i><p>Gerando questões... (${i+1}/${plano.length} assuntos)<br><span style="font-size:10px">${p.sub.name}</span></p></div></div>`;
     try{
       const qs=await generateQuestionsForSubject(apiKey,p.kingdom,p.topic,p.sub,p.quantidade);
-      questoes.push(...qs.map(q=>({...q,subId:p.sub.id,subName:p.sub.name,topicName:p.topic.name,kingdomName:p.kingdom.name,kingdomIcon:p.kingdom.icon})));
+      questoes.push(...qs.map(q=>({...q,subId:p.sub.id,subName:p.sub.name,topicName:p.topic.name,kingdomId:p.kingdom.id,kingdomName:p.kingdom.name,kingdomIcon:p.kingdom.icon})));
     }catch(e){
       falhas.push(`${p.sub.name} (${e.message||'erro'})`);
     }
@@ -3739,6 +3747,7 @@ function simGeralCorrigir(){
   // sem precisar duplicar nenhuma lógica de agregação.
   const bySub={};
   simGeralActive.questoes.forEach(q=>{(bySub[q.subId]=bySub[q.subId]||[]).push(q);});
+  const totalQuestoes=simGeralActive.questoes.length;
   const assuntosResumo=[];
   Object.keys(bySub).forEach(subId=>{
     const sub=simFindSub(subId);
@@ -3750,10 +3759,39 @@ function simGeralCorrigir(){
     sub.simStats.questoesTotal+=qs.length;
     sub.simStats.acertosTotal+=acertosSub;
     sub.simHistorico=sub.simHistorico||[];
-    sub.simHistorico.unshift({id:genId(),data:new Date().toISOString(),quantidade:qs.length,acertos:acertosSub,erros:qs.length-acertosSub,questoes:qs,geral:true});
+    const histId=genId();
+    // Marca cada questão com onde ela foi parar (subId/histórico/índice) pra o botão
+    // "reportar problema" na tela de resultado saber endereçar de volta — como são as
+    // mesmas referências de objeto usadas em simGeralActive.questoes, isso já fica
+    // visível ali também sem precisar de nenhuma outra sincronização.
+    qs.forEach((q,idx)=>{q._histId=histId;q._qIdxInHist=idx;});
+    sub.simHistorico.unshift({id:histId,data:new Date().toISOString(),quantidade:qs.length,acertos:acertosSub,erros:qs.length-acertosSub,questoes:qs,geral:true});
     sub.simHistorico=sub.simHistorico.slice(0,5);
     assuntosResumo.push({subId,subName:sub.name,acertos:acertosSub,total:qs.length});
+
+    // Tempo gasto na prova entra como tempo de estudo de verdade (meta diária, dias
+    // seguidos, tempo total, ranking de reinos) — distribuído entre os assuntos
+    // proporcional à quantidade de questões de cada um, já que não dá pra saber quanto
+    // tempo exato foi gasto em cada assunto dentro de uma prova só.
+    if(simGeralActive.tempoGastoSec>0&&totalQuestoes>0){
+      const share=Math.round(simGeralActive.tempoGastoSec*(qs.length/totalQuestoes));
+      if(share>0){
+        if(!db.subTotalSeconds)db.subTotalSeconds={};
+        db.subTotalSeconds[subId]=(db.subTotalSeconds[subId]||0)+share;
+        const kId=qs[0].kingdomId;
+        if(kId){if(!db.kingdomSeconds)db.kingdomSeconds={};db.kingdomSeconds[kId]=(db.kingdomSeconds[kId]||0)+share;}
+      }
+    }
   });
+
+  if(simGeralActive.tempoGastoSec>0){
+    logStudySeconds(simGeralActive.tempoGastoSec);
+    db.lifetimeSeconds=(db.lifetimeSeconds||0)+simGeralActive.tempoGastoSec;
+    if(!db.freeSessions)db.freeSessions=[];
+    db.freeSessions.push({tipo:'simulado',reinoId:'',reinoName:'Simulado Geral',segundos:simGeralActive.tempoGastoSec,data:todayStr(),hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})});
+    if(db.freeSessions.length>50)db.freeSessions=db.freeSessions.slice(-50);
+    logSessionEvent('simulado',simGeralActive.tempoGastoSec,null);
+  }
 
   const totalAcertos=simGeralActive.questoes.filter(q=>q.userAnswer===q.correta).length;
   db.simGeral=db.simGeral||{historico:[]};
@@ -3764,6 +3802,8 @@ function simGeralCorrigir(){
     assuntos:assuntosResumo
   });
   db.simGeral.historico=db.simGeral.historico.slice(0,20);
+
+  db.simSessionsCount=(db.simSessionsCount||0)+1;
 
   saveDB();
   updateErrosBadge();
@@ -3800,7 +3840,7 @@ function simGeralResultsHTML(){
     <button class="btn btn-sm btn-primary" style="width:100%;justify-content:center;margin:14px 0" onclick="simGeralReset()"><i class="fa fa-rotate"></i> Novo Simulado Geral</button>
     <div style="display:flex;flex-direction:column;gap:8px">
       ${active.questoes.map((q,i)=>`
-        <div class="sim-q">
+        <div class="sim-q${q.problematico?' sim-q-flagged':''}">
           <div class="sg-q-tag">${q.kingdomIcon} ${q.kingdomName} · ${q.topicName} · ${q.subName}</div>
           <div class="sim-q-text">${i+1}. ${q.questao}</div>
           <div class="sim-alts">
@@ -3812,6 +3852,8 @@ function simGeralResultsHTML(){
             }).join('')}
           </div>
           ${q.explicacao?`<div class="sim-explain"><i class="fa fa-circle-info"></i> ${q.explicacao}</div>`:''}
+          ${q.problematico?'<div class="sim-flagged-banner"><i class="fa fa-flag"></i> Marcada como problemática — não conta nas suas estatísticas.</div>':''}
+          <button class="btn btn-xs btn-ghost" style="margin-top:8px" onclick="toggleQuestaoProblematica('${q.subId}','${q._histId}',${q._qIdxInHist})">${q.problematico?'<i class="fa fa-rotate"></i> Remover marcação':'<i class="fa fa-flag"></i> Reportar questão com problema'}</button>
         </div>
       `).join('')}
     </div>
@@ -5075,7 +5117,8 @@ function getErrorBank(){
                 histId:hist.id,qIdx,data:hist.data,
                 questao:q.questao,alternativas:q.alternativas,
                 correta:q.correta,userAnswer:q.userAnswer,
-                explicacao:q.explicacao,revisado:q.revisado===true
+                explicacao:q.explicacao,revisado:q.revisado===true,
+                problematico:q.problematico===true
               });
             }
           });
@@ -5096,6 +5139,35 @@ function toggleErroRevisado(subId,histId,qIdx){
   renderErrosScreen();
   updateErrosBadge();
 }
+// Marca/desmarca uma questão gerada por IA como "com problema" (gabarito errado, mal
+// formulada etc.) — ela some do que conta contra o usuário (simStats/Banco de Erros
+// pendentes) sem apagar o registro, então dá pra desfazer se foi engano. Ajusta
+// simStats incrementalmente (não recalcula do zero) porque simHistorico só guarda as
+// últimas 5 tentativas por assunto, mas simStats acumula a vida toda — um recálculo
+// completo a partir do histórico truncado apagaria tentativas antigas da conta.
+function toggleQuestaoProblematica(subId,histId,qIdx){
+  const sub=simFindSub(subId);
+  if(!sub)return;
+  const hist=(sub.simHistorico||[]).find(h=>h.id===histId);
+  if(!hist||!hist.questoes[qIdx])return;
+  const q=hist.questoes[qIdx];
+  const marking=!q.problematico;
+  q.problematico=marking;
+
+  if(!sub.simStats)sub.simStats={tentativas:0,questoesTotal:0,acertosTotal:0};
+  const wasCorrect=q.userAnswer===q.correta;
+  const sign=marking?-1:1;
+  sub.simStats.questoesTotal=Math.max(0,sub.simStats.questoesTotal+sign);
+  if(wasCorrect)sub.simStats.acertosTotal=Math.max(0,sub.simStats.acertosTotal+sign);
+
+  saveDB();
+  updateErrosBadge();
+  renderErrosScreen();
+  const simWrap=document.getElementById('sim-'+subId);
+  if(simWrap)simWrap.innerHTML=simPanelHTML(sub);
+  if(simGeralActive&&simGeralActive.corrected)renderSimGeralScreen();
+  toast(marking?'🚩 Questão marcada como problemática — não conta mais nas suas estatísticas.':'↺ Marcação removida — questão volta a contar normalmente.','var(--accent)');
+}
 function filterErros(f,el){
   errFilter=f;
   document.querySelectorAll('#screen-erros .filter-row .chip').forEach(c=>c.classList.remove('active'));
@@ -5106,7 +5178,7 @@ function renderErrosScreen(){
   const container=document.getElementById('erros-list');
   if(!container)return;
   let items=getErrorBank();
-  if(errFilter==='pending')items=items.filter(i=>!i.revisado);
+  if(errFilter==='pending')items=items.filter(i=>!i.revisado&&!i.problematico);
   else if(errFilter==='reviewed')items=items.filter(i=>i.revisado);
   if(!items.length){
     const msg=errFilter==='pending'?'Nenhum erro pendente! Você já revisou tudo que errou. 🎉'
@@ -5116,16 +5188,20 @@ function renderErrosScreen(){
     return;
   }
   container.innerHTML=items.map(it=>`
-    <div class="err-item${it.revisado?' err-reviewed':''}">
+    <div class="err-item${it.revisado?' err-reviewed':''}${it.problematico?' err-problematic':''}">
       <div class="err-header">
         <div class="err-breadcrumb">${it.kingdomIcon} ${it.kingdomName} · ${it.topicName} · <b>${it.subName}</b></div>
-        <div style="display:flex;align-items:center;gap:8px">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <span class="err-date">${new Date(it.data).toLocaleDateString('pt-BR')}</span>
           <button class="btn btn-xs ${it.revisado?'btn-green-s':'btn-ghost'}" onclick="toggleErroRevisado('${it.subId}','${it.histId}',${it.qIdx})">
             ${it.revisado?'<i class="fa fa-check"></i> Revisado':'Marcar como revisado'}
           </button>
+          <button class="btn btn-xs ${it.problematico?'btn-danger':'btn-ghost'}" onclick="toggleQuestaoProblematica('${it.subId}','${it.histId}',${it.qIdx})">
+            ${it.problematico?'<i class="fa fa-rotate"></i> Remover marcação':'<i class="fa fa-flag"></i> Reportar problema'}
+          </button>
         </div>
       </div>
+      ${it.problematico?'<div class="sim-flagged-banner"><i class="fa fa-flag"></i> Marcada como problemática — não conta nas suas estatísticas.</div>':''}
       <div class="err-q-text">${it.questao}</div>
       <div class="sim-alts">
         ${(it.alternativas||[]).map(alt=>{
@@ -5144,7 +5220,7 @@ function renderErrosScreen(){
 function updateErrosBadge(){
   const b=document.getElementById('erros-badge');
   if(!b)return;
-  const pending=getErrorBank().filter(i=>!i.revisado).length;
+  const pending=getErrorBank().filter(i=>!i.revisado&&!i.problematico).length;
   if(pending>0){b.textContent=pending;b.style.display='inline';}else{b.style.display='none';}
 }
 
@@ -5191,15 +5267,19 @@ function computeStudyRecommendations(){
   items.sort((a,b)=>b.score-a.score);
   return items.slice(0,5);
 }
-// Agrega s.simStats de todos os minibosses — cada simulado corrigido soma aqui,
-// então "simulados feitos" cresce a cada vez que o usuário gera E responde um.
+// Agrega s.simStats de todos os minibosses pra questões/acertos (esses somam certinho,
+// cada questão pertence a um assunto só). "Simulados feitos" NÃO pode vir dessa mesma
+// soma: um Simulado Geral grava +1 tentativa em CADA assunto que ele cobriu (é assim que
+// o "Histórico: X/Y acertos em N simulados" de cada miniboss funciona, e isso tá certo lá),
+// então um único Simulado Geral com 40 assuntos inflaria "simulados feitos" pra 40. Por
+// isso usamos db.simSessionsCount — incrementado uma vez por sessão de verdade, em
+// simCorrigir() e simGeralCorrigir(), independente de quantos assuntos ela cobriu.
 function computeSimuladoStats(){
-  let tentativas=0,questoes=0,acertos=0;
+  let questoes=0,acertos=0;
   db.kingdoms.forEach(k=>{
     (db.topics[k.id]||[]).forEach(t=>{
       (t.subtopics||[]).forEach(s=>{
         if(s.simStats){
-          tentativas+=s.simStats.tentativas||0;
           questoes+=s.simStats.questoesTotal||0;
           acertos+=s.simStats.acertosTotal||0;
         }
@@ -5208,7 +5288,7 @@ function computeSimuladoStats(){
   });
   const erros=questoes-acertos;
   const pct=questoes>0?Math.round(acertos/questoes*100):0;
-  return{tentativas,questoes,acertos,erros,pct};
+  return{tentativas:db.simSessionsCount||0,questoes,acertos,erros,pct};
 }
 function renderSimGlobalStats(){
   const el=document.getElementById('sim-global-stats');
@@ -7759,7 +7839,7 @@ function floatTimerOpen(){
   const sel=document.getElementById('ft-reino');
   if(sel){sel.innerHTML='<option value="" style="background:#4c1d95;color:#fff">🏰 Todos os Reinos (Geral)</option>';db.kingdoms.forEach(k=>{sel.innerHTML+='<option value="'+k.id+'" style="background:#4c1d95;color:#fff">'+(k.icon||'🏰')+' '+k.name+'</option>';});}
   document.getElementById('float-timer').style.display='block';
-  const btn=document.getElementById('float-timer-btn');if(btn)btn.style.visibility='hidden';
+  const btn=document.getElementById('float-timer-btn');if(btn)btn.style.display='none';
   ftUpdateDisplay();
   const st=document.getElementById('ft-status');if(st)st.textContent=ftRunning?'▶ Em andamento...':'Pronto para iniciar';
   if(ftRunning)ftRafId=requestAnimationFrame(ftTick);
@@ -7774,7 +7854,7 @@ function floatTimerClose(){
   if(ftHasActiveSession()){
     floatTimerShowMini();
   }else{
-    const btn=document.getElementById('float-timer-btn');if(btn){btn.style.display='flex';btn.style.visibility='visible';}
+    const btn=document.getElementById('float-timer-btn');if(btn)btn.style.display='flex';
   }
 }
 function floatTimerExpand(){
@@ -7788,7 +7868,7 @@ function floatTimerShowMini(){
   const mini=document.getElementById('float-timer-mini');
   if(!mini)return;
   mini.style.display='flex';
-  const btn=document.getElementById('float-timer-btn');if(btn)btn.style.visibility='hidden';
+  const btn=document.getElementById('float-timer-btn');if(btn)btn.style.display='none';
   ftmUpdate();
   if(ftMiniInterval)clearInterval(ftMiniInterval);
   ftMiniInterval=setInterval(ftmUpdate,1000);
@@ -7797,6 +7877,11 @@ function floatTimerHideMini(){
   const mini=document.getElementById('float-timer-mini');
   if(mini)mini.style.display='none';
   if(ftMiniInterval){clearInterval(ftMiniInterval);ftMiniInterval=null;}
+  // Sempre devolve o ícone do relógio na barra lateral — se for chamado a partir de
+  // floatTimerOpen(), o painel cheio esconde o ícone de novo logo em seguida (mesma
+  // pilha de execução, sem repintura no meio), então não pisca.
+  const btn=document.getElementById('float-timer-btn');
+  if(btn)btn.style.display='flex';
 }
 function ftmUpdate(){
   const icon=document.getElementById('ftm-icon'),time=document.getElementById('ftm-time'),toggle=document.getElementById('ftm-toggle');
