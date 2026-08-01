@@ -5174,6 +5174,17 @@ function renderFCMain(){
       <button onclick="fcBossStudy('new')" style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:8px 16px;font-size:12px;font-weight:900;cursor:pointer;white-space:nowrap;flex-shrink:0">▶ Estudar novos</button>
     </div>`:''}
 
+    <!-- Upload de PDF — gera flashcards automaticamente via IA -->
+    <div class="fc-pdf-zone" id="fc-pdf-zone" ondragover="fcDragOver(event)" ondragleave="fcDragLeave(event)" ondrop="fcDrop(event)" onclick="document.getElementById('fc-pdf-input').click()">
+      <i class="fa fa-file-pdf" style="font-size:26px;color:var(--accent)"></i>
+      <div class="fc-pdf-label">📄 Arraste um PDF aqui ou clique para gerar flashcards automaticamente com IA</div>
+      <input type="file" id="fc-pdf-input" accept="application/pdf" onchange="fcHandlePDF(this.files[0])">
+    </div>
+    <div class="fc-pdf-generating" id="fc-pdf-status" style="display:none">
+      <div class="fc-pdf-spinner"></div>
+      <div id="fc-pdf-status-txt" style="font-size:12px;font-weight:700;color:var(--text2)">Processando...</div>
+    </div>
+
     <!-- Formulário -->
     <div class="fc-form" id="fc-form-wrap" style="display:none">
       <div class="fc-form-title" id="fc-form-title-lbl">➕ Novo Flashcard</div>
