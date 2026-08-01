@@ -512,6 +512,13 @@ nav{
 @media(max-width:900px){
   .dash-sim-next-row{grid-template-columns:1fr;}
 }
+.sim-kb-title{font-size:11px;font-weight:800;color:var(--muted);letter-spacing:0.5px;margin:16px 0 8px;padding-top:14px;border-top:1.5px solid var(--border2);}
+.sim-kb-row{display:flex;align-items:center;gap:10px;padding:7px 0;}
+.sim-kb-kingdom{flex:0 0 34%;min-width:0;font-size:11.5px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sim-kb-bar-wrap{flex:1;min-width:0;height:6px;border-radius:4px;background:var(--panel2);overflow:hidden;}
+.sim-kb-bar{height:100%;border-radius:4px;}
+.sim-kb-pct{flex-shrink:0;font-size:11.5px;font-weight:800;width:36px;text-align:right;}
+.sim-kb-qtd{flex-shrink:0;font-size:9.5px;color:var(--muted);font-weight:600;width:48px;text-align:right;}
 
 .dash-gamify-row{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:18px;align-items:stretch;}
 .gamify-card{display:flex;align-items:center;gap:10px;margin-bottom:0;flex:1 1 165px;padding:14px 16px;}
@@ -1359,6 +1366,7 @@ nav{
     <div class="section-card sim-global-card">
       <div class="sec-title" style="margin-bottom:10px">🎯 DESEMPENHO EM SIMULADOS</div>
       <div id="sim-global-stats" class="sim-global-grid"></div>
+      <div id="sim-kingdom-breakdown"></div>
     </div>
 
     <div class="section-card next-steps-card">
@@ -5342,6 +5350,42 @@ function renderSimGlobalStats(){
     {icon:'❌',val:st.erros,lbl:'Erros',color:'var(--red)'},
     {icon:'🎯',val:st.pct+'%',lbl:'Aproveitamento geral',color:st.pct>=60?'var(--green)':'var(--red)'},
   ].map(s=>`<div class="stat-card"><span class="stat-icon">${s.icon}</span><div class="stat-val" style="color:${s.color}">${s.val}</div><div class="stat-lbl">${s.lbl}</div></div>`).join('');
+  renderSimKingdomBreakdown();
+}
+// Quebra o desempenho de simulados por reino (matéria), pior aproveitamento primeiro —
+// ocupa o espaço que sobrava embaixo dos 5 blocos de stat quando "O que estudar agora"
+// (ao lado) tem mais itens e fica mais alto que esse card.
+function computeSimuladoStatsByKingdom(){
+  const rows=[];
+  db.kingdoms.forEach(k=>{
+    let questoes=0,acertos=0;
+    (db.topics[k.id]||[]).forEach(t=>{
+      (t.subtopics||[]).forEach(s=>{
+        if(s.simStats){
+          questoes+=s.simStats.questoesTotal||0;
+          acertos+=s.simStats.acertosTotal||0;
+        }
+      });
+    });
+    if(questoes>0)rows.push({kingdom:k,questoes,acertos,pct:Math.round(acertos/questoes*100)});
+  });
+  rows.sort((a,b)=>a.pct-b.pct);
+  return rows;
+}
+function renderSimKingdomBreakdown(){
+  const el=document.getElementById('sim-kingdom-breakdown');
+  if(!el)return;
+  const rows=computeSimuladoStatsByKingdom();
+  if(rows.length<2){el.innerHTML='';return;}
+  el.innerHTML=`<div class="sim-kb-title">📚 DESEMPENHO POR REINO</div>`+rows.map(r=>{
+    const color=r.pct>=60?'var(--green)':'var(--red)';
+    return `<div class="sim-kb-row">
+      <div class="sim-kb-kingdom">${r.kingdom.icon} ${r.kingdom.name}</div>
+      <div class="sim-kb-bar-wrap"><div class="sim-kb-bar" style="width:${r.pct}%;background:${color}"></div></div>
+      <div class="sim-kb-pct" style="color:${color}">${r.pct}%</div>
+      <div class="sim-kb-qtd">${r.acertos}/${r.questoes}</div>
+    </div>`;
+  }).join('');
 }
 function renderNextSteps(){
   const el=document.getElementById('next-steps-list');
