@@ -3402,6 +3402,20 @@ function simSelectAnswer(subId,qIdx,letra){
   const wrap=document.getElementById('sim-'+subId);
   if(wrap&&sub)wrap.innerHTML=simPanelHTML(sub);
 }
+// Toda questão errada num simulado já vira flashcard automaticamente, sem precisar de
+// nenhuma ação do usuário — reaproveita o mesmo deck/tela de flashcards que já existe,
+// então essas questões entram na revisão normal como qualquer outro card. Evita duplicar
+// se a mesma questão (por texto) já tiver virado card nesse miniboss antes.
+function criarFlashcardDeQuestaoErrada(subId,q){
+  if(!db.flashcards)db.flashcards={};
+  const pergunta=q.questao+'\n\n'+(q.alternativas||[]).map(a=>`${a.letra}) ${a.texto}`).join('\n');
+  const jaExiste=Object.values(db.flashcards).some(c=>c.mbId===subId&&c.pergunta===pergunta);
+  if(jaExiste)return;
+  const altCorreta=(q.alternativas||[]).find(a=>a.letra===q.correta);
+  const resposta=`Resposta certa: ${q.correta}) ${altCorreta?altCorreta.texto:''}${q.explicacao?'\n\n'+q.explicacao:''}`;
+  const id=genId();
+  db.flashcards[id]={id,mbId:subId,pergunta,resposta,tags:'banco-de-erros',dificuldade:2,acertos:0,erros:0,lastConf:0,criacao:new Date().toISOString(),ultimaRevisao:null};
+}
 function simCorrigir(subId){
   const active=simActive[subId];
   if(!active||active.corrected)return;
@@ -3420,6 +3434,7 @@ function simCorrigir(subId){
   sub.simHistorico.unshift({id:histId,data:new Date().toISOString(),quantidade:total,acertos,erros:total-acertos,questoes:active.questoes});
   sub.simHistorico=sub.simHistorico.slice(0,5);
   db.simSessionsCount=(db.simSessionsCount||0)+1;
+  active.questoes.filter(q=>q.userAnswer!==q.correta).forEach(q=>criarFlashcardDeQuestaoErrada(subId,q));
   saveDB();
   updateErrosBadge();
   const btn=document.getElementById('sim-btn-'+subId);
@@ -3772,6 +3787,7 @@ function simGeralCorrigir(){
     sub.simHistorico.unshift({id:histId,data:new Date().toISOString(),quantidade:qs.length,acertos:acertosSub,erros:qs.length-acertosSub,questoes:qs,geral:true});
     sub.simHistorico=sub.simHistorico.slice(0,5);
     assuntosResumo.push({subId,subName:sub.name,acertos:acertosSub,total:qs.length});
+    qs.filter(q=>q.userAnswer!==q.correta).forEach(q=>criarFlashcardDeQuestaoErrada(subId,q));
 
     // Tempo gasto na prova entra como tempo de estudo de verdade (meta diária, dias
     // seguidos, tempo total, ranking de reinos) — distribuído entre os assuntos
