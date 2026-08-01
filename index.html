@@ -7808,7 +7808,7 @@ function floatTimerOpen(){
   const sel=document.getElementById('ft-reino');
   if(sel){sel.innerHTML='<option value="" style="background:#4c1d95;color:#fff">🏰 Todos os Reinos (Geral)</option>';db.kingdoms.forEach(k=>{sel.innerHTML+='<option value="'+k.id+'" style="background:#4c1d95;color:#fff">'+(k.icon||'🏰')+' '+k.name+'</option>';});}
   document.getElementById('float-timer').style.display='block';
-  const btn=document.getElementById('float-timer-btn');if(btn)btn.style.visibility='hidden';
+  const btn=document.getElementById('float-timer-btn');if(btn)btn.style.display='none';
   ftUpdateDisplay();
   const st=document.getElementById('ft-status');if(st)st.textContent=ftRunning?'▶ Em andamento...':'Pronto para iniciar';
   if(ftRunning)ftRafId=requestAnimationFrame(ftTick);
@@ -7823,7 +7823,7 @@ function floatTimerClose(){
   if(ftHasActiveSession()){
     floatTimerShowMini();
   }else{
-    const btn=document.getElementById('float-timer-btn');if(btn){btn.style.display='flex';btn.style.visibility='visible';}
+    const btn=document.getElementById('float-timer-btn');if(btn)btn.style.display='flex';
   }
 }
 function floatTimerExpand(){
@@ -7837,7 +7837,7 @@ function floatTimerShowMini(){
   const mini=document.getElementById('float-timer-mini');
   if(!mini)return;
   mini.style.display='flex';
-  const btn=document.getElementById('float-timer-btn');if(btn)btn.style.visibility='hidden';
+  const btn=document.getElementById('float-timer-btn');if(btn)btn.style.display='none';
   ftmUpdate();
   if(ftMiniInterval)clearInterval(ftMiniInterval);
   ftMiniInterval=setInterval(ftmUpdate,1000);
@@ -7846,6 +7846,11 @@ function floatTimerHideMini(){
   const mini=document.getElementById('float-timer-mini');
   if(mini)mini.style.display='none';
   if(ftMiniInterval){clearInterval(ftMiniInterval);ftMiniInterval=null;}
+  // Sempre devolve o ícone do relógio na barra lateral — se for chamado a partir de
+  // floatTimerOpen(), o painel cheio esconde o ícone de novo logo em seguida (mesma
+  // pilha de execução, sem repintura no meio), então não pisca.
+  const btn=document.getElementById('float-timer-btn');
+  if(btn)btn.style.display='flex';
 }
 function ftmUpdate(){
   const icon=document.getElementById('ftm-icon'),time=document.getElementById('ftm-time'),toggle=document.getElementById('ftm-toggle');
