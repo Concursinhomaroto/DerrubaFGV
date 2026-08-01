@@ -7,8 +7,8 @@
 <meta name="description" content="Dashboard gamificado de estudos para concurso federal.">
 <meta name="theme-color" content="#7c3aed">
 <link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon32.png">
+<link rel="apple-touch-icon" href="icons/appletouchicon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Vale dos Nomeados">
@@ -1641,7 +1641,7 @@ function checkOverdueNotifications(force){
     try{
       new Notification('🔔 Vale dos Nomeados',{
         body:`Você tem ${overdueCount} revisão${overdueCount>1?'ões':''} atrasada${overdueCount>1?'s':''}. Hora de revisar!`,
-        icon:'icons/icon-192.png'
+        icon:'icons/icon192.png'
       });
     }catch(e){}
   }
