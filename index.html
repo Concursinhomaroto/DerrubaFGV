@@ -1327,19 +1327,6 @@ nav{
 <div class="screen active" id="screen-dashboard">
   <div class="sec-title">🏆 Painel do Herói</div>
 
-  <!-- O que estudar agora -->
-  <div class="section-card next-steps-card">
-    <div class="sec-title" style="margin-bottom:4px">🧭 O QUE ESTUDAR AGORA</div>
-    <div style="font-size:10px;color:var(--muted);margin-bottom:10px;font-weight:600">Prioridade do miniboss conta mais, depois revisão atrasada, depois desempenho fraco em simulados</div>
-    <div id="next-steps-list"></div>
-  </div>
-
-  <!-- Desempenho em simulados -->
-  <div class="section-card sim-global-card">
-    <div class="sec-title" style="margin-bottom:10px">🎯 DESEMPENHO EM SIMULADOS</div>
-    <div id="sim-global-stats" class="sim-global-grid"></div>
-  </div>
-
   <!-- Streak + Meta diária + Conquistas -->
   <div class="dash-gamify-row">
     <div class="section-card gamify-card" id="streak-card">
@@ -1360,6 +1347,19 @@ nav{
       <div class="gamify-badges-title">🏅 CONQUISTAS <span id="dash-badges-summary" class="gamify-badges-summary"></span></div>
       <div class="badges-row" id="dash-badges"></div>
     </div>
+  </div>
+
+  <!-- Desempenho em simulados -->
+  <div class="section-card sim-global-card">
+    <div class="sec-title" style="margin-bottom:10px">🎯 DESEMPENHO EM SIMULADOS</div>
+    <div id="sim-global-stats" class="sim-global-grid"></div>
+  </div>
+
+  <!-- O que estudar agora -->
+  <div class="section-card next-steps-card">
+    <div class="sec-title" style="margin-bottom:4px">🧭 O QUE ESTUDAR AGORA</div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:10px;font-weight:600">Prioridade do miniboss conta mais, depois revisão atrasada, depois desempenho fraco em simulados</div>
+    <div id="next-steps-list"></div>
   </div>
 
   <!-- Stats 3+3 + Gráfico ao lado -->
@@ -3415,6 +3415,7 @@ function simCorrigir(subId){
   active.histId=histId;
   sub.simHistorico.unshift({id:histId,data:new Date().toISOString(),quantidade:total,acertos,erros:total-acertos,questoes:active.questoes});
   sub.simHistorico=sub.simHistorico.slice(0,5);
+  db.simSessionsCount=(db.simSessionsCount||0)+1;
   saveDB();
   updateErrosBadge();
   const btn=document.getElementById('sim-btn-'+subId);
@@ -3643,7 +3644,7 @@ async function generateSimuladoGeral(){
     if(container)container.innerHTML=`<div class="section-card"><div class="empty"><i class="fa fa-spinner fa-spin"></i><p>Gerando questões... (${i+1}/${plano.length} assuntos)<br><span style="font-size:10px">${p.sub.name}</span></p></div></div>`;
     try{
       const qs=await generateQuestionsForSubject(apiKey,p.kingdom,p.topic,p.sub,p.quantidade);
-      questoes.push(...qs.map(q=>({...q,subId:p.sub.id,subName:p.sub.name,topicName:p.topic.name,kingdomName:p.kingdom.name,kingdomIcon:p.kingdom.icon})));
+      questoes.push(...qs.map(q=>({...q,subId:p.sub.id,subName:p.sub.name,topicName:p.topic.name,kingdomId:p.kingdom.id,kingdomName:p.kingdom.name,kingdomIcon:p.kingdom.icon})));
     }catch(e){
       falhas.push(`${p.sub.name} (${e.message||'erro'})`);
     }
@@ -3746,6 +3747,7 @@ function simGeralCorrigir(){
   // sem precisar duplicar nenhuma lógica de agregação.
   const bySub={};
   simGeralActive.questoes.forEach(q=>{(bySub[q.subId]=bySub[q.subId]||[]).push(q);});
+  const totalQuestoes=simGeralActive.questoes.length;
   const assuntosResumo=[];
   Object.keys(bySub).forEach(subId=>{
     const sub=simFindSub(subId);
@@ -3766,7 +3768,30 @@ function simGeralCorrigir(){
     sub.simHistorico.unshift({id:histId,data:new Date().toISOString(),quantidade:qs.length,acertos:acertosSub,erros:qs.length-acertosSub,questoes:qs,geral:true});
     sub.simHistorico=sub.simHistorico.slice(0,5);
     assuntosResumo.push({subId,subName:sub.name,acertos:acertosSub,total:qs.length});
+
+    // Tempo gasto na prova entra como tempo de estudo de verdade (meta diária, dias
+    // seguidos, tempo total, ranking de reinos) — distribuído entre os assuntos
+    // proporcional à quantidade de questões de cada um, já que não dá pra saber quanto
+    // tempo exato foi gasto em cada assunto dentro de uma prova só.
+    if(simGeralActive.tempoGastoSec>0&&totalQuestoes>0){
+      const share=Math.round(simGeralActive.tempoGastoSec*(qs.length/totalQuestoes));
+      if(share>0){
+        if(!db.subTotalSeconds)db.subTotalSeconds={};
+        db.subTotalSeconds[subId]=(db.subTotalSeconds[subId]||0)+share;
+        const kId=qs[0].kingdomId;
+        if(kId){if(!db.kingdomSeconds)db.kingdomSeconds={};db.kingdomSeconds[kId]=(db.kingdomSeconds[kId]||0)+share;}
+      }
+    }
   });
+
+  if(simGeralActive.tempoGastoSec>0){
+    logStudySeconds(simGeralActive.tempoGastoSec);
+    db.lifetimeSeconds=(db.lifetimeSeconds||0)+simGeralActive.tempoGastoSec;
+    if(!db.freeSessions)db.freeSessions=[];
+    db.freeSessions.push({tipo:'simulado',reinoId:'',reinoName:'Simulado Geral',segundos:simGeralActive.tempoGastoSec,data:todayStr(),hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})});
+    if(db.freeSessions.length>50)db.freeSessions=db.freeSessions.slice(-50);
+    logSessionEvent('simulado',simGeralActive.tempoGastoSec,null);
+  }
 
   const totalAcertos=simGeralActive.questoes.filter(q=>q.userAnswer===q.correta).length;
   db.simGeral=db.simGeral||{historico:[]};
@@ -3777,6 +3802,8 @@ function simGeralCorrigir(){
     assuntos:assuntosResumo
   });
   db.simGeral.historico=db.simGeral.historico.slice(0,20);
+
+  db.simSessionsCount=(db.simSessionsCount||0)+1;
 
   saveDB();
   updateErrosBadge();
@@ -5240,15 +5267,19 @@ function computeStudyRecommendations(){
   items.sort((a,b)=>b.score-a.score);
   return items.slice(0,5);
 }
-// Agrega s.simStats de todos os minibosses — cada simulado corrigido soma aqui,
-// então "simulados feitos" cresce a cada vez que o usuário gera E responde um.
+// Agrega s.simStats de todos os minibosses pra questões/acertos (esses somam certinho,
+// cada questão pertence a um assunto só). "Simulados feitos" NÃO pode vir dessa mesma
+// soma: um Simulado Geral grava +1 tentativa em CADA assunto que ele cobriu (é assim que
+// o "Histórico: X/Y acertos em N simulados" de cada miniboss funciona, e isso tá certo lá),
+// então um único Simulado Geral com 40 assuntos inflaria "simulados feitos" pra 40. Por
+// isso usamos db.simSessionsCount — incrementado uma vez por sessão de verdade, em
+// simCorrigir() e simGeralCorrigir(), independente de quantos assuntos ela cobriu.
 function computeSimuladoStats(){
-  let tentativas=0,questoes=0,acertos=0;
+  let questoes=0,acertos=0;
   db.kingdoms.forEach(k=>{
     (db.topics[k.id]||[]).forEach(t=>{
       (t.subtopics||[]).forEach(s=>{
         if(s.simStats){
-          tentativas+=s.simStats.tentativas||0;
           questoes+=s.simStats.questoesTotal||0;
           acertos+=s.simStats.acertosTotal||0;
         }
@@ -5257,7 +5288,7 @@ function computeSimuladoStats(){
   });
   const erros=questoes-acertos;
   const pct=questoes>0?Math.round(acertos/questoes*100):0;
-  return{tentativas,questoes,acertos,erros,pct};
+  return{tentativas:db.simSessionsCount||0,questoes,acertos,erros,pct};
 }
 function renderSimGlobalStats(){
   const el=document.getElementById('sim-global-stats');
