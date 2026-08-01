@@ -1763,6 +1763,17 @@ function applyDefaults(){
       if(!Array.isArray(db.revisions[subId]))return;
       // Remover entradas com date inválida
       db.revisions[subId]=db.revisions[subId].filter(r=>r.date&&r.date!=='undefined'&&typeof r.date==='string'&&r.date.length===10);
+      // Corrige fila travada: uma versão antiga do botão "Intensivo" empilhava uma revisão
+      // nova atrás de uma pendente já existente, presa esperando a mais antiga (só dá pra
+      // concluir em ordem) — e como itens bloqueados ficam escondidos nas abas Atrasadas/Hoje,
+      // pareciam ter simplesmente sumido. Antecipa a pendente mais antiga (a que já pode ser
+      // concluída) pra data mais próxima entre as pendentes, liberando a fila de novo.
+      const revs=db.revisions[subId];
+      const pendentes=revs.map((r,i)=>({r,i})).filter(x=>!x.r.completed);
+      if(pendentes.length>1){
+        const minDate=pendentes.reduce((m,x)=>x.r.date<m?x.r.date:m,pendentes[0].r.date);
+        if(pendentes[0].r.date!==minDate)pendentes[0].r.date=minDate;
+      }
     });
   }
   db.kingdoms.forEach(k=>{if(!db.topics[k.id])db.topics[k.id]=[];});
@@ -4168,8 +4179,18 @@ function intensiveTraining(topicId){
   topic.subtopics.forEach(s=>{
     if(!s.studied)return;// only studied ones
     if(!db.revisions[s.id])db.revisions[s.id]=[];
-    db.revisions[s.id].push({date:today,completed:false});
-    added++;
+    const revs=db.revisions[s.id];
+    // Empurrar uma revisão nova pro fim da fila quando já existe uma pendente prende essa
+    // nova atrás da antiga (só pode concluir em ordem) — ela ficava travada e nem aparecia
+    // nas abas Atrasadas/Hoje (itens bloqueados são escondidos ali), só em "Todas". Por isso
+    // antecipamos a pendente já existente pra hoje em vez de empilhar outra atrás dela.
+    const pending=revs.find(r=>!r.completed);
+    if(pending){
+      if(pending.date>today){pending.date=today;added++;}
+    }else{
+      revs.push({date:today,completed:false});
+      added++;
+    }
   });
   saveDB();updateRevBadge();
   if(added)toast(`🔥 ${added} revisão(ões) intensivas agendadas!`,'var(--accent)');
