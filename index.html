@@ -3428,26 +3428,30 @@ async function generateQuestionsForSubject(apiKey,kingdom,topic,sub,quantidade){
   const nota=(sub.note||'').trim();
   const prompt=`Você é um elaborador de questões de concurso público brasileiro, especializado em múltipla escolha.
 
-TAREFA: Gere ${quantidade} questões de múltipla escolha inéditas sobre o assunto abaixo, no padrão de bancas como FGV/Cebraspe, com DIFICULDADE ENTRE MODERADA E ALTA (nunca questões triviais ou puramente decorativas — exija raciocínio, interpretação ou aplicação prática do conteúdo).
+TAREFA: Gere EXATAMENTE ${quantidade} questões de múltipla escolha inéditas sobre o assunto abaixo — nem mais, nem menos que ${quantidade} — no padrão de bancas como FGV/Cebraspe, com DIFICULDADE ENTRE MODERADA E ALTA (nunca questões triviais ou puramente decorativas — exija raciocínio, interpretação ou aplicação prática do conteúdo).
 
 REINO/ÁREA: ${kingdom.name}
 CHEFÃO/TÓPICO: ${topic.name}
 MINIBOSS/ASSUNTO ESPECÍFICO: ${sub.name}
 ${nota?`\nANOTAÇÃO DO ALUNO SOBRE ESTE ASSUNTO (use como referência principal do recorte a cobrar — as questões devem ser sobre o que está anotado aqui, não só sobre o nome genérico do assunto):\n${nota}\n`:''}
 REGRAS:
+- O array JSON da resposta deve ter exatamente ${quantidade} elementos.
 - Cada questão tem exatamente 5 alternativas (A a E), com apenas uma correta.
 - Evite pegadinhas de português; o foco é o conteúdo técnico do assunto.
 - Se for citar lei/norma específica, use apenas referência que você tenha certeza que existe; se não tiver certeza do número exato, formule a questão sem citar número de lei.
 - Inclua uma explicação curta (1 a 3 frases) do porquê a alternativa correta está certa.
 
-RESPONDA APENAS COM UM JSON (array), sem markdown, no formato exato:
+RESPONDA APENAS COM UM JSON (array de ${quantidade} itens), sem markdown, no formato exato:
 [{"questao":"...","alternativas":[{"letra":"A","texto":"..."},{"letra":"B","texto":"..."},{"letra":"C","texto":"..."},{"letra":"D","texto":"..."},{"letra":"E","texto":"..."}],"correta":"B","explicacao":"..."}]`;
 
   const raw=await callGeminiGenerate(apiKey,prompt);
   const parsed=extractAIJson(raw);
   const arr=Array.isArray(parsed)?parsed:(Array.isArray(parsed?.questoes)?parsed.questoes:null);
   if(!arr||!arr.length)throw new Error(`IA não retornou questões válidas para "${sub.name}".`);
-  const questoes=arr.filter(q=>q&&q.questao&&Array.isArray(q.alternativas)&&q.correta).map(q=>({...q,userAnswer:null}));
+  // A IA às vezes ignora a instrução de quantidade e devolve mais itens do que o pedido —
+  // corta aqui pra garantir que a contagem bate com o que o usuário escolheu, em vez de
+  // confiar cegamente no que veio na resposta.
+  const questoes=arr.filter(q=>q&&q.questao&&Array.isArray(q.alternativas)&&q.correta).slice(0,quantidade).map(q=>({...q,userAnswer:null}));
   if(!questoes.length)throw new Error(`IA não retornou questões válidas para "${sub.name}".`);
   return questoes;
 }
