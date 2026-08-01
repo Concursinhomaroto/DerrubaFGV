@@ -4956,8 +4956,23 @@ function showSubRevisions(subId,topicId){
     if(sub.revMastered){
       html+=`<div style="background:rgba(21,128,61,0.08);border:1.5px solid rgba(21,128,61,0.3);border-radius:12px;padding:14px;margin-top:12px;text-align:center;font-size:12px;font-weight:800;color:var(--green)">🏆 Domínio total! Sem mais revisões agendadas por agora.</div>`;
     }
+    html+=`<button class="btn btn-sm btn-ghost" style="width:100%;justify-content:center;margin-top:14px" title="Útil se o assunto ficou atrasado com o sistema antigo de revisão, ou se você já reestudou por fora" onclick="resetarRevisoes('${subId}');showSubRevisions('${subId}','${topicId}')"><i class="fa fa-rotate"></i> Resetar revisões (recomeçar a partir de hoje)</button>`;
   }
   openModal(`📅 Revisões — ${subName}`,html);
+}
+// "Escape hatch" pra quem tem revisão atrasada de forma injusta — miniboss criado antes
+// do SM-2 existir, ou reestudado por fora sem passar pelo fluxo normal de "Concluir".
+// Descarta o progresso de SM-2 acumulado (reps/ef) e recomeça do zero, igual a uma
+// primeira revisão de verdade: 7 dias a partir de hoje.
+function resetarRevisoes(subId){
+  const sub=simFindSub(subId);
+  if(!sub)return;
+  db.revisions[subId]=[{date:addDays(todayStr(),7),completed:false}];
+  delete sub.sm2;
+  sub.revMastered=false;
+  saveDB();
+  updateRevBadge();
+  toast(`🔄 Revisões de "${sub.name}" resetadas — próxima em 7 dias a partir de hoje.`,'var(--accent)');
 }
 
 // ===== REVISÃO ESPAÇADA (SM-2) =====
@@ -5422,6 +5437,7 @@ function renderRevisions(){
           : `<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
                <button class="btn btn-xs btn-green-s" onclick="openRevQualityPicker('${item.subId}',${item.idx},'list')">✓ Feito</button>
                <button class="btn btn-xs btn-primary" onclick="goToSubtopic('${item.subId}')"><i class="fa fa-book-open"></i> Revisar</button>
+               ${isPast?`<button class="btn btn-xs btn-ghost" title="Já reestudei esse assunto — recomeçar o agendamento de revisão a partir de hoje" onclick="resetarRevisoes('${item.subId}');renderRevisions()"><i class="fa fa-rotate"></i> Já reestudei</button>`:''}
              </div>`
         : `<button class="btn btn-xs" style="background:rgba(108,71,255,0.08);color:var(--accent);border:1px solid var(--border)" onclick="goToSubtopic('${item.subId}')"><i class="fa fa-eye"></i> Ver</button>`
       }
@@ -5632,7 +5648,10 @@ function renderDashboard(){
         <span style="font-size:18px">${item.kingdomIcon}</span>
         <div class="rev-info"><div class="rev-name">${item.subName}</div><div class="rev-sub">${item.kingdomName} · ${item.date}</div></div>
         <span class="rev-cd cd-over">${d}d atraso</span>
-        <button class="btn btn-xs btn-green-s" onclick="openRevQualityPicker('${item.subId}',${item.idx},'dashboard')"${!item.studied?' style="opacity:0.35;cursor:not-allowed;"':''}>✓</button>
+        <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+          <button class="btn btn-xs btn-green-s" onclick="openRevQualityPicker('${item.subId}',${item.idx},'dashboard')"${!item.studied?' style="opacity:0.35;cursor:not-allowed;"':''}>✓</button>
+          <button class="btn btn-xs btn-ghost" title="Já reestudei esse assunto — recomeçar o agendamento de revisão a partir de hoje" onclick="resetarRevisoes('${item.subId}');renderDashboard()"><i class="fa fa-rotate"></i></button>
+        </div>
       </div>`;
     }).join('');
   }
