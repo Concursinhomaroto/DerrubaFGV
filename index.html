@@ -3619,22 +3619,38 @@ async function generateSimuladoGeral(){
   });
 
   const container=document.getElementById('simgeral-content');
-  if(container)container.innerHTML=`<div class="section-card"><div class="empty"><i class="fa fa-spinner fa-spin"></i><p>Gerando ${totalQtd} questões de ${subjects.length} assunto(s)...</p></div></div>`;
 
-  try{
-    const results=await Promise.all(plano.map(p=>
-      generateQuestionsForSubject(apiKey,p.kingdom,p.topic,p.sub,p.quantidade)
-        .then(qs=>qs.map(q=>({...q,subId:p.sub.id,subName:p.sub.name,topicName:p.topic.name,kingdomName:p.kingdom.name,kingdomIcon:p.kingdom.icon})))
-    ));
-    let questoes=results.flat();
+  // Gera assunto por assunto, em sequência (não em paralelo): a API gratuita do Gemini
+  // tem limite de requisições por minuto, e disparar dezenas de chamadas de uma vez
+  // (um simulado geral pode cobrir 40+ assuntos) estoura esse limite na hora, fazendo
+  // literalmente TODAS as tentativas — inclusive a primeira — voltarem 429 "quota
+  // exceeded". Com pausa entre cada chamada, a maioria passa dentro da janela do limite.
+  const questoes=[];
+  const falhas=[];
+  for(let i=0;i<plano.length;i++){
+    const p=plano[i];
+    if(container)container.innerHTML=`<div class="section-card"><div class="empty"><i class="fa fa-spinner fa-spin"></i><p>Gerando questões... (${i+1}/${plano.length} assuntos)<br><span style="font-size:10px">${p.sub.name}</span></p></div></div>`;
+    try{
+      const qs=await generateQuestionsForSubject(apiKey,p.kingdom,p.topic,p.sub,p.quantidade);
+      questoes.push(...qs.map(q=>({...q,subId:p.sub.id,subName:p.sub.name,topicName:p.topic.name,kingdomName:p.kingdom.name,kingdomIcon:p.kingdom.icon})));
+    }catch(e){
+      falhas.push(`${p.sub.name} (${e.message||'erro'})`);
+    }
+    if(i<plano.length-1)await new Promise(r=>setTimeout(r,4000));
+  }
+
+  if(!questoes.length){
+    toast('❌ Nenhuma questão pôde ser gerada. '+(falhas[0]||'')+(falhas.length>1?` (+${falhas.length-1} outro${falhas.length>2?'s':''})`:'')+' — se for erro de quota (429), aguarde um pouco ou verifique o plano da sua chave em aistudio.google.com.','var(--red)');
+    simGeralActive=null;
+  }else{
     // Embaralhar pra não ficar tudo agrupado por assunto, como numa prova de verdade
     for(let i=questoes.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[questoes[i],questoes[j]]=[questoes[j],questoes[i]];}
-
     simGeralActive={questoes,startedAt:Date.now(),limiteSec:tempoMin>0?tempoMin*60:0,corrected:false};
-    toast(`🏛️ Simulado geral gerado! ${questoes.length} questões de ${subjects.length} assunto(s).`,'var(--accent)');
-  }catch(e){
-    toast('❌ '+(e.message||'Erro ao gerar simulado geral'),'var(--red)');
-    simGeralActive=null;
+    if(falhas.length){
+      toast(`⚠️ Simulado gerado com ${questoes.length} questões, mas ${falhas.length} assunto${falhas.length>1?'s falharam':' falhou'} (provável limite de requisições da API). Pode gerar de novo depois pra cobrir o resto.`,'var(--orange)');
+    }else{
+      toast(`🏛️ Simulado geral gerado! ${questoes.length} questões de ${subjects.length} assunto(s).`,'var(--accent)');
+    }
   }
   renderSimGeralScreen();
 }
