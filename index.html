@@ -1094,11 +1094,8 @@ nav{
     <button class="nav-btn active" id="nav-dashboard">
       <span class="nav-icon">🏆</span><span class="nav-label">PAINEL DO HERÓI</span>
     </button>
-    <button class="nav-btn" id="nav-map">
-      <span class="nav-icon">🗺️</span><span class="nav-label">MAPA DOS REINOS</span>
-    </button>
     <button class="nav-btn" id="nav-vale">
-      <span class="nav-icon">🐉</span><span class="nav-label">O MAPA DO VALE</span>
+      <span class="nav-icon">🐉</span><span class="nav-label">MAPA DO VALE</span>
     </button>
     <button class="nav-btn" id="nav-revisions">
       <span class="nav-icon">🔔</span><span class="nav-label">REVISÕES</span>
@@ -1160,7 +1157,7 @@ nav{
 <!-- ===== KINGDOM ===== -->
 <div class="screen" id="screen-kingdom">
   <div class="breadcrumb">
-    <span class="bc-link" onclick="showScreen('map')"><i class="fa fa-home"></i> Mapa</span>
+    <span class="bc-link" onclick="showScreen('vale')"><i class="fa fa-home"></i> Mapa</span>
     <i class="fa fa-chevron-right" style="font-size:9px"></i>
     <span id="bc-kingdom" style="font-weight:800;color:var(--text)"></span>
   </div>
@@ -2185,8 +2182,11 @@ function createKingdom(){
   const color=document.getElementById('nk-color').value;
   if(!name){toast('⚠️ Digite o nome do reino','var(--red)');return;}
   const k={id:genId(),name,icon,color};
+  if(typeof valePendingZone==='number'){k.mapZone=valePendingZone;valePendingZone=null;}
   db.kingdoms.push(k);db.topics[k.id]=[];
-  saveDB();closeModal();renderMap();toast('🏰 Novo reino criado!','var(--accent)');
+  saveDB();closeModal();renderMap();
+  if(document.getElementById('screen-vale')?.classList.contains('active')&&typeof renderValeMap==='function')renderValeMap();
+  toast('🏰 Novo reino criado!','var(--accent)');
 }
 function deleteKingdom(id){
   const k=db.kingdoms.find(x=>x.id===id);
@@ -2200,7 +2200,9 @@ function deleteKingdom(id){
   delete db.topics[id];
   if(db.kingdomSeconds)delete db.kingdomSeconds[id];
   db.kingdoms=db.kingdoms.filter(x=>x.id!==id);
-  saveDB();renderMap();toast('🗑️ Reino removido','var(--red)');
+  saveDB();renderMap();
+  if(document.getElementById('screen-vale')?.classList.contains('active')&&typeof renderValeMap==='function')renderValeMap();
+  toast('🗑️ Reino removido','var(--red)');
 }
 
 // ===== O MAPA DO VALE (mapa real do Brasil — D3 + GeoJSON, data-driven) =====
@@ -2252,6 +2254,21 @@ function valeGotoFlashcards(kingdomId){
   closeModal();
   fcFilterKingdom=kingdomId;
   showScreen('flashcards');
+}
+let valePendingZone=null;
+function valeCreateKingdomHere(zoneIdx){
+  closeModal();
+  valePendingZone=zoneIdx;
+  openAddKingdomModal();
+}
+function valeManageKingdom(kingdomId){
+  closeModal();
+  const k=db.kingdoms.find(x=>x.id===kingdomId);
+  if(k)openKingdom(k);
+}
+function valeDeleteKingdom(kingdomId){
+  closeModal();
+  deleteKingdom(kingdomId);
 }
 
 (function(){
@@ -2503,13 +2520,13 @@ function valeGotoFlashcards(kingdomId){
     groups.forEach(g=>{
       const d=path(g.feature);
       gLand.append('path').attr('d',d).attr('fill','url(#valeParch)');
-      gLand.append('path').attr('d',d).attr('class','vale-tint').attr('data-id',g.reino.id).attr('fill',g.reino.hue).attr('opacity',.2);
+      g.tint=gLand.append('path').attr('d',d).attr('class','vale-tint').attr('fill',g.reino.hue).attr('opacity',.2);
       gLand.append('path').attr('d',d).attr('fill','url(#valeGrain)').attr('opacity',.35);
     });
     tagged.forEach(t=>gLand.append('path').attr('d',path(t.f)).attr('fill','none')
       .attr('stroke','#b9a8ff').attr('stroke-width',.8).attr('stroke-dasharray','3 4').attr('opacity',.22));
-    groups.forEach(g=>gLand.append('path').attr('d',path(g.feature)).attr('fill','none')
-      .attr('class','vale-border').attr('data-id',g.reino.id)
+    groups.forEach(g=>g.border=gLand.append('path').attr('d',path(g.feature)).attr('fill','none')
+      .attr('class','vale-border')
       .attr('stroke',g.reino.hue).attr('stroke-width',2.2).attr('opacity',.9)
       .style('filter',`drop-shadow(0 0 6px ${g.reino.hue})`));
     gLand.append('path').attr('d',path(all)).attr('fill','none').attr('stroke','#0b0820').attr('stroke-width',5);
@@ -2666,25 +2683,25 @@ function valeGotoFlashcards(kingdomId){
         <span>Chefão ${i+1}</span>
       </div>`).join(''):`<div style="opacity:.6;font-size:13px">Nenhum chefão criado neste reino ainda.</div>`;
     const statusLabel=!claimed?'Terra Ignota':st.state==='fog'?'Enevoado':st.state==='dominado'?'Dominado':'Descoberto';
-    const cta=(claimed&&st.total>0)?`<div style="display:flex;justify-content:flex-end;margin-top:10px"><button class="btn btn-primary" onclick="valeGotoFlashcards('${r.kingdom.id}')">Ver flashcards deste reino →</button></div>`:'';
-    const hint=!claimed?`<div style="font-size:13px;opacity:.75;margin-top:4px">Crie um reino em "Mapa dos Reinos" pra reivindicar este território.</div>`:'';
+    const actions=claimed?`
+        <button class="btn" onclick="valeManageKingdom('${r.kingdom.id}')"><i class="fa fa-list"></i> Gerenciar chefões</button>
+        ${st.total>0?`<button class="btn btn-primary" onclick="valeGotoFlashcards('${r.kingdom.id}')">Ver flashcards →</button>`:''}
+        <button class="btn btn-danger" onclick="valeDeleteKingdom('${r.kingdom.id}')" title="Excluir reino"><i class="fa fa-trash"></i></button>`
+      :`<button class="btn btn-primary" onclick="valeCreateKingdomHere(${r.zoneIdx})"><i class="fa fa-plus"></i> Criar reino aqui</button>`;
     openModal(claimed?((r.kingdom.icon||'🏰')+' '+r.name):'🌫️ Terra Ignota',`
       <div style="font-family:'IM Fell English',serif">
         <div style="font-size:13px;opacity:.75;margin-bottom:14px">${statusLabel}${claimed?` · ${st.dominio}% de domínio`:''} · ${r.states.join(' · ')}</div>
         ${claimed?`<div style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:1px;margin-bottom:8px;opacity:.85">CHEFÕES DO REINO</div>
-        <div style="display:flex;flex-direction:column;gap:6px">${bossesHtml}</div>`:''}
-        ${hint}${cta}
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px">${bossesHtml}</div>`:''}
+        <div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap">${actions}</div>
       </div>`);
   }
 
+  // Recalcula do zero quais reinos ocupam quais zonas (cobre criação/exclusão de reino
+  // desde o último render, não só mudança de progresso) sem tocar na geometria já construída.
   function syncData(){
-    BR.groups.forEach(g=>{
-      if(g.reino.kingdom){
-        g.reino.st=valeKingdomStats(g.reino.kingdom);
-        g.reino.hue=g.reino.kingdom.color;
-        g.reino.name=g.reino.kingdom.name;
-      }
-    });
+    const reinos=buildReinos();
+    BR.groups.forEach((g,i)=>{g.reino=reinos[i];});
   }
 
   function render(){
@@ -2693,8 +2710,11 @@ function valeGotoFlashcards(kingdomId){
       const r=g.reino,st=r.st,claimed=!!r.kingdom,[cx,cy]=g.centroid;
       const C=2*Math.PI*30,filled=C*st.dominio/100;
 
-      d3.selectAll(`.vale-tint[data-id="${r.id}"]`).attr('fill',st.state==='fog'?'#6b6153':r.hue)
+      g.node.attr('data-id',r.id).attr('aria-label',r.name||'Terra Ignota');
+      g.tint.attr('fill',st.state==='fog'?'#6b6153':r.hue)
         .attr('opacity',st.state==='fog'?.16:st.state==='dominado'?.3:.22);
+      g.border.attr('stroke',st.state==='fog'?'#4a4270':r.hue)
+        .style('filter',st.state==='fog'?'none':`drop-shadow(0 0 6px ${r.hue})`);
 
       g.node.select('.ring').attr('stroke',st.state==='fog'?'#4a4270':r.hue)
         .style('filter',st.state==='fog'?'none':`drop-shadow(0 0 7px ${r.hue})`)
@@ -3862,7 +3882,7 @@ function globalSearch(q){
     (db.topics[k.id]||[]).forEach(t=>{
       (t.subtopics||[]).forEach(s=>{
         if((s.name||'').toLowerCase().includes(q)){
-          results.push({icon:k.icon||'🏰',title:s.name,sub:`${k.name} · ${t.name}`,typeLabel:'Assunto',action:()=>{closeModal();showScreen('map');goToSubtopic(s.id);}});
+          results.push({icon:k.icon||'🏰',title:s.name,sub:`${k.name} · ${t.name}`,typeLabel:'Assunto',action:()=>{closeModal();goToSubtopic(s.id);}});
         }
       });
     });
@@ -6730,7 +6750,7 @@ function removeRevFromPlan(subId,revIdx,ds){
 
 // ===== BIND STATIC HTML EVENTS (module scripts are isolated from onclick) =====
 function bindStaticEvents(){
-  document.getElementById('nav-map')?.addEventListener('click',()=>showScreen('map'));
+  document.getElementById('nav-vale')?.addEventListener('click',()=>showScreen('vale'));
   document.getElementById('nav-revisions')?.addEventListener('click',()=>showScreen('revisions'));
   document.getElementById('nav-dashboard')?.addEventListener('click',()=>showScreen('dashboard'));
   document.getElementById('nav-editais')?.addEventListener('click',()=>showScreen('editais'));
