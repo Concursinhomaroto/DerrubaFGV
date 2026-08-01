@@ -13,6 +13,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Vale dos Nomeados">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#f5f3ff;
@@ -1094,6 +1097,9 @@ nav{
     <button class="nav-btn" id="nav-map">
       <span class="nav-icon">🗺️</span><span class="nav-label">MAPA DOS REINOS</span>
     </button>
+    <button class="nav-btn" id="nav-vale">
+      <span class="nav-icon">🐉</span><span class="nav-label">O MAPA DO VALE</span>
+    </button>
     <button class="nav-btn" id="nav-revisions">
       <span class="nav-icon">🔔</span><span class="nav-label">REVISÕES</span>
       <span class="nav-badge" id="rev-badge" style="display:none">0</span>
@@ -1434,6 +1440,141 @@ nav{
   </div>
   <div id="conquistas-grid"></div>
 </div>
+
+<div class="screen" id="screen-vale">
+  <div class="vale-wrap" id="vale-wrap">
+    <canvas id="vale-texture"></canvas>
+    <svg class="vale-svg" id="vale-svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid meet"></svg>
+    <div class="vale-cartouche">
+      <h2>O Vale dos Nomeados</h2>
+      <p>mapa do reino</p>
+    </div>
+    <div class="vale-legend" id="vale-legend"></div>
+  </div>
+  <div class="vale-tooltip" id="vale-tooltip"></div>
+</div>
+<style>
+:root{
+  --vale-parchment:#e4d3a3; --vale-parchment2:#d8c188; --vale-edge:#b99a5c;
+  --vale-ink:#3b2a1a; --vale-ink-soft:#6b5432; --vale-ink-faint:#8a7350;
+  --vale-gold:#a6741a; --vale-gold-bright:#c98f27; --vale-crimson:#8c2f2f;
+  --vale-water:#5f8ea6; --vale-water2:#4a7488; --vale-forest:#4c6b3f; --vale-forest2:#3a5530;
+  --vale-mountain:#7d6a52; --vale-mountain2:#5f4f3c; --vale-desk:#241a10;
+  --vale-font-display:'Cinzel','Iowan Old Style',Georgia,serif;
+  --vale-font-flavor:'IM Fell English',Georgia,serif;
+}
+:root[data-theme="dark"]{
+  --vale-parchment:#241a10; --vale-parchment2:#1c140b; --vale-edge:#0f0a05;
+  --vale-ink:#e9d3a3; --vale-ink-soft:#bb9c6c; --vale-ink-faint:#8a7350;
+  --vale-gold:#d4a73a; --vale-gold-bright:#e8c15a; --vale-crimson:#e07a5f;
+  --vale-water:#2c4652; --vale-water2:#213640; --vale-forest:#354a2b; --vale-forest2:#283a20;
+  --vale-mountain:#4d4132; --vale-mountain2:#392f24; --vale-desk:#0a0704;
+}
+@media(prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --vale-parchment:#241a10; --vale-parchment2:#1c140b; --vale-edge:#0f0a05;
+    --vale-ink:#e9d3a3; --vale-ink-soft:#bb9c6c; --vale-ink-faint:#8a7350;
+    --vale-gold:#d4a73a; --vale-gold-bright:#e8c15a; --vale-crimson:#e07a5f;
+    --vale-water:#2c4652; --vale-water2:#213640; --vale-forest:#354a2b; --vale-forest2:#283a20;
+    --vale-mountain:#4d4132; --vale-mountain2:#392f24; --vale-desk:#0a0704;
+  }
+}
+#screen-vale{padding:20px}
+#screen-vale.active{display:flex;flex-direction:column;align-items:center;gap:12px}
+.vale-wrap{
+  position:relative;width:100%;max-width:1360px;aspect-ratio:1600/1000;border-radius:10px;
+  background:var(--vale-parchment);box-shadow:0 20px 46px -18px rgba(0,0,0,.4);
+  outline:2px solid var(--vale-edge);outline-offset:-9px;overflow:hidden;
+}
+.vale-wrap::after{content:"";position:absolute;inset:0;border-radius:10px;outline:1px solid color-mix(in srgb, var(--vale-gold) 55%, transparent);outline-offset:-14px;pointer-events:none}
+#vale-texture{position:absolute;inset:0;width:100%;height:100%;opacity:.5;mix-blend-mode:multiply;pointer-events:none}
+:root[data-theme="dark"] #vale-texture{mix-blend-mode:soft-light;opacity:.38}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) #vale-texture{mix-blend-mode:soft-light;opacity:.38}}
+.vale-svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+
+.vale-cartouche{position:absolute;top:14px;left:50%;transform:translateX(-50%);text-align:center;pointer-events:none}
+.vale-cartouche h2{margin:0;font-family:var(--vale-font-display);font-weight:700;font-size:clamp(16px,2.4vw,26px);letter-spacing:.14em;text-transform:uppercase;color:var(--vale-ink)}
+.vale-cartouche p{margin:2px 0 0;font-family:'Segoe UI',system-ui,sans-serif;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--vale-ink-soft)}
+
+.vale-legend{position:absolute;top:12px;right:12px;background:var(--vale-parchment2);border:1px solid var(--vale-ink-soft);border-radius:6px;padding:8px 12px;font-family:'Segoe UI',system-ui,sans-serif;font-size:10.5px;color:var(--vale-ink-soft);box-shadow:0 3px 8px rgba(0,0,0,.25);max-width:200px}
+.vale-legend b{color:var(--vale-ink);font-weight:700}
+.vale-legend .vl-row{display:flex;align-items:center;gap:6px;margin-top:4px}
+.vale-legend .vl-dot{width:9px;height:9px;border-radius:50%;flex:none}
+
+.vale-water{fill:var(--vale-water);stroke:var(--vale-water2);stroke-width:2}
+.vale-wave{stroke:var(--vale-water2);stroke-width:1.2;fill:none;opacity:.5}
+.vale-forest path{fill:var(--vale-forest);stroke:var(--vale-forest2);stroke-width:1}
+.vale-mountain path{fill:var(--vale-mountain);stroke:var(--vale-mountain2);stroke-width:1.2;stroke-linejoin:round}
+.vale-mountain path.snow{fill:color-mix(in srgb, var(--vale-parchment) 88%, white 12%);stroke:none;opacity:.85}
+.vale-road{fill:none;stroke:var(--vale-ink-soft);stroke-width:2.6;stroke-linecap:round;stroke-dasharray:1 9;opacity:.6}
+.vale-road.is-active{stroke:var(--vale-ink);stroke-dasharray:none;opacity:.8}
+.vale-road.is-dominado{stroke:var(--vale-gold);stroke-width:4.4;stroke-dasharray:none;opacity:.95}
+.vale-camp path,.vale-camp polygon{fill:var(--vale-ink-soft);stroke:var(--vale-ink);stroke-width:1}
+.vale-camp-flag{fill:var(--vale-crimson)}
+.vale-camp-label{font-family:var(--vale-font-display);font-variant:small-caps;letter-spacing:.05em;font-size:14px;fill:var(--vale-ink);text-anchor:middle}
+
+.vale-kingdom{cursor:pointer}
+.vale-marker-icon{fill:currentColor;stroke:var(--vale-ink);stroke-width:1.6;stroke-linejoin:round;transition:transform .18s ease;transform-box:fill-box;transform-origin:center}
+.vale-kingdom:hover .vale-marker-icon,.vale-kingdom:focus-visible .vale-marker-icon,.vale-kingdom.is-open .vale-marker-icon{transform:scale(1.1) translateY(-2px)}
+.vale-kingdom:focus-visible{outline:none}
+.vale-kingdom:focus-visible .vale-ring-track{stroke:var(--vale-gold-bright);stroke-width:3}
+.vale-ring-track{fill:none;stroke:var(--vale-ink-faint);stroke-width:3;opacity:.4}
+.vale-ring-fill{fill:none;stroke-width:3;stroke-linecap:round;transform:rotate(-90deg);transform-origin:center;transition:stroke-dashoffset .8s cubic-bezier(.2,.8,.2,1)}
+.vale-fog{fill:var(--vale-ink-faint);opacity:.32;filter:blur(6px)}
+.vale-fog-icon{opacity:.5;filter:grayscale(1) brightness(1.15)}
+.vale-banner{fill:var(--vale-parchment2);stroke:var(--vale-ink-soft);stroke-width:1}
+.vale-name{font-family:var(--vale-font-display);font-variant:small-caps;letter-spacing:.03em;font-weight:700;fill:var(--vale-ink);text-anchor:middle}
+.vale-boss-dot{stroke:var(--vale-ink);stroke-width:1}
+.vale-warn-flame{fill:var(--vale-crimson);stroke:var(--vale-ink);stroke-width:1}
+.vale-guardian-bird path{fill:var(--vale-ink-soft);opacity:.9}
+.vale-guardian-dragon *{stroke:var(--vale-ink);stroke-width:1.4;stroke-linejoin:round}
+.vale-crown-glow{fill:var(--vale-gold-bright);opacity:.32;filter:blur(10px)}
+.vale-frontier rect{fill:none;stroke:var(--vale-ink-faint);stroke-width:1.5;stroke-dasharray:5 5}
+.vale-frontier text{font-family:'Segoe UI',system-ui,sans-serif;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;fill:var(--vale-ink-faint);text-anchor:middle}
+
+@media (prefers-reduced-motion: no-preference){
+  .vale-guardian-bird{animation:valeBob 3.2s ease-in-out infinite}
+  .vale-guardian-bird.vb2{animation-delay:.6s}
+  @keyframes valeBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+  .vale-warn-flame{animation:valeFlicker 1.8s ease-in-out infinite}
+  @keyframes valeFlicker{0%,100%{transform:scaleY(1) scaleX(1)}50%{transform:scaleY(1.12) scaleX(.94)}}
+  .vale-smoke{animation:valeRise 4s ease-in infinite}
+  @keyframes valeRise{0%{transform:translateY(0) scale(.6);opacity:0}20%{opacity:.5}100%{transform:translateY(-30px) scale(1.3);opacity:0}}
+}
+
+.vale-tooltip{
+  position:fixed;z-index:60;background:var(--vale-parchment);color:var(--vale-ink);
+  border:1px solid var(--vale-ink-soft);border-radius:10px;box-shadow:0 20px 50px rgba(0,0,0,.4);
+  width:min(340px,92vw);padding:16px 18px 18px;opacity:0;pointer-events:none;
+  transform:translateY(14px) scale(.98);transition:opacity .24s ease,transform .24s cubic-bezier(.2,.8,.2,1);
+  font-family:'Segoe UI',system-ui,sans-serif;
+}
+.vale-tooltip.open{opacity:1;pointer-events:auto;transform:translateY(0) scale(1)}
+@media(min-width:860px){.vale-tooltip{right:36px;top:50%;transform:translateY(calc(-50% + 14px)) scale(.98)}.vale-tooltip.open{transform:translateY(-50%) scale(1)}}
+@media(max-width:859px){.vale-tooltip{left:50%;bottom:16px;max-height:60vh;overflow-y:auto;transform:translateX(-50%) translateY(14px) scale(.98)}.vale-tooltip.open{transform:translateX(-50%) translateY(0) scale(1)}}
+@media(max-width:700px){.vale-tooltip{bottom:calc(var(--mobile-navbar-h) + 12px);max-height:56vh}}
+.vale-tt-close{position:absolute;top:9px;right:9px;width:24px;height:24px;border-radius:50%;background:var(--vale-ink-soft);color:var(--vale-parchment);border:none;cursor:pointer;font-size:12px}
+.vale-tt-close:hover{background:var(--vale-crimson)}
+.vale-tt-head{display:flex;align-items:center;gap:9px;margin-bottom:4px}
+.vale-tt-head .icn{font-size:22px}
+.vale-tt-head h3{margin:0;font-family:var(--vale-font-display);font-variant:small-caps;font-size:18px;letter-spacing:.02em;color:var(--vale-ink)}
+.vale-tt-flavor{font-family:var(--vale-font-flavor);font-style:italic;font-size:13px;line-height:1.5;color:var(--vale-ink-soft);margin:6px 0 12px;border-left:2px solid var(--vale-gold);padding-left:9px}
+.vale-tt-stats{display:grid;grid-template-columns:1fr 1fr;gap:7px 12px;margin-bottom:12px;font-size:11.5px}
+.vale-tt-stats .l{color:var(--vale-ink-faint);font-size:10px;text-transform:uppercase;letter-spacing:.05em}
+.vale-tt-stats .v{font-weight:700;font-variant-numeric:tabular-nums}
+.vale-tt-stats .v.warn{color:var(--vale-crimson)}
+.vale-tt-pp-row{display:flex;justify-content:space-between;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--vale-ink-faint);margin-bottom:3px}
+.vale-tt-track{height:7px;border-radius:4px;background:var(--vale-parchment2);border:1px solid var(--vale-ink-soft);overflow:hidden}
+.vale-tt-fill{height:100%;border-radius:4px;width:0%;transition:width .9s cubic-bezier(.2,.8,.2,1)}
+.vale-tt-cta{display:inline-block;margin-top:12px;font-size:11px;font-weight:700;color:var(--vale-gold-bright);text-decoration:none;cursor:pointer}
+@media(max-width:859px){#screen-vale{padding:10px}}
+@media(max-width:700px){
+  .vale-cartouche p{display:none}
+  .vale-cartouche h2{font-size:13px;letter-spacing:.08em}
+  .vale-legend{top:auto;bottom:8px;left:8px;right:auto;max-width:150px;font-size:8.5px;padding:5px 8px}
+  .vale-legend .vl-row{display:none}
+}
+</style>
 
 <div id="loading-overlay" class="loading-overlay">
   <div class="skeleton-shell" aria-hidden="true">
@@ -1992,6 +2133,7 @@ function showScreen(name){
   if(name==='redacoes')renderRedacoesScreen();
   if(name==='repertorio')renderRepertorioScreen();
   if(name==='conquistas')renderConquistasScreen();
+  if(name==='vale')renderValeMap();
 }
 
 // ===== MAP =====
@@ -2135,6 +2277,322 @@ function deleteKingdom(id){
   db.kingdoms=db.kingdoms.filter(x=>x.id!==id);
   saveDB();renderMap();toast('🗑️ Reino removido','var(--red)');
 }
+
+// ===== O MAPA DO VALE (mapa de fantasia interativo, data-driven) =====
+const VALE_CAMP={x:800,y:880};
+const VALE_REGION={cx:820,cy:460,rx:560,ry:290};
+const VALE_GOLD_ANGLE=2.399963229728653;
+
+function valeHash(str){
+  let h=2166136261;
+  for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619);}
+  return h>>>0;
+}
+function valeSpiralPoint(n){
+  const rUnit=Math.min(0.94,0.14+0.045*Math.sqrt(n));
+  const a=n*VALE_GOLD_ANGLE;
+  return {x:VALE_REGION.cx+Math.cos(a)*rUnit*VALE_REGION.rx, y:VALE_REGION.cy+Math.sin(a)*rUnit*VALE_REGION.ry};
+}
+// Posição determinística por reino: usa mapX/mapY já salvos; se não existirem,
+// calcula via espiral áurea (semente = hash do id) evitando colidir com os já posicionados,
+// e persiste no Firebase pra nunca mais "pular de lugar".
+function valeAssignPositions(){
+  const MIN_DIST=128;
+  const placed=[];
+  let changed=false;
+  db.kingdoms.forEach(k=>{
+    if(typeof k.mapX==='number'&&typeof k.mapY==='number'){
+      placed.push({x:k.mapX,y:k.mapY});
+      return;
+    }
+    let n=valeHash(k.id)%50, tries=0, point=valeSpiralPoint(n);
+    while(tries<250){
+      point=valeSpiralPoint(n);
+      const tooClose=placed.some(p=>Math.hypot(p.x-point.x,p.y-point.y)<MIN_DIST);
+      if(!tooClose)break;
+      n++;tries++;
+    }
+    k.mapX=Math.round(point.x);k.mapY=Math.round(point.y);
+    placed.push({x:k.mapX,y:k.mapY});
+    changed=true;
+  });
+  if(changed)saveDB();
+}
+
+function valeKingdomCards(k){
+  const topicIds=(db.topics[k.id]||[]).map(t=>t.id);
+  return Object.values(db.flashcards||{}).filter(c=>topicIds.includes(c.mbId));
+}
+// Estados do território reaproveitando o mesmo critério de "maduro" (lastConf>=4)
+// já usado pela conquista Reino Dominado — o mapa nunca diverge da conquista.
+function valeKingdomStats(k){
+  const topics=db.topics[k.id]||[];
+  const cards=valeKingdomCards(k);
+  const total=cards.length;
+  const studied=cards.filter(c=>(c.lastConf||0)>0).length;
+  const matured=cards.filter(c=>(c.lastConf||0)>=4).length;
+  let state='fog';
+  if(total>0&&studied>0)state=(matured===total)?'dominado':'descoberto';
+  const chefoes=topics.map(t=>{
+    const tc=getAllFCForTopic(t.id);
+    return {id:t.id,name:t.name,total:tc.length,defeated:tc.length>0&&tc.every(c=>(c.lastConf||0)>=4)};
+  });
+  let acertos=0,erros=0,lastVisit=null;
+  cards.forEach(c=>{
+    acertos+=(c.acertos||0);erros+=(c.erros||0);
+    if(c.ultimaRevisao&&(!lastVisit||c.ultimaRevisao>lastVisit))lastVisit=c.ultimaRevisao;
+  });
+  const atrasadas=topics.reduce((n,t)=>n+(t.subtopics||[]).reduce((m,s)=>m+countOverdue(s,todayStr()),0),0);
+  return {
+    total,studied,matured,state,chefoes,
+    defeated:chefoes.filter(c=>c.defeated).length,
+    totalChefoes:chefoes.length,
+    lastVisit,atrasadas,
+    dominio: total?Math.round(matured/total*100):0,
+    retencao: (acertos+erros)>0?Math.round(acertos/(acertos+erros)*100):null
+  };
+}
+function valeFlavorText(k,st){
+  if(st.state==='fog')return `Território ainda envolto em névoa. Nenhum passo foi dado além da fronteira de ${k.name}.`;
+  if(st.state==='dominado')return `Erguida por completo sob sua bandeira. ${st.atrasadas>0?`Ainda assim, o dragão dorme de olho aberto: ${st.atrasadas} revisão(ões) bate(m) à porta.`:'Nem o dragão que a guarda encontra motivo pra despertar.'}`;
+  return `${st.dominio}% do reino já responde ao seu comando, Nomeado.${st.atrasadas>0?` ${st.atrasadas} revisão(ões) cobrada(s) esperam resposta.`:''}`;
+}
+
+const svgNS='http://www.w3.org/2000/svg';
+function valeMulberry32(seed){
+  return function(){
+    seed|=0;seed=seed+0x6D2B79F5|0;
+    let t=Math.imul(seed^seed>>>15,1|seed);
+    t=t+Math.imul(t^t>>>7,61|t)^t;
+    return ((t^t>>>14)>>>0)/4294967296;
+  };
+}
+
+function renderValeMap(){
+  const svg=document.getElementById('vale-svg');
+  if(!svg)return;
+  valeAssignPositions();
+
+  const defs=`<defs>
+    <symbol id="vi-castle" viewBox="0 0 100 100">
+      <rect x="8" y="52" width="84" height="36"/>
+      <rect x="8" y="42" width="10" height="10"/><rect x="26" y="42" width="10" height="10"/>
+      <rect x="45" y="42" width="10" height="10"/><rect x="64" y="42" width="10" height="10"/><rect x="82" y="42" width="10" height="10"/>
+      <rect x="2" y="24" width="17" height="62"/><polygon points="10.5,6 2,24 19,24"/>
+      <rect x="81" y="24" width="17" height="62"/><polygon points="89.5,6 81,24 98,24"/>
+      <rect x="37" y="16" width="26" height="70"/><polygon points="50,0 36,16 64,16"/>
+    </symbol>
+    <symbol id="vi-tent" viewBox="0 0 60 46">
+      <polygon points="30,2 4,44 56,44"/><polygon points="30,2 24,44 36,44" opacity=".35"/>
+    </symbol>
+    <symbol id="vi-bird" viewBox="0 0 40 16"><path d="M0,9 Q10,-5 20,9 Q30,-5 40,9 Q30,3 20,9 Q10,3 0,9 Z"/></symbol>
+    <symbol id="vi-flame" viewBox="0 0 20 26"><path d="M10 1 C4 8 2 13 5.5 18 C4.5 14 6.5 11.5 8.5 9.5 C8 14.5 12.5 15.5 12 19.5 C16.5 16.5 18 11.5 14.5 7 C15.5 10 13 11 12 9 C13.5 5.5 12.5 3 10 1 Z"/></symbol>
+  </defs>`;
+
+  // Terreno decorativo fixo (ambientação, não é dado) + rosa dos ventos + fronteira
+  const chrome=`
+    <g class="vale-water"><path d="M60,760 C40,700 80,648 165,638 C255,628 340,660 358,724 C376,786 332,838 250,846 C165,854 82,822 60,760 Z"/></g>
+    <g class="vale-wave"><path d="M100,730 Q140,715 180,730 Q220,745 260,730"/><path d="M110,770 Q150,755 190,770 Q230,785 270,770"/></g>
+    <g class="vale-mountain">
+      <path d="M1180,240 L1250,110 L1300,205 L1350,120 L1420,240 Z"/>
+      <path class="snow" d="M1250,110 L1235,148 L1267,148 Z"/><path class="snow" d="M1350,120 L1335,156 L1367,156 Z"/>
+    </g>
+    <g class="vale-forest">
+      <path d="M260,240 L275,205 L290,240 Z"/><path d="M282,252 L298,215 L314,252 Z"/><path d="M240,255 L255,221 L270,255 Z"/>
+    </g>
+    <g class="vale-forest">
+      <path d="M1360,700 L1374,668 L1388,700 Z"/><path d="M1382,712 L1396,680 L1410,712 Z"/>
+    </g>
+    <g class="vale-compass" transform="translate(118,118)" opacity=".85">
+      <circle r="52" fill="none" stroke="var(--vale-ink-soft)" stroke-width="1.5"/>
+      <polygon points="0,-52 8,-8 52,0 8,8 0,52 -8,8 -52,0 -8,-8" fill="var(--vale-gold)" stroke="var(--vale-ink)" stroke-width="1"/>
+      <polygon points="0,-36 5,-5 36,0 5,5 0,36 -5,5 -36,0 -5,-5" fill="var(--vale-parchment)" stroke="var(--vale-ink-soft)" stroke-width="1" transform="rotate(45)"/>
+      <circle r="5" fill="var(--vale-ink)"/>
+      <text y="-60" text-anchor="middle" font-family="var(--vale-font-display)" font-size="15" font-weight="700" fill="var(--vale-ink)">N</text>
+      <text y="72" text-anchor="middle" font-family="var(--vale-font-display)" font-size="15" font-weight="700" fill="var(--vale-ink)">S</text>
+      <text x="64" y="5" text-anchor="middle" font-family="var(--vale-font-display)" font-size="15" font-weight="700" fill="var(--vale-ink)">L</text>
+      <text x="-64" y="5" text-anchor="middle" font-family="var(--vale-font-display)" font-size="15" font-weight="700" fill="var(--vale-ink)">O</text>
+    </g>
+    <g class="vale-frontier" transform="translate(1440,860)">
+      <rect x="-70" y="-42" width="140" height="84" rx="6"/>
+      <text y="-12">Terras</text><text y="2">inexploradas</text>
+      <text y="34" style="font-size:22px;fill:var(--vale-ink-faint)">+</text>
+    </g>
+    <g class="vale-camp" transform="translate(${VALE_CAMP.x},${VALE_CAMP.y})">
+      <use href="#vi-tent" x="-30" y="-40" width="60" height="46" style="color:var(--vale-ink-soft)"/>
+      <rect class="vale-camp-flag" x="1" y="-58" width="16" height="11"/>
+      <line x1="1" y1="-58" x2="1" y2="-6" stroke="var(--vale-ink)" stroke-width="1.5"/>
+      <text class="vale-camp-label" y="24">Seu Acampamento</text>
+    </g>`;
+
+  const R=44,C=2*Math.PI*R;
+  let roads='',markers='';
+  let dominados=0,cobertos=0;
+
+  db.kingdoms.forEach((k,idx)=>{
+    const st=valeKingdomStats(k);
+    if(st.state!=='fog')cobertos++;
+    if(st.state==='dominado')dominados++;
+
+    const rand=valeMulberry32(valeHash(k.id));
+    const cx=k.mapX,cy=k.mapY;
+    const ctrlX=(VALE_CAMP.x+cx)/2+(rand()-0.5)*160;
+    const ctrlY=(VALE_CAMP.y+cy)/2+(rand()-0.5)*160;
+    const roadCls='vale-road'+(st.state==='dominado'?' is-dominado':st.state!=='fog'?' is-active':'');
+    roads+=`<path class="${roadCls}" d="M${VALE_CAMP.x},${VALE_CAMP.y} Q${ctrlX},${ctrlY} ${cx},${cy}"/>`;
+
+    let inner='';
+    if(st.state==='fog')inner+=`<ellipse class="vale-fog" cx="0" cy="0" rx="70" ry="56"/>`;
+    inner+=`<circle class="vale-ring-track" r="${R}"/>`;
+    inner+=`<circle class="vale-ring-fill" r="${R}" stroke="${k.color}" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C*(1-st.dominio/100)).toFixed(1)}"/>`;
+
+    if(st.atrasadas>0)inner+=`<use href="#vi-flame" x="30" y="-64" width="18" height="23" class="vale-warn-flame"/>`;
+
+    if(st.state==='dominado'){
+      inner+=`<circle class="vale-crown-glow" r="56"/>`;
+      inner+=`<g class="vale-guardian-dragon" transform="translate(-118,-6) scale(.6)" style="color:${k.color}">
+        <ellipse cx="110" cy="80" rx="60" ry="30" fill="currentColor"/>
+        <path d="M165,80 C200,75 210,50 195,35 C188,27 178,32 182,42 C185,50 178,55 170,52 C175,62 172,72 165,80 Z" fill="currentColor"/>
+        <path d="M95,55 L130,15 L142,26 L155,8 L165,30 L140,55 Z" fill="color-mix(in srgb, ${k.color} 70%, var(--vale-ink) 30%)"/>
+        <ellipse cx="55" cy="62" rx="20" ry="15" fill="currentColor"/>
+        <polygon points="48,50 44,38 54,46" fill="currentColor"/><polygon points="60,48 62,36 68,46" fill="currentColor"/>
+        <circle class="vale-smoke" cx="40" cy="52" r="4" fill="var(--vale-ink-faint)" opacity="0"/>
+        <circle class="vale-smoke" cx="40" cy="52" r="4" fill="var(--vale-ink-faint)" opacity="0" style="animation-delay:1.3s"/>
+      </g>`;
+    } else if(st.state==='descoberto'){
+      inner+=`<use href="#vi-bird" x="-70" y="-62" width="26" height="11" class="vale-guardian-bird"/>`;
+      if(st.dominio>40)inner+=`<use href="#vi-bird" x="-16" y="-70" width="24" height="10" class="vale-guardian-bird vb2"/>`;
+    }
+
+    inner+=`<use href="#vi-castle" x="-24" y="-58" width="48" height="48" class="vale-marker-icon${st.state==='fog'?' vale-fog-icon':''}"/>`;
+
+    // Mini-marcadores de chefão (até 8 visíveis, arco abaixo do castelo)
+    const dots=st.chefoes.slice(0,8);
+    const span=Math.min(150,dots.length*20);
+    dots.forEach((c,i)=>{
+      const a=(-span/2+ (dots.length>1? i*(span/(dots.length-1)) : span/2))*Math.PI/180;
+      const dx=Math.sin(a)*58, dy=64+Math.cos(a)*10;
+      inner+=`<circle class="vale-boss-dot" cx="${dx.toFixed(1)}" cy="${dy.toFixed(1)}" r="3.4" fill="${c.defeated?'var(--vale-gold-bright)':'var(--vale-ink-faint)'}"/>`;
+    });
+    if(st.chefoes.length>8)inner+=`<text x="0" y="90" text-anchor="middle" style="font-size:9px;fill:var(--vale-ink-faint);font-family:'Segoe UI',sans-serif">+${st.chefoes.length-8}</text>`;
+
+    inner+=`<rect class="vale-banner" x="-54" y="22" width="108" height="22" rx="3"/>`;
+    inner+=`<text class="vale-name" y="38" style="font-size:14px">${k.name}</text>`;
+
+    markers+=`<g class="vale-kingdom" tabindex="0" role="button" aria-label="${k.name}, ${st.dominio} por cento dominado" data-id="${k.id}" transform="translate(${cx},${cy})" style="color:${k.color}">${inner}</g>`;
+  });
+
+  svg.innerHTML=defs+chrome+`<g class="vale-roads-layer">${roads}</g>`+`<g class="vale-kingdoms-layer">${markers}</g>`;
+
+  // Legenda + contador de cobertura
+  const legend=document.getElementById('vale-legend');
+  if(legend){
+    const n=db.kingdoms.length;
+    legend.innerHTML=`<b>${dominados} de ${n}</b> reinos dominados · <b>${n?Math.round(cobertos/n*100):0}%</b> do Vale iluminado
+      <div class="vl-row"><span class="vl-dot" style="background:var(--vale-ink-faint)"></span>Enevoado — nada estudado</div>
+      <div class="vl-row"><span class="vl-dot" style="background:var(--vale-gold)"></span>Descoberto — em progresso</div>
+      <div class="vl-row"><span class="vl-dot" style="background:var(--vale-gold-bright)"></span>Dominado — 100% maduro</div>`;
+  }
+
+  document.querySelectorAll('.vale-kingdom').forEach(node=>{
+    const id=node.getAttribute('data-id');
+    const k=db.kingdoms.find(x=>x.id===id);
+    if(!k)return;
+    node.addEventListener('mouseenter',()=>valeOpenPanel(k));
+    node.addEventListener('click',()=>{
+      if(valeOpenId===id)valeClosePanel();else valeOpenPanel(k);
+    });
+    node.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();node.click();}});
+  });
+
+  valePaintTexture();
+  valeBindGlobalListeners();
+}
+
+let valeOpenId=null;
+function valeStatBlock(label,value,warn){
+  return `<div><div class="v${warn?' warn':''}">${value}</div><div class="l">${label}</div></div>`;
+}
+function valeOpenPanel(k){
+  const st=valeKingdomStats(k);
+  const tip=document.getElementById('vale-tooltip');
+  if(!tip)return;
+  tip.innerHTML=`
+    <button class="vale-tt-close" onclick="valeClosePanel()" aria-label="Fechar">✕</button>
+    <div class="vale-tt-head"><span class="icn">${k.icon||'🏰'}</span><h3>${k.name}</h3></div>
+    <p class="vale-tt-flavor">${valeFlavorText(k,st)}</p>
+    <div class="vale-tt-stats">
+      ${valeStatBlock('Chefões derrotados',st.defeated+'/'+st.totalChefoes)}
+      ${valeStatBlock('Atrasadas',st.atrasadas,st.atrasadas>0)}
+      ${valeStatBlock('Retenção',st.retencao===null?'—':st.retencao+'%')}
+      ${valeStatBlock('Cards maduros',st.matured+'/'+st.total)}
+    </div>
+    <div class="vale-tt-pp-row"><span>Domínio do reino</span><span>${st.dominio}%</span></div>
+    <div class="vale-tt-track"><div class="vale-tt-fill" id="vale-tt-fill" style="background:${k.color}"></div></div>
+    ${st.total>0?`<a class="vale-tt-cta" onclick="valeGotoFlashcards('${k.id}')">Ver flashcards deste reino →</a>`:''}
+  `;
+  tip.classList.add('open');
+  valeOpenId=k.id;
+  document.querySelectorAll('.vale-kingdom').forEach(n=>n.classList.toggle('is-open',n.getAttribute('data-id')===k.id));
+  requestAnimationFrame(()=>{const f=document.getElementById('vale-tt-fill');if(f)f.style.width=st.dominio+'%';});
+}
+function valeClosePanel(){
+  const tip=document.getElementById('vale-tooltip');
+  if(tip)tip.classList.remove('open');
+  valeOpenId=null;
+  document.querySelectorAll('.vale-kingdom').forEach(n=>n.classList.remove('is-open'));
+}
+function valeGotoFlashcards(kingdomId){
+  valeClosePanel();
+  fcFilterKingdom=kingdomId;
+  showScreen('flashcards');
+}
+let valeGlobalListenersBound=false;
+function valeBindGlobalListeners(){
+  if(valeGlobalListenersBound)return;
+  valeGlobalListenersBound=true;
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')valeClosePanel();});
+  document.getElementById('vale-wrap')?.addEventListener('click',e=>{
+    if(e.target.id==='vale-wrap'||e.target.id==='vale-svg')valeClosePanel();
+  });
+}
+
+function valePaintTexture(){
+  const canvas=document.getElementById('vale-texture');
+  const wrap=document.getElementById('vale-wrap');
+  if(!canvas||!wrap)return;
+  const w=wrap.clientWidth,h=wrap.clientHeight;
+  if(!w||!h)return;
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  canvas.width=w*dpr;canvas.height=h*dpr;
+  const ctx=canvas.getContext('2d');
+  ctx.scale(dpr,dpr);
+  const img=ctx.createImageData(w,h);
+  const d=img.data;
+  const rand=valeMulberry32(20260730);
+  for(let i=0;i<d.length;i+=4){
+    const n=210+(rand()*40-20);
+    d[i]=n;d[i+1]=n*0.94;d[i+2]=n*0.82;d[i+3]=18;
+  }
+  ctx.putImageData(img,0,0);
+  ctx.globalAlpha=0.05;
+  for(let s=0;s<26;s++){
+    ctx.strokeStyle='#5a4326';ctx.lineWidth=rand()*1.4+0.3;
+    ctx.beginPath();
+    const sx=rand()*w,sy=rand()*h;
+    ctx.moveTo(sx,sy);
+    ctx.lineTo(sx+(rand()*160-80),sy+(rand()*160-80));
+    ctx.stroke();
+  }
+  const grad=ctx.createRadialGradient(w/2,h/2,h*0.2,w/2,h/2,h*0.85);
+  grad.addColorStop(0,'rgba(0,0,0,0)');grad.addColorStop(1,'rgba(0,0,0,0.28)');
+  ctx.globalAlpha=1;ctx.fillStyle=grad;ctx.fillRect(0,0,w,h);
+}
+let valeResizeTimer=null;
+window.addEventListener('resize',()=>{
+  clearTimeout(valeResizeTimer);
+  valeResizeTimer=setTimeout(()=>{if(document.getElementById('screen-vale')?.classList.contains('active'))valePaintTexture();},150);
+});
 
 // ===== KINGDOM =====
 function openKingdom(k){
@@ -4829,6 +5287,7 @@ function renderRedacoesScreen(){
   rdInit();rdRenderTopics();rdRenderMain();
 }
 let fcSelectedMb=null;   // chefão selecionado {id, name, topic, kingdom, kColor, icon}
+let fcFilterKingdom=null; // id de reino opcional pra filtrar a tela inicial (setado pelo Mapa do Vale)
 let fcMode='grid';       // 'grid' | 'study' | 'timeline'
 let fcRevFilter='all';   // 'all' | 'due' | '7' | '14' | '21' | '41'
 let fcStudyIdx=0;
@@ -5023,11 +5482,17 @@ function renderFCMain(){
         const cards=getAllFCForTopic(t.id);
         const due=cards.filter(c=>fcStatus(c)==='due').length;
         const novo=cards.filter(c=>fcStatus(c)==='new').length;
-        if(cards.length>0)byBoss[t.id]={name:t.name,kingdom:k.name,kColor:k.color,kIcon:k.icon||'🏰',due,novo,total:cards.length,topicId:t.id};
+        if(cards.length>0)byBoss[t.id]={name:t.name,kingdom:k.name,kingdomId:k.id,kColor:k.color,kIcon:k.icon||'🏰',due,novo,total:cards.length,topicId:t.id};
       });
     });
-    const urgentes=Object.values(byBoss).filter(b=>b.due>0).sort((a,b)=>b.due-a.due).slice(0,5);
-    const todosChefoes=Object.values(byBoss).sort((a,b)=>a.kingdom.localeCompare(b.kingdom)||a.name.localeCompare(b.name));
+    const filterKingdom=fcFilterKingdom?db.kingdoms.find(k=>k.id===fcFilterKingdom):null;
+    if(fcFilterKingdom&&!filterKingdom)fcFilterKingdom=null; // reino filtrado foi removido
+    let urgentes=Object.values(byBoss).filter(b=>b.due>0).sort((a,b)=>b.due-a.due).slice(0,5);
+    let todosChefoes=Object.values(byBoss).sort((a,b)=>a.kingdom.localeCompare(b.kingdom)||a.name.localeCompare(b.name));
+    if(filterKingdom){
+      urgentes=urgentes.filter(b=>b.kingdomId===filterKingdom.id);
+      todosChefoes=todosChefoes.filter(b=>b.kingdomId===filterKingdom.id);
+    }
 
     el.innerHTML=`
       <div style="padding:4px 0">
@@ -5036,6 +5501,12 @@ function renderFCMain(){
           <div style="font-size:20px;font-weight:900;color:var(--text)">🃏 Seus Flashcards</div>
           <div style="font-size:12px;color:var(--muted);margin-top:4px">${total} cards no total — selecione um chefão para estudar ou criar cards</div>
         </div>
+        ${filterKingdom?`
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;background:${filterKingdom.color}14;border:1.5px solid ${filterKingdom.color}40;border-radius:12px;padding:8px 14px">
+          <span style="font-size:16px">${filterKingdom.icon||'🏰'}</span>
+          <span style="font-size:12px;font-weight:800;color:${filterKingdom.color};flex:1">Filtrado pelo reino: ${filterKingdom.name}</span>
+          <button class="btn btn-xs" onclick="fcFilterKingdom=null;renderFCMain();" style="font-size:11px">✕ Limpar filtro</button>
+        </div>`:''}
 
         <!-- Stats compactas -->
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px">
