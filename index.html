@@ -3257,7 +3257,7 @@ function simPanelHTML(s){
   return`
     <div class="sim-header"><div class="sim-title"><i class="fa fa-list-check"></i> Simulado rápido</div></div>
     ${stats?`<div style="text-align:center"><span class="sim-stat-badge"><i class="fa fa-chart-simple"></i> Histórico: ${stats.acertosTotal}/${stats.questoesTotal} acertos (${Math.round(stats.acertosTotal/stats.questoesTotal*100)}%) em ${stats.tentativas} simulado${stats.tentativas>1?'s':''}</span></div>`:''}
-    <div class="sim-empty">Gere questões de múltipla escolha (dificuldade moderada a alta) pra treinar este assunto.</div>
+    <div class="sim-empty">Gere questões de múltipla escolha (dificuldade moderada a alta) pra treinar este assunto.${(s.note||'').trim()?' <b style="color:var(--pink)">Vai usar sua anotação como referência.</b>':' <span title="Adicione uma anotação neste miniboss pra deixar as questões mais precisas ao seu recorte de estudo">Sem anotação — a IA vai gerar com base só no nome do assunto.</span>'}</div>
     <div class="sim-config-row">
       <label style="font-size:11px;color:var(--muted);font-weight:700">Quantidade:</label>
       <select id="sim-qtd-${s.id}" class="inp" style="width:auto;padding:6px 10px">
@@ -3337,6 +3337,7 @@ async function generateSimulado(subId){
 
   const qtdSel=document.getElementById('sim-qtd-'+subId);
   const quantidade=parseInt(qtdSel?.value||'10',10);
+  const nota=(sub.note||'').trim();
 
   simGenerating.add(subId);
   openSim.add(subId);
@@ -3351,7 +3352,7 @@ TAREFA: Gere ${quantidade} questões de múltipla escolha inéditas sobre o assu
 REINO/ÁREA: ${kingdom.name}
 CHEFÃO/TÓPICO: ${topic.name}
 MINIBOSS/ASSUNTO ESPECÍFICO: ${sub.name}
-
+${nota?`\nANOTAÇÃO DO ALUNO SOBRE ESTE ASSUNTO (use como referência principal do recorte a cobrar — as questões devem ser sobre o que está anotado aqui, não só sobre o nome genérico do assunto):\n${nota}\n`:''}
 REGRAS:
 - Cada questão tem exatamente 5 alternativas (A a E), com apenas uma correta.
 - Evite pegadinhas de português; o foco é o conteúdo técnico do assunto.
