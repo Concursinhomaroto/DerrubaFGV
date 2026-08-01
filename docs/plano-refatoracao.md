@@ -6,8 +6,9 @@
 
 - ✅ **Fase 0** — sincronização das correções + bug de `EIXOS_DEFAULT` (travava o loading quando o Firebase/CDN falha) corrigido.
 - ✅ **Fase 1** — design tokens, responsivo mobile real (bottom nav, corrigido bug de texto vazando dos botões de navegação), modo claro/escuro persistido, skeleton loading + animações de entrada. Testado em 375px/1440px, claro/escuro, nas 7 telas principais.
-- 🔶 **Fase 2** — em andamento. Feito até agora (2a): tratamento de erros amigável — toasts para perda de conexão com o Firebase após o carregamento inicial, falha ao salvar (`saveDB`) e erros JS não tratados, com debounce contra spam. **Decisão de escopo**: a modularização ES6 completa prevista originalmente na Fase 2 foi adiada — é uma mudança de alto risco (165 funções globais entrelaçadas, 137 `onclick` inline) sem rede de testes automatizados, então não compensa arriscar sem necessidade concreta. Value entregue prioriza o que reduz risco real ao usuário (perda silenciosa de dados) sobre reorganização interna do código.
-- ⬜ Fases 3–6 — não iniciadas.
+- 🔶 **Fase 2** — parcial (2a feita). Tratamento de erros amigável — toasts para perda de conexão com o Firebase após o carregamento inicial, falha ao salvar (`saveDB`) e erros JS não tratados, com debounce contra spam. **Decisão de escopo**: a modularização ES6 completa prevista originalmente na Fase 2 foi adiada — é uma mudança de alto risco (165 funções globais entrelaçadas, 137 `onclick` inline) sem rede de testes automatizados, então não compensa arriscar sem necessidade concreta. Valor entregue prioriza o que reduz risco real ao usuário (perda silenciosa de dados) sobre reorganização interna do código.
+- 🔶 **Fase 3** — parcial (3a, 3b, 3c feitas). Streak de dias consecutivos (🔥, calculado a partir de `db.sessions`, sem zerar se o dia ainda não acabou), meta diária de estudo configurável com anel de progresso animado, e 6 conquistas iniciais (primeiro estudo, 7/30 dias de streak, 10 revisões feitas, 100 flashcards revisados, 3 reinos com estudo) exibidas como chips que acendem quando desbloqueadas. Testado com dados simulados (streak, % da meta, badges) em claro/escuro/mobile. Ainda faltam da Fase 3: notificações locais, exportar CSV, busca global.
+- ⬜ Fases 4–6 — não iniciadas.
 
 ## 1. Mapeamento do estado atual
 

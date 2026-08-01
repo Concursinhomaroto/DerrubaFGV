@@ -355,6 +355,35 @@ nav{
 .stat-lbl{font-size:8px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;font-weight:700;}
 .chart-svg-wrap{width:100%;overflow:hidden;}
 
+/* ===== GAMIFICAÇÃO: STREAK / META DIÁRIA / BADGES ===== */
+.dash-gamify-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px;}
+.gamify-card{display:flex;align-items:center;gap:14px;margin-bottom:0;}
+.gamify-goal{cursor:pointer;transition:all 0.2s;}
+.gamify-goal:hover{transform:translateY(-2px);box-shadow:var(--shadow2);border-color:var(--border2);}
+.gamify-icon{font-size:40px;flex-shrink:0;transition:opacity 0.3s;}
+.gamify-icon.streak-flame{animation:flamePulse 1.8s ease-in-out infinite;}
+@keyframes flamePulse{0%,100%{transform:scale(1);}50%{transform:scale(1.08);}}
+.gamify-info{flex:1;min-width:0;}
+.gamify-val{font-size:26px;font-weight:900;color:var(--text);line-height:1;}
+.gamify-lbl{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-top:4px;}
+.goal-ring-wrap{position:relative;width:70px;height:70px;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.goal-ring-wrap svg{width:70px;height:70px;}
+.goal-ring-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
+.goal-ring-pct{font-size:14px;font-weight:900;color:var(--text);}
+
+.badges-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;}
+.badge-chip{display:flex;align-items:center;gap:6px;background:var(--panel);border:1.5px solid var(--border);border-radius:20px;padding:6px 12px 6px 8px;opacity:0.4;filter:grayscale(1);transition:all 0.2s;}
+.badge-chip.unlocked{opacity:1;filter:none;border-color:var(--border2);box-shadow:0 2px 8px rgba(124,58,237,0.1);}
+.badge-icon{font-size:16px;}
+.badge-name{font-size:9.5px;font-weight:800;color:var(--text2);letter-spacing:0.2px;white-space:nowrap;}
+
+@media(max-width:768px){
+  .dash-gamify-row{grid-template-columns:1fr!important;}
+  .badges-row{gap:6px;}
+  .badge-name{display:none;}
+  .badge-chip{padding:8px;border-radius:50%;}
+}
+
 /* ===== PRIORITY CHART ===== */
 .pri-section{background:var(--panel);border:1.5px solid var(--border);border-radius:18px;padding:22px;margin-bottom:20px;box-shadow:0 2px 10px rgba(0,0,0,0.04);}
 .pri-rings{display:flex;gap:24px;align-items:center;flex-wrap:wrap;justify-content:center;}
@@ -985,6 +1014,25 @@ nav{
 <div class="screen active" id="screen-dashboard">
   <div class="sec-title">🏆 Painel do Herói</div>
 
+  <!-- Streak + Meta diária + Conquistas -->
+  <div class="dash-gamify-row">
+    <div class="section-card gamify-card">
+      <div class="gamify-icon streak-flame" id="streak-flame">🔥</div>
+      <div class="gamify-info">
+        <div class="gamify-val" id="streak-val">0</div>
+        <div class="gamify-lbl" id="streak-lbl">dias seguidos</div>
+      </div>
+    </div>
+    <div class="section-card gamify-card gamify-goal" onclick="openDailyGoalModal()" title="Clique para ajustar sua meta diária">
+      <div class="goal-ring-wrap" id="goal-ring-wrap"></div>
+      <div class="gamify-info">
+        <div class="gamify-val" style="font-size:13px">Meta diária</div>
+        <div class="gamify-lbl" id="goal-lbl">0 / 60 min</div>
+      </div>
+    </div>
+  </div>
+  <div class="badges-row" id="dash-badges"></div>
+
   <!-- Stats 3+3 + Gráfico ao lado -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px;align-items:stretch" class="dash-hero-row">
     <div class="stats-grid" id="dash-stats" style="grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:8px;margin-bottom:0;height:100%"></div>
@@ -1381,6 +1429,7 @@ function applyDefaults(){
   if(!db.flashcards)db.flashcards={};
   if(!db.redacoes)db.redacoes={topics:{},textos:{}};
   if(!db.repertorio)db.repertorio={eixos:[...EIXOS_DEFAULT],temas:{}};
+  if(typeof db.dailyGoalMinutes!=='number')db.dailyGoalMinutes=60;
 
   // Limpar revisões inválidas (date=undefined ou extras além de 4)
   const INTERVALOS_MAX=4;
@@ -2154,6 +2203,70 @@ function logStudySeconds(seconds){
   db.sessions[td]=(db.sessions[td]||0)+seconds;
 }
 
+// ===== STREAK / META DIÁRIA / CONQUISTAS =====
+// Dias consecutivos com estudo registrado. Se hoje ainda não estudou, não zera a
+// sequência (o dia ainda não acabou) — conta a partir de ontem.
+function computeStreak(){
+  const sessions=db.sessions||{};
+  let ds=todayStr();
+  if(!(sessions[ds]>0))ds=addDays(ds,-1);
+  let streak=0;
+  while(sessions[ds]>0){streak++;ds=addDays(ds,-1);}
+  return streak;
+}
+function todayStudiedSeconds(){
+  return (db.sessions||{})[todayStr()]||0;
+}
+function totalFlashcardReviews(){
+  return Object.values(db.flashcards||{}).reduce((a,c)=>a+(c.acertos||0)+(c.erros||0),0);
+}
+function progressRingSVG(pct,opts={}){
+  const size=opts.size||88,sw=opts.strokeWidth||9,color=opts.color||'var(--accent)',track=opts.track||'rgba(124,58,237,0.12)';
+  const r=(size-sw)/2,c=size/2,circ=2*Math.PI*r;
+  const dash=circ*Math.max(0,Math.min(100,pct))/100;
+  return`<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="transform:rotate(-90deg);flex-shrink:0">
+    <circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="${track}" stroke-width="${sw}"/>
+    <circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="${color}" stroke-width="${sw}" stroke-linecap="round" stroke-dasharray="${dash} ${circ}" style="transition:stroke-dasharray 0.6s ease"/>
+  </svg>`;
+}
+function openDailyGoalModal(){
+  openModal('🎯 Meta diária de estudo',`
+    <div style="text-align:center">
+      <p style="font-size:12px;color:var(--text2);margin-bottom:14px">Quantos minutos por dia você quer estudar?</p>
+      <input type="number" id="daily-goal-input" class="inp" min="5" step="5" value="${db.dailyGoalMinutes||60}" style="text-align:center;font-size:20px;font-weight:900;max-width:140px;margin:0 auto 16px;display:block">
+      <button class="btn btn-primary" onclick="saveDailyGoal()">Salvar meta</button>
+    </div>`);
+}
+function saveDailyGoal(){
+  const v=parseInt(document.getElementById('daily-goal-input').value,10);
+  if(!v||v<5){toast('Informe um valor válido (mínimo 5 minutos).','var(--red)');return;}
+  db.dailyGoalMinutes=v;
+  saveDB();
+  closeModal();
+  renderDashboard();
+  toast('🎯 Meta diária atualizada!','var(--green)');
+}
+
+const BADGES=[
+  {id:'first_study',icon:'🌱',name:'Primeiro estudo',check:()=>(db.lifetimeSeconds||0)>0},
+  {id:'streak_7',icon:'🔥',name:'7 dias seguidos',check:()=>computeStreak()>=7},
+  {id:'streak_30',icon:'💎',name:'30 dias seguidos',check:()=>computeStreak()>=30},
+  {id:'revs_10',icon:'🔔',name:'10 revisões feitas',check:(ctx)=>ctx.totRevDone>=10},
+  {id:'fc_100',icon:'🃏',name:'100 flashcards revisados',check:()=>totalFlashcardReviews()>=100},
+  {id:'kingdoms_3',icon:'🗺️',name:'3 reinos com estudo',check:()=>db.kingdoms.filter(k=>((db.kingdomSeconds||{})[k.id]||0)>0).length>=3},
+];
+function renderBadges(totRevDone){
+  const el=document.getElementById('dash-badges');
+  if(!el)return;
+  const ctx={totRevDone};
+  el.innerHTML=BADGES.map(b=>{
+    const unlocked=!!b.check(ctx);
+    return`<div class="badge-chip${unlocked?' unlocked':''}" title="${b.name}${unlocked?'':' (bloqueada)'}">
+      <span class="badge-icon">${b.icon}</span><span class="badge-name">${b.name}</span>
+    </div>`;
+  }).join('');
+}
+
 function resetTimer(subId,topicId){
   if(!confirm('Zerar cronômetro deste miniboss?'))return;
   if(activeTimers[subId]){activeTimers[subId].running=false;activeTimers[subId].startedAt=0;}
@@ -2625,6 +2738,25 @@ function renderDashboard(){
   });
   const totTime=db.lifetimeSeconds||0;
 
+  // Streak + meta diária
+  const streak=computeStreak();
+  const streakEl=document.getElementById('streak-val'),streakLblEl=document.getElementById('streak-lbl'),flameEl=document.getElementById('streak-flame');
+  if(streakEl){
+    streakEl.textContent=streak;
+    streakLblEl.textContent=streak===1?'dia seguido':'dias seguidos';
+    flameEl.style.opacity=streak>0?'1':'0.35';
+  }
+  const goalMin=db.dailyGoalMinutes||60;
+  const todayMin=Math.round(todayStudiedSeconds()/60);
+  const goalPct=Math.round(Math.min(100,(todayMin/goalMin)*100));
+  const goalWrap=document.getElementById('goal-ring-wrap');
+  if(goalWrap){
+    goalWrap.innerHTML=progressRingSVG(goalPct,{color:goalPct>=100?'var(--green)':'var(--accent)'})+
+      `<div class="goal-ring-label"><div class="goal-ring-pct">${goalPct}%</div></div>`;
+  }
+  const goalLblEl=document.getElementById('goal-lbl');
+  if(goalLblEl)goalLblEl.textContent=`${todayMin} / ${goalMin} min hoje`;
+
   // Stats
   document.getElementById('dash-stats').innerHTML=[
     {icon:'⚔️',val:totBoss,lbl:'Chefões',color:'var(--accent)'},
@@ -2677,6 +2809,7 @@ function renderDashboard(){
   initPhrase();
   renderStudyChart();
   renderWeekStudyChart();
+  renderBadges(totRevDone);
 }
 
 function setMbFilter(id,el){
