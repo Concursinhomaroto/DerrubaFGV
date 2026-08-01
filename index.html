@@ -347,6 +347,31 @@ nav{
 .legis-disclaimer{font-size:9.5px;color:var(--muted);margin-top:10px;padding-top:8px;border-top:1px dashed var(--border);display:flex;align-items:center;gap:5px;}
 .legis-empty{font-size:12px;color:var(--muted);text-align:center;padding:10px 0;}
 
+/* ===== SIMULADO RÁPIDO (IA) ===== */
+.btn-pink{background:linear-gradient(135deg,var(--pink),#9d174d);color:#fff;box-shadow:0 4px 12px rgba(190,24,93,0.3);}
+.btn-pink:hover{filter:brightness(1.1);transform:translateY(-1px);}
+.sim-wrap{background:rgba(190,24,93,0.05);border:1.5px solid rgba(190,24,93,0.25);border-radius:14px;padding:14px;margin-top:10px;display:none;}
+.sim-wrap.sim-open{display:block;}
+.sim-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
+.sim-title{font-size:11px;font-weight:900;color:var(--pink);text-transform:uppercase;letter-spacing:0.5px;display:flex;align-items:center;gap:6px;}
+.sim-empty{font-size:12px;color:var(--muted);text-align:center;padding:6px 0 12px;}
+.sim-config-row{display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:10px;flex-wrap:wrap;}
+.sim-stat-badge{font-size:10.5px;font-weight:700;color:var(--pink);background:rgba(190,24,93,0.1);border:1px solid rgba(190,24,93,0.25);border-radius:8px;padding:3px 9px;display:inline-block;margin-bottom:8px;}
+.sim-q{border-top:1px dashed var(--border);padding-top:10px;margin-top:10px;}
+.sim-q:first-of-type{border-top:none;padding-top:0;margin-top:0;}
+.sim-q-text{font-size:12.5px;font-weight:700;color:var(--text);line-height:1.5;margin-bottom:8px;}
+.sim-alts{display:flex;flex-direction:column;gap:6px;}
+.sim-alt{display:flex;align-items:flex-start;gap:8px;font-size:12px;color:var(--text2);line-height:1.5;padding:7px 10px;border-radius:10px;border:1.5px solid var(--border2);cursor:pointer;background:var(--panel2);}
+.sim-alt:hover{border-color:var(--pink);}
+.sim-alt.sim-selected{border-color:var(--accent);background:rgba(124,58,237,0.08);}
+.sim-alt.sim-correct{border-color:var(--green);background:rgba(21,128,61,0.1);color:var(--green);font-weight:700;}
+.sim-alt.sim-wrong{border-color:var(--red);background:rgba(220,38,38,0.1);color:var(--red);font-weight:700;}
+.sim-explain{font-size:11.5px;color:var(--muted);margin-top:6px;padding:8px 10px;background:rgba(0,0,0,0.03);border-radius:8px;line-height:1.5;}
+.sim-score-banner{text-align:center;padding:12px;border-radius:12px;margin-bottom:12px;font-weight:900;font-size:15px;}
+.sim-score-banner.sim-good{background:rgba(21,128,61,0.1);color:var(--green);border:1.5px solid rgba(21,128,61,0.3);}
+.sim-score-banner.sim-bad{background:rgba(220,38,38,0.1);color:var(--red);border:1.5px solid rgba(220,38,38,0.3);}
+.sim-disclaimer{font-size:9.5px;color:var(--muted);margin-top:10px;padding-top:8px;border-top:1px dashed var(--border);display:flex;align-items:center;gap:5px;}
+
 /* ===== FEEDBACK DE REDAÇÃO (IA) ===== */
 .rd-ai-panel{background:rgba(108,71,255,0.04);border:1.5px solid rgba(108,71,255,0.25);border-radius:14px;padding:14px;margin-bottom:14px;}
 .rd-ai-title{font-size:11px;font-weight:900;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
@@ -2038,6 +2063,9 @@ function pauseOtherTimers(exceptType,exceptSubId){
 let openNotes=new Set(); // subIds whose note panel is manually open
 let openLegis=new Set(); // subIds whose painel de base legal está aberto
 let legisGenerating=new Set(); // subIds com geração de IA em andamento
+let openSim=new Set(); // subIds com painel de simulado aberto
+let simGenerating=new Set(); // subIds com geração de simulado em andamento
+let simActive={}; // subId -> {questoes,quantidade,corrected} do simulado em andamento (não salvo até corrigir)
 let revFilter='overdue';
 let mbFilter='all';
 
@@ -2991,9 +3019,11 @@ function subItemHTML(s,topicId){
         ${stratDone?'✅ Resumo feito':'📋 Resumo'}
       </button>
       <button class="btn btn-sm ${s.legislacao?'btn-cyan':'btn-ghost'}" onclick="toggleLegis('${s.id}')" id="legis-btn-${s.id}"><i class="fa fa-scale-balanced"></i> ${s.legislacao?'Base Legal':'Base Legal'}</button>
+      <button class="btn btn-sm ${s.simStats?'btn-pink':'btn-ghost'}" onclick="toggleSim('${s.id}')" id="sim-btn-${s.id}"><i class="fa fa-list-check"></i> Simulado</button>
       <button class="btn btn-sm btn-danger" onclick="deleteSub('${topicId}','${s.id}')"><i class="fa fa-trash"></i></button>
     </div>
     <div class="legis-wrap${openLegis.has(s.id)?' legis-open':''}" id="legis-${s.id}">${legisPanelHTML(s)}</div>
+    <div class="sim-wrap${openSim.has(s.id)?' sim-open':''}" id="sim-${s.id}">${simPanelHTML(s)}</div>
     <div class="timer-wrap" id="tw-${s.id}" ${panelOpen?'style="display:block"':''}>
       <div class="timer-display" id="td-${s.id}">${fmtHMS(displayTime)}</div>
       <div style="text-align:center;font-size:10px;color:rgba(196,181,253,0.6);margin-bottom:8px">
@@ -3164,6 +3194,187 @@ REGRAS:
     if(btn)btn.className='btn btn-sm '+(sub.legislacao?'btn-cyan':'btn-ghost');
     const wrap2=document.getElementById('legis-'+subId);
     if(wrap2){wrap2.innerHTML=legisPanelHTML(sub);wrap2.classList.add('legis-open');wrap2.style.display='';}
+  }
+}
+
+// ===== SIMULADO RÁPIDO (IA) =====
+function simFindSub(subId){
+  let sub=null;
+  for(const k of db.kingdoms){
+    (db.topics[k.id]||[]).forEach(t=>{const f=t.subtopics?.find(s=>s.id===subId);if(f)sub=f;});
+    if(sub)break;
+  }
+  return sub;
+}
+function simPanelHTML(s){
+  if(simGenerating.has(s.id)){
+    return`<div class="sim-header"><div class="sim-title"><i class="fa fa-list-check"></i> Simulado rápido</div></div><div class="sim-empty"><i class="fa fa-spinner fa-spin"></i> Gerando questões...</div>`;
+  }
+  const active=simActive[s.id];
+  if(active&&!active.corrected){
+    return`
+      <div class="sim-header"><div class="sim-title"><i class="fa fa-list-check"></i> Simulado (${active.questoes.length} questões)</div></div>
+      ${active.questoes.map((q,i)=>`
+        <div class="sim-q">
+          <div class="sim-q-text">${i+1}. ${q.questao}</div>
+          <div class="sim-alts">
+            ${(q.alternativas||[]).map(alt=>`<div class="sim-alt${q.userAnswer===alt.letra?' sim-selected':''}" onclick="simSelectAnswer('${s.id}',${i},'${alt.letra}')"><b>${alt.letra})</b> ${alt.texto}</div>`).join('')}
+          </div>
+        </div>
+      `).join('')}
+      <button class="btn btn-sm btn-pink" style="width:100%;justify-content:center;margin-top:12px" onclick="simCorrigir('${s.id}')"><i class="fa fa-check-double"></i> Corrigir</button>
+    `;
+  }
+  if(active&&active.corrected){
+    const total=active.questoes.length;
+    const acertos=active.questoes.filter(q=>q.userAnswer===q.correta).length;
+    const pct=total?Math.round(acertos/total*100):0;
+    const good=pct>=60;
+    return`
+      <div class="sim-header">
+        <div class="sim-title"><i class="fa fa-list-check"></i> Resultado</div>
+        <button class="btn btn-xs btn-ghost" onclick="simNovoSimulado('${s.id}')"><i class="fa fa-rotate"></i> Novo simulado</button>
+      </div>
+      <div class="sim-score-banner ${good?'sim-good':'sim-bad'}">${acertos}/${total} acertos (${pct}%)</div>
+      ${active.questoes.map((q,i)=>`
+        <div class="sim-q">
+          <div class="sim-q-text">${i+1}. ${q.questao}</div>
+          <div class="sim-alts">
+            ${(q.alternativas||[]).map(alt=>{
+              let cls='';
+              if(alt.letra===q.correta)cls=' sim-correct';
+              else if(alt.letra===q.userAnswer)cls=' sim-wrong';
+              return`<div class="sim-alt${cls}"><b>${alt.letra})</b> ${alt.texto}</div>`;
+            }).join('')}
+          </div>
+          ${q.explicacao?`<div class="sim-explain"><i class="fa fa-circle-info"></i> ${q.explicacao}</div>`:''}
+        </div>
+      `).join('')}
+      <div class="sim-disclaimer"><i class="fa fa-triangle-exclamation"></i> Questões geradas por IA para treino — não são questões oficiais de banca.</div>
+    `;
+  }
+  const stats=s.simStats;
+  return`
+    <div class="sim-header"><div class="sim-title"><i class="fa fa-list-check"></i> Simulado rápido</div></div>
+    ${stats?`<div style="text-align:center"><span class="sim-stat-badge"><i class="fa fa-chart-simple"></i> Histórico: ${stats.acertosTotal}/${stats.questoesTotal} acertos (${Math.round(stats.acertosTotal/stats.questoesTotal*100)}%) em ${stats.tentativas} simulado${stats.tentativas>1?'s':''}</span></div>`:''}
+    <div class="sim-empty">Gere questões de múltipla escolha (dificuldade moderada a alta) pra treinar este assunto.</div>
+    <div class="sim-config-row">
+      <label style="font-size:11px;color:var(--muted);font-weight:700">Quantidade:</label>
+      <select id="sim-qtd-${s.id}" class="inp" style="width:auto;padding:6px 10px">
+        <option value="5">5 questões</option>
+        <option value="10" selected>10 questões</option>
+        <option value="15">15 questões</option>
+        <option value="20">20 questões</option>
+      </select>
+    </div>
+    <button class="btn btn-sm btn-pink" style="width:100%;justify-content:center" onclick="generateSimulado('${s.id}')"><i class="fa fa-wand-magic-sparkles"></i> Gerar simulado com IA</button>
+    <div class="sim-disclaimer"><i class="fa fa-triangle-exclamation"></i> Questões geradas por IA para treino — não são questões oficiais de banca.</div>
+  `;
+}
+function toggleSim(subId){
+  if(openSim.has(subId))openSim.delete(subId);else openSim.add(subId);
+  const wrap=document.getElementById('sim-'+subId);
+  if(wrap){
+    wrap.classList.toggle('sim-open',openSim.has(subId));
+    wrap.style.display='';
+  }
+}
+function closeSim(subId){
+  openSim.delete(subId);
+  const wrap=document.getElementById('sim-'+subId);
+  if(wrap){wrap.classList.remove('sim-open');wrap.style.display='';}
+}
+function simSelectAnswer(subId,qIdx,letra){
+  const active=simActive[subId];
+  if(!active||active.corrected)return;
+  active.questoes[qIdx].userAnswer=letra;
+  const sub=simFindSub(subId);
+  const wrap=document.getElementById('sim-'+subId);
+  if(wrap&&sub)wrap.innerHTML=simPanelHTML(sub);
+}
+function simCorrigir(subId){
+  const active=simActive[subId];
+  if(!active||active.corrected)return;
+  const sub=simFindSub(subId);
+  if(!sub)return;
+  const total=active.questoes.length;
+  const acertos=active.questoes.filter(q=>q.userAnswer===q.correta).length;
+  active.corrected=true;
+  sub.simStats=sub.simStats||{tentativas:0,questoesTotal:0,acertosTotal:0};
+  sub.simStats.tentativas++;
+  sub.simStats.questoesTotal+=total;
+  sub.simStats.acertosTotal+=acertos;
+  sub.simHistorico=sub.simHistorico||[];
+  sub.simHistorico.unshift({id:genId(),data:new Date().toISOString(),quantidade:total,acertos,erros:total-acertos,questoes:active.questoes});
+  sub.simHistorico=sub.simHistorico.slice(0,5);
+  saveDB();
+  const btn=document.getElementById('sim-btn-'+subId);
+  if(btn)btn.className='btn btn-sm btn-pink';
+  const wrap=document.getElementById('sim-'+subId);
+  if(wrap)wrap.innerHTML=simPanelHTML(sub);
+  toast(`🎯 ${acertos}/${total} acertos!`,acertos/total>=0.6?'var(--green)':'var(--red)');
+}
+function simNovoSimulado(subId){
+  delete simActive[subId];
+  const sub=simFindSub(subId);
+  const wrap=document.getElementById('sim-'+subId);
+  if(wrap&&sub)wrap.innerHTML=simPanelHTML(sub);
+}
+async function generateSimulado(subId){
+  let sub=null,topic=null,kingdom=null;
+  for(const k of db.kingdoms){
+    (db.topics[k.id]||[]).forEach(t=>{const f=t.subtopics?.find(s=>s.id===subId);if(f){sub=f;topic=t;kingdom=k;}});
+    if(sub)break;
+  }
+  if(!sub)return;
+
+  const apiKey=(db.geminiApiKey||'').trim();
+  if(!apiKey){
+    toast('⚠️ Configure sua chave de API do Gemini primeiro','var(--red)');
+    openAISettingsModal();
+    return;
+  }
+
+  const qtdSel=document.getElementById('sim-qtd-'+subId);
+  const quantidade=parseInt(qtdSel?.value||'10',10);
+
+  simGenerating.add(subId);
+  openSim.add(subId);
+  const wrap=document.getElementById('sim-'+subId);
+  if(wrap){wrap.classList.add('sim-open');wrap.style.display='';wrap.innerHTML=simPanelHTML(sub);}
+
+  try{
+    const prompt=`Você é um elaborador de questões de concurso público brasileiro, especializado em múltipla escolha.
+
+TAREFA: Gere ${quantidade} questões de múltipla escolha inéditas sobre o assunto abaixo, no padrão de bancas como FGV/Cebraspe, com DIFICULDADE ENTRE MODERADA E ALTA (nunca questões triviais ou puramente decorativas — exija raciocínio, interpretação ou aplicação prática do conteúdo).
+
+REINO/ÁREA: ${kingdom.name}
+CHEFÃO/TÓPICO: ${topic.name}
+MINIBOSS/ASSUNTO ESPECÍFICO: ${sub.name}
+
+REGRAS:
+- Cada questão tem exatamente 5 alternativas (A a E), com apenas uma correta.
+- Evite pegadinhas de português; o foco é o conteúdo técnico do assunto.
+- Se for citar lei/norma específica, use apenas referência que você tenha certeza que existe; se não tiver certeza do número exato, formule a questão sem citar número de lei.
+- Inclua uma explicação curta (1 a 3 frases) do porquê a alternativa correta está certa.
+
+RESPONDA APENAS COM UM JSON (array), sem markdown, no formato exato:
+[{"questao":"...","alternativas":[{"letra":"A","texto":"..."},{"letra":"B","texto":"..."},{"letra":"C","texto":"..."},{"letra":"D","texto":"..."},{"letra":"E","texto":"..."}],"correta":"B","explicacao":"..."}]`;
+
+    const raw=await callGeminiGenerate(apiKey,prompt);
+    const parsed=extractAIJson(raw);
+    const arr=Array.isArray(parsed)?parsed:(Array.isArray(parsed?.questoes)?parsed.questoes:null);
+    if(!arr||!arr.length)throw new Error('IA não retornou questões válidas.');
+    const questoes=arr.filter(q=>q&&q.questao&&Array.isArray(q.alternativas)&&q.correta).map(q=>({...q,userAnswer:null}));
+    if(!questoes.length)throw new Error('IA não retornou questões válidas.');
+    simActive[subId]={questoes,quantidade:questoes.length,corrected:false};
+    toast('🎯 Simulado gerado! Responda e depois corrija.','var(--pink)');
+  }catch(e){
+    toast('❌ '+(e.message||'Erro ao gerar simulado'),'var(--red)');
+  }finally{
+    simGenerating.delete(subId);
+    const wrap2=document.getElementById('sim-'+subId);
+    if(wrap2){wrap2.innerHTML=simPanelHTML(sub);wrap2.classList.add('sim-open');wrap2.style.display='';}
   }
 }
 
