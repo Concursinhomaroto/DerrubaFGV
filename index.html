@@ -5637,16 +5637,59 @@ function loadPDFjs(){
   });
 }
 
-// Extrair texto do PDF usando PDF.js (100% local, sem CORS)
-async function extractPDFText(file){
+// Carrega o Tesseract.js dinamicamente — só quando alguma página do PDF não tem
+// camada de texto real (slide "achatado" em imagem), pra não pesar o caso comum.
+function loadTesseract(){
+  return new Promise((res,rej)=>{
+    if(window.Tesseract){res();return;}
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+    s.onload=()=>res();
+    s.onerror=rej;
+    document.head.appendChild(s);
+  });
+}
+
+// Renderiza uma página do PDF num canvas e roda OCR nela — fallback para páginas
+// sem texto extraível (imagens de slide, prints, PDFs escaneados).
+async function ocrPDFPage(page){
+  const viewport=page.getViewport({scale:2});
+  const canvas=document.createElement('canvas');
+  canvas.width=viewport.width;canvas.height=viewport.height;
+  const ctx=canvas.getContext('2d');
+  await page.render({canvasContext:ctx,viewport}).promise;
+  await loadTesseract();
+  const worker=await Tesseract.createWorker('por');
+  try{
+    const {data}=await worker.recognize(canvas);
+    return (data.text||'').trim();
+  } finally {
+    await worker.terminate();
+  }
+}
+
+// Extrair texto do PDF usando PDF.js (100% local, sem CORS). Quando uma página não
+// tem camada de texto real — comum em slides exportados como imagem —, cai pra OCR
+// (Tesseract.js) nessa página específica, em vez de falhar o PDF inteiro.
+async function extractPDFText(file,onProgress){
   await loadPDFjs();
   const arrayBuffer=await file.arrayBuffer();
   const pdf=await pdfjsLib.getDocument({data:arrayBuffer}).promise;
   let fullText='';
   for(let i=1;i<=pdf.numPages;i++){
+    if(onProgress)onProgress(i,pdf.numPages,'texto');
     const page=await pdf.getPage(i);
     const content=await page.getTextContent();
-    const pageText=content.items.map(item=>item.str).join(' ');
+    let pageText=content.items.map(item=>item.str).join(' ').trim();
+    if(pageText.length<20){
+      if(onProgress)onProgress(i,pdf.numPages,'ocr');
+      try{
+        const ocrText=await ocrPDFPage(page);
+        if(ocrText.length>pageText.length)pageText=ocrText;
+      }catch(e){
+        console.warn('OCR falhou na página '+i+':',e);
+      }
+    }
     fullText+=`\n--- Página ${i} ---\n${pageText}`;
   }
   return fullText.trim();
@@ -5663,10 +5706,15 @@ async function fcHandlePDF(file){
 
   try{
     if(statusTxt)statusTxt.textContent='Extraindo texto do PDF...';
-    const texto=await extractPDFText(file);
+    const texto=await extractPDFText(file,(pageNum,total,modo)=>{
+      if(!statusTxt)return;
+      statusTxt.textContent=modo==='ocr'
+        ?`Página ${pageNum}/${total} sem texto direto — lendo por OCR (pode demorar)...`
+        :`Lendo página ${pageNum}/${total}...`;
+    });
 
     if(!texto||texto.length<50){
-      throw new Error('Não foi possível extrair texto. O PDF pode ser uma imagem escaneada.');
+      throw new Error('Não foi possível extrair texto, nem com OCR. O PDF pode estar em baixa qualidade ou ser majoritariamente imagens/diagramas.');
     }
 
     if(statusTxt)statusTxt.textContent=`IA gerando flashcards (${texto.length} caracteres lidos)...`;
