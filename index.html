@@ -1684,6 +1684,7 @@ function applyDefaults(){
   if(typeof db.streakRecoveries!=='number')db.streakRecoveries=0;
   if(!db.revsCompletedPerDay)db.revsCompletedPerDay={};
   if(!db.redacoesPerDay)db.redacoesPerDay={};
+  if(typeof db.geminiApiKey!=='string')db.geminiApiKey='';
 
   // Limpar revisões inválidas (date=undefined ou extras além de 4)
   const INTERVALOS_MAX=4;
@@ -5171,7 +5172,8 @@ function renderFCMain(){
     </div>`:''}
 
     <!-- Upload de PDF — gera flashcards automaticamente via IA -->
-    <div class="fc-pdf-zone" id="fc-pdf-zone" ondragover="fcDragOver(event)" ondragleave="fcDragLeave(event)" ondrop="fcDrop(event)" onclick="document.getElementById('fc-pdf-input').click()">
+    <div class="fc-pdf-zone" id="fc-pdf-zone" style="position:relative" ondragover="fcDragOver(event)" ondragleave="fcDragLeave(event)" ondrop="fcDrop(event)" onclick="document.getElementById('fc-pdf-input').click()">
+      <button onclick="event.stopPropagation();openAISettingsModal()" title="Configurar chave de IA (Gemini)" style="position:absolute;top:8px;right:8px;background:var(--panel);border:1.5px solid var(--border);border-radius:8px;width:28px;height:28px;cursor:pointer;font-size:13px;color:var(--muted)">⚙️</button>
       <i class="fa fa-file-pdf" style="font-size:26px;color:var(--accent)"></i>
       <div class="fc-pdf-label">📄 Arraste um PDF aqui ou clique para gerar flashcards automaticamente com IA</div>
       <input type="file" id="fc-pdf-input" accept="application/pdf" onchange="fcHandlePDF(this.files[0])">
@@ -5695,6 +5697,29 @@ async function extractPDFText(file,onProgress){
   return fullText.trim();
 }
 
+// Configuração da chave de API do Gemini — fica salva no Firebase do próprio
+// usuário (nunca no código-fonte), usada só pra gerar flashcards a partir de PDF.
+function openAISettingsModal(){
+  const hasKey=!!(db.geminiApiKey||'').trim();
+  openModal('⚙️ IA para gerar flashcards',`
+    <div style="text-align:left">
+      <p style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.6">
+        Pra gerar flashcards a partir de PDF, o app usa a IA do <b>Google Gemini</b>.
+        Crie uma chave gratuita em <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:var(--accent)">aistudio.google.com/apikey</a> e cole aqui.
+      </p>
+      <input type="password" id="gemini-key-input" class="inp" placeholder="Cole sua chave de API do Gemini" value="${hasKey?db.geminiApiKey:''}" style="width:100%;margin-bottom:6px">
+      <div style="font-size:10px;color:var(--muted);margin-bottom:14px">${hasKey?'✅ Chave configurada':'⚠️ Nenhuma chave configurada ainda'} — fica salva só no seu banco de dados, nunca no código do app.</div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="saveGeminiApiKey()">Salvar chave</button>
+    </div>`);
+}
+function saveGeminiApiKey(){
+  const v=(document.getElementById('gemini-key-input')?.value||'').trim();
+  db.geminiApiKey=v;
+  saveDB();
+  closeModal();
+  toast(v?'✅ Chave da IA salva!':'Chave removida.','var(--green)');
+}
+
 async function fcHandlePDF(file){
   if(!file||file.type!=='application/pdf'){toast('⚠️ Envie um arquivo PDF','var(--red)');return;}
   if(!fcSelectedMb){toast('⚠️ Selecione um chefão primeiro','var(--red)');return;}
@@ -5717,13 +5742,14 @@ async function fcHandlePDF(file){
       throw new Error('Não foi possível extrair texto, nem com OCR. O PDF pode estar em baixa qualidade ou ser majoritariamente imagens/diagramas.');
     }
 
+    const apiKey=(db.geminiApiKey||'').trim();
+    if(!apiKey){
+      throw new Error('Configure sua chave de API do Gemini primeiro (botão ⚙️ ao lado do upload de PDF).');
+    }
+
     if(statusTxt)statusTxt.textContent=`IA gerando flashcards (${texto.length} caracteres lidos)...`;
 
-    const WORKER_URL='https://flashcard.leonardobrunotlc.workers.dev';
-    const response=await fetch(WORKER_URL,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({prompt:`Você é um gerador de flashcards para concurso de enfermagem.
+    const prompt=`Você é um gerador de flashcards para concurso de enfermagem.
 
 TAREFA: Leia o texto e gere flashcards no formato JSON.
 
@@ -5741,18 +5767,24 @@ dificuldade: 1=muito fácil, 2=fácil, 3=médio, 4=difícil, 5=muito difícil
 TEXTO PARA GERAR FLASHCARDS:
 ${texto.slice(0,25000)}
 
-LEMBRE: responda APENAS com o JSON array, começando com [ e terminando com ]`})
+LEMBRE: responda APENAS com o JSON array, começando com [ e terminando com ]`;
+
+    const GEMINI_MODEL='gemini-2.5-flash';
+    const response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})
     });
 
     if(statusTxt)statusTxt.textContent='Processando resposta da IA...';
 
     if(!response.ok){
       const err=await response.text();
-      throw new Error(`Erro no servidor: ${response.status} — ${err}`);
+      throw new Error(`Erro na IA (Gemini): ${response.status} — ${err.slice(0,200)}`);
     }
 
     const data=await response.json();
-    const raw=(data.text||'').trim();
+    const raw=(data?.candidates?.[0]?.content?.parts?.[0]?.text||'').trim();
 
     // Extrair JSON de forma mais robusta
     let cards=null;
@@ -6129,6 +6161,8 @@ window.rdCalcLive=rdCalcLive;
 window.rdToggleText=rdToggleText;
 window.confirmAddPlanItem=confirmAddPlanItem;
 window.removePlanItem=removePlanItem;
+window.openAISettingsModal=openAISettingsModal;
+window.saveGeminiApiKey=saveGeminiApiKey;
 </script>
 </div><!-- /main-content -->
 </div><!-- /app -->
