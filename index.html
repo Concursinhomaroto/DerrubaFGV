@@ -62,6 +62,7 @@
   --mobile-navbar-h:60px;
 
   --map-bg:linear-gradient(160deg,#e8f4fd 0%,#f0e8ff 40%,#fdf0e8 70%,#e8fff4 100%);
+  --note-bg:#fffbeb;
 }
 
 :root[data-theme="dark"]{
@@ -80,6 +81,7 @@
   --shadow:0 4px 24px rgba(0,0,0,0.35);
   --shadow2:0 8px 40px rgba(0,0,0,0.5);
   --map-bg:linear-gradient(160deg,#171528 0%,#1a1830 50%,#201d38 100%);
+  --note-bg:#3d3315;
 }
 @media(prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
@@ -89,6 +91,7 @@
     --text:#ede9fe; --text2:#c4b5fd; --muted:#8b7fb8;
     --shadow:0 4px 24px rgba(0,0,0,0.35); --shadow2:0 8px 40px rgba(0,0,0,0.5);
     --map-bg:linear-gradient(160deg,#171528 0%,#1a1830 50%,#201d38 100%);
+    --note-bg:#3d3315;
   }
 }
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -323,7 +326,7 @@ nav{
 .timer-wrap{background:linear-gradient(135deg,var(--dark2),var(--dark3));border-radius:14px;padding:16px;margin-top:10px;display:none;border:1px solid rgba(108,71,255,0.2);}
 
 /* ===== NOTE / OBSERVAÇÃO ===== */
-.note-wrap{background:#fffbeb;border:1.5px solid rgba(245,166,35,0.35);border-radius:14px;padding:14px;margin-top:10px;display:none;}
+.note-wrap{background:var(--note-bg);border:1.5px solid rgba(245,166,35,0.35);border-radius:14px;padding:14px;margin-top:10px;display:none;}
 .note-wrap.note-open{display:block;}
 
 /* ===== RESUMO ESTRATÉGICO ===== */
@@ -405,9 +408,31 @@ nav{
 .goal-ring-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
 .goal-ring-pct{font-size:14px;font-weight:900;color:var(--text);}
 
+/* Cards de gamificação ganham cor forte só quando há algo real pra comemorar
+   (streak ativo, meta batida) — evita "fingir" destaque sem conquista real. */
+#streak-card.streak-active{
+  background:linear-gradient(135deg,#fb923c 0%,#f97316 55%,#dc2626 100%);
+  border-color:transparent;
+  box-shadow:0 8px 28px rgba(220,38,38,0.35);
+}
+#streak-card.streak-active .gamify-val{color:#fff;}
+#streak-card.streak-active .gamify-lbl{color:rgba(255,255,255,0.85);}
+#streak-card.streak-active .gamify-icon{filter:drop-shadow(0 2px 10px rgba(0,0,0,0.3));}
+#goal-card.goal-complete{
+  background:linear-gradient(135deg,#22c55e 0%,#16a34a 55%,#15803d 100%);
+  border-color:transparent;
+  box-shadow:0 8px 28px rgba(21,128,61,0.35);
+}
+#goal-card.goal-complete .gamify-val,#goal-card.goal-complete .goal-ring-pct{color:#fff;}
+#goal-card.goal-complete .gamify-lbl{color:rgba(255,255,255,0.85);}
+
 .badges-row{display:flex;gap:8px;flex-wrap:wrap;align-content:center;flex:2 1 320px;}
 .badge-chip{display:flex;align-items:center;gap:6px;background:var(--panel);border:1.5px solid var(--border);border-radius:20px;padding:6px 12px 6px 8px;opacity:0.4;filter:grayscale(1);transition:all 0.2s;}
-.badge-chip.unlocked{opacity:1;filter:none;border-color:var(--border2);box-shadow:0 2px 8px rgba(124,58,237,0.1);}
+.badge-chip.unlocked{
+  opacity:1;filter:none;border-color:transparent;
+  background:linear-gradient(135deg,rgba(124,58,237,0.16),rgba(196,181,253,0.1));
+  box-shadow:0 2px 10px rgba(124,58,237,0.18);
+}
 .badge-icon{font-size:16px;}
 .badge-name{font-size:9.5px;font-weight:800;color:var(--text2);letter-spacing:0.2px;white-space:nowrap;}
 
@@ -485,7 +510,7 @@ nav{
 .glow-div{height:2px;background:linear-gradient(90deg,transparent,var(--accent),var(--cyan),var(--accent),transparent);border-radius:1px;margin:18px 0;}
 
 /* ===== REPERTÓRIO ===== */
-.rep-layout{display:grid;grid-template-columns:260px 1fr;gap:18px;min-height:70vh;}
+.rep-layout{display:grid;grid-template-columns:260px minmax(0,1fr);gap:18px;min-height:70vh;}
 @media(max-width:700px){
   .rep-layout{grid-template-columns:1fr!important;}
   .rep-sidebar{position:static;max-height:260px;}
@@ -523,7 +548,7 @@ nav{
 .rep-secao-icon{font-size:16px;}
 .rep-secao-title{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:1px;}
 .rep-secao-body{font-size:13px;color:var(--text2);line-height:1.7;white-space:pre-wrap;}
-.rep-secao-edit{width:100%;min-height:100px;border:1.5px solid var(--border);border-radius:10px;padding:10px;font-size:13px;font-family:inherit;line-height:1.7;resize:vertical;outline:none;background:#fafbff;color:var(--text);transition:border-color .2s;}
+.rep-secao-edit{width:100%;min-height:100px;border:1.5px solid var(--border);border-radius:10px;padding:10px;font-size:13px;font-family:inherit;line-height:1.7;resize:vertical;outline:none;background:var(--panel2);color:var(--text);transition:border-color .2s;}
 .rep-secao-edit:focus{border-color:var(--accent);}
 
 /* Repertório especial */
@@ -547,9 +572,13 @@ nav{
 .rep-overview-card-eixo{font-size:10px;color:var(--muted);font-weight:600;margin-bottom:8px;}
 .rep-prog-bar{height:4px;background:var(--bg2);border-radius:2px;overflow:hidden;}
 .rep-prog-fill{height:100%;border-radius:2px;transition:width .4s;}
-.rd-layout{display:grid;grid-template-columns:260px 1fr;gap:18px;min-height:70vh;}
+.rd-layout{display:grid;grid-template-columns:260px minmax(0,1fr);gap:18px;min-height:70vh;}
 .rd-sidebar{background:var(--panel);border:1.5px solid var(--border);border-radius:18px;padding:18px;height:fit-content;max-height:82vh;overflow-y:auto;position:sticky;top:20px;}
-.rd-topic-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;cursor:pointer;transition:all .15s;margin-bottom:4px;border:1.5px solid transparent;}
+.rd-topic-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;cursor:pointer;transition:all .15s;margin-bottom:4px;border:1.5px solid transparent;border-left:3px solid var(--border);}
+.rd-topic-item.rd-topic-empty{opacity:0.55;}
+.rd-topic-icon{font-size:15px;flex-shrink:0;}
+.rd-topic-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:5px 7px;border-radius:8px;transition:all .15s;opacity:0.5;}
+.rd-topic-del:hover{background:rgba(220,38,38,0.1);color:var(--red);opacity:1;}
 .rd-topic-item:hover{background:var(--bg2);border-color:var(--border);}
 .rd-topic-item.active{background:linear-gradient(135deg,rgba(108,71,255,0.08),rgba(79,70,229,0.04));border-color:rgba(108,71,255,0.3);}
 .rd-topic-name{font-size:13px;font-weight:800;color:var(--text);flex:1;}
@@ -613,7 +642,7 @@ nav{
   .rd-comp-grid{grid-template-columns:1fr!important;}
   .rd-input-row{grid-template-columns:1fr!important;}
 }
-.fc-layout{display:grid;grid-template-columns:280px 1fr;gap:18px;}
+.fc-layout{display:grid;grid-template-columns:280px minmax(0,1fr);gap:18px;}
 .fc-sidebar{background:var(--panel);border:1.5px solid var(--border);border-radius:18px;padding:18px;height:fit-content;max-height:80vh;overflow-y:auto;position:sticky;top:20px;}
 .fc-mb-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;cursor:pointer;transition:all .15s;margin-bottom:4px;border:1.5px solid transparent;}
 .fc-mb-item:hover{background:var(--bg2);border-color:var(--border);}
@@ -744,7 +773,7 @@ nav{
 
 @media(max-width:700px){
   .fc-layout{grid-template-columns:1fr!important;}
-  .fc-sidebar{position:static;max-height:220px;}
+  .fc-sidebar{position:relative;max-height:340px;}
   .fc-form-row{grid-template-columns:1fr!important;}
   .fc-search{width:100%!important;}
 }
@@ -1082,14 +1111,14 @@ nav{
 
   <!-- Streak + Meta diária + Conquistas -->
   <div class="dash-gamify-row">
-    <div class="section-card gamify-card">
+    <div class="section-card gamify-card" id="streak-card">
       <div class="gamify-icon streak-flame" id="streak-flame">🔥</div>
       <div class="gamify-info">
         <div class="gamify-val" id="streak-val">0</div>
         <div class="gamify-lbl" id="streak-lbl">dias seguidos</div>
       </div>
     </div>
-    <div class="section-card gamify-card gamify-goal" onclick="openDailyGoalModal()" title="Clique para ajustar sua meta diária">
+    <div class="section-card gamify-card gamify-goal" id="goal-card" onclick="openDailyGoalModal()" title="Clique para ajustar sua meta diária">
       <div class="goal-ring-wrap" id="goal-ring-wrap"></div>
       <div class="gamify-info">
         <div class="gamify-val" style="font-size:13px">Meta diária</div>
@@ -1130,11 +1159,11 @@ nav{
       <div style="font-size:10px;color:var(--muted);margin-bottom:10px;font-weight:600">Revisões cujo prazo já passou</div>
       <div id="dash-overdue-revs" style="overflow-y:auto;flex:1;padding-right:4px;max-height:300px"></div>
     </div>
-    <div class="section-card" style="margin-bottom:0">
+    <div class="section-card" style="margin-bottom:0;display:flex;flex-direction:column">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
         <div class="sec-title" style="margin-bottom:0;font-size:11px">📚 ASSUNTOS ESTUDADOS NA SEMANA</div>
       </div>
-      <div id="week-study-chart" style="width:100%"></div>
+      <div id="week-study-chart" style="width:100%;flex:1;min-height:0;overflow-y:auto;padding-right:4px;max-height:300px"></div>
       <div id="week-study-total" style="text-align:center;font-size:11px;color:var(--muted);margin-top:8px;font-weight:700"></div>
     </div>
   </div>
@@ -3055,7 +3084,7 @@ function renderWeekStudyChart(){
   const priColor={30:'var(--green)',70:'var(--orange)',100:'var(--red)'};
   const priLabel={30:'🟢 Comum',70:'🟠 Raro',100:'🔴 Lendário'};
 
-  el.innerHTML=`<div style="display:flex;flex-direction:column;gap:6px;max-height:240px;overflow-y:auto;padding-right:4px">
+  el.innerHTML=`<div style="display:flex;flex-direction:column;gap:6px">
     ${studied.map(s=>`
       <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg2);border-radius:10px;border-left:3px solid ${s.kColor}">
         <span style="font-size:18px;flex-shrink:0">${s.kIcon}</span>
@@ -3105,13 +3134,16 @@ function renderDashboard(){
     streakEl.textContent=streak;
     streakLblEl.textContent=streak===1?'dia seguido':'dias seguidos';
     flameEl.style.opacity=streak>0?'1':'0.35';
+    document.getElementById('streak-card')?.classList.toggle('streak-active',streak>0);
   }
   const goalMin=db.dailyGoalMinutes||60;
   const todayMin=Math.round(todayStudiedSeconds()/60);
   const goalPct=Math.round(Math.min(100,(todayMin/goalMin)*100));
+  const goalComplete=goalPct>=100;
+  document.getElementById('goal-card')?.classList.toggle('goal-complete',goalComplete);
   const goalWrap=document.getElementById('goal-ring-wrap');
   if(goalWrap){
-    goalWrap.innerHTML=progressRingSVG(goalPct,{color:goalPct>=100?'var(--green)':'var(--accent)'})+
+    goalWrap.innerHTML=progressRingSVG(goalPct,goalComplete?{color:'#fff',track:'rgba(255,255,255,0.3)'}:{color:'var(--accent)'})+
       `<div class="goal-ring-label"><div class="goal-ring-pct">${goalPct}%</div></div>`;
   }
   const goalLblEl=document.getElementById('goal-lbl');
@@ -3690,7 +3722,7 @@ function repRenderOverview(){
     ${eixos.map(e=>{
       const temaEixo=temas.filter(t=>t.eixoId===e.id);
       if(!temaEixo.length)return`
-        <div style="background:#fff;border:1.5px dashed var(--border);border-radius:16px;padding:16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;cursor:pointer;opacity:0.6" onclick="repOpenNewTema('${e.id}')">
+        <div style="background:var(--panel);border:1.5px dashed var(--border);border-radius:16px;padding:16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;cursor:pointer;opacity:0.6" onclick="repOpenNewTema('${e.id}')">
           <span style="font-size:24px">${e.icon}</span>
           <div><div style="font-size:13px;font-weight:800;color:${e.color}">${e.nome}</div>
           <div style="font-size:11px;color:var(--muted)">Nenhum tema ainda — clique para adicionar</div></div>
@@ -3822,14 +3854,14 @@ function rdRenderTopics(){
   el.innerHTML=topics.map(t=>{
     const count=Object.values(db.redacoes.textos||{}).filter(r=>r.topicId===t.id).length;
     const aprovadas=Object.values(db.redacoes.textos||{}).filter(r=>r.topicId===t.id&&rdStatus(r.npd)==='aprovado').length;
-    return`<div class="rd-topic-item${rdSelectedTopic?.id===t.id?' active':''}" onclick="rdSelectTopic('${t.id}')">
-      <div style="flex:1">
+    const borderColor=aprovadas>0?'var(--green)':count>0?'var(--accent)':'var(--border)';
+    return`<div class="rd-topic-item${rdSelectedTopic?.id===t.id?' active':''}${count===0?' rd-topic-empty':''}" style="border-left-color:${borderColor}" onclick="rdSelectTopic('${t.id}')">
+      <span class="rd-topic-icon">📝</span>
+      <div style="flex:1;min-width:0">
         <div class="rd-topic-name">${t.name}</div>
-        <div class="rd-topic-count">${count} redaç${count!==1?'ões':'ão'} · ${aprovadas} aprovada${aprovadas!==1?'s':''}</div>
+        <div class="rd-topic-count">${count?`${count} redaç${count!==1?'ões':'ão'} · ${aprovadas} aprovada${aprovadas!==1?'s':''}`:'Sem redações ainda'}</div>
       </div>
-      <div style="display:flex;gap:4px;align-items:center" onclick="event.stopPropagation()">
-        <button class="btn btn-xs btn-danger" onclick="rdDeleteTopic('${t.id}')"><i class="fa fa-trash"></i></button>
-      </div>
+      <button class="rd-topic-del" onclick="event.stopPropagation();rdDeleteTopic('${t.id}')" title="Excluir tópico"><i class="fa fa-trash"></i></button>
     </div>`;
   }).join('');
 }
@@ -3905,15 +3937,15 @@ function rdRenderMain(){
 
     <!-- Stats rápidas -->
     ${redacoes.length>0?`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px">
-      <div style="background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:14px;text-align:center">
+      <div style="background:var(--panel);border:1.5px solid var(--border);border-radius:14px;padding:14px;text-align:center">
         <div style="font-size:22px;font-weight:900;color:var(--green)">${aprovadas}</div>
         <div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase">✅ Aprovadas</div>
       </div>
-      <div style="background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:14px;text-align:center">
+      <div style="background:var(--panel);border:1.5px solid var(--border);border-radius:14px;padding:14px;text-align:center">
         <div style="font-size:22px;font-weight:900;color:var(--red)">${reprovadas}</div>
         <div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase">❌ Reprovadas</div>
       </div>
-      <div style="background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:14px;text-align:center">
+      <div style="background:var(--panel);border:1.5px solid var(--border);border-radius:14px;padding:14px;text-align:center">
         <div style="font-size:22px;font-weight:900;color:var(--accent)">${melhorNPD>-Infinity?melhorNPD.toFixed(2):'—'}</div>
         <div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase">🏆 Melhor NPD</div>
       </div>
@@ -4363,7 +4395,7 @@ function renderFCMain(){
           <div style="font-size:12px;font-weight:900;color:var(--red);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">🔥 Chefões com revisões vencidas</div>
           <div style="display:flex;flex-direction:column;gap:6px">
             ${urgentes.map(b=>`
-              <div onclick="selectFCBoss('${b.topicId}')" style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:#fff;border:1.5px solid rgba(220,38,38,0.2);border-left:4px solid var(--red);border-radius:12px;cursor:pointer;transition:all .15s" onmouseover="this.style.transform='translateX(4px)'" onmouseout="this.style.transform='translateX(0)'">
+              <div onclick="selectFCBoss('${b.topicId}')" style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--panel);border:1.5px solid rgba(220,38,38,0.2);border-left:4px solid var(--red);border-radius:12px;cursor:pointer;transition:all .15s" onmouseover="this.style.transform='translateX(4px)'" onmouseout="this.style.transform='translateX(0)'">
                 <span style="font-size:22px">${b.kIcon}</span>
                 <div style="flex:1">
                   <div style="font-size:13px;font-weight:800;color:${b.kColor}">${b.name}</div>
@@ -4380,7 +4412,7 @@ function renderFCMain(){
           <div style="font-size:12px;font-weight:900;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">✨ Chefões com cards novos</div>
           <div style="display:flex;flex-direction:column;gap:6px">
             ${comNovos.map(b=>`
-              <div onclick="selectFCBoss('${b.topicId}')" style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:#fff;border:1.5px solid rgba(108,71,255,0.2);border-left:4px solid var(--accent);border-radius:12px;cursor:pointer;transition:all .15s" onmouseover="this.style.transform='translateX(4px)'" onmouseout="this.style.transform='translateX(0)'">
+              <div onclick="selectFCBoss('${b.topicId}')" style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--panel);border:1.5px solid rgba(108,71,255,0.2);border-left:4px solid var(--accent);border-radius:12px;cursor:pointer;transition:all .15s" onmouseover="this.style.transform='translateX(4px)'" onmouseout="this.style.transform='translateX(0)'">
                 <span style="font-size:22px">${b.kIcon}</span>
                 <div style="flex:1">
                   <div style="font-size:13px;font-weight:800;color:${b.kColor}">${b.name}</div>
@@ -4550,7 +4582,7 @@ function fcGridHTML(cards){
       </div>
     </div>`;}).join('')}</div>
   <!-- Gráfico de desempenho -->
-  <div style="background:#fff;border:1.5px solid var(--border);border-radius:16px;padding:18px;margin-top:16px">
+  <div style="background:var(--panel);border:1.5px solid var(--border);border-radius:16px;padding:18px;margin-top:16px">
     <div style="font-size:11px;font-weight:900;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">📊 Desempenho dos Flashcards</div>
     ${fcDesempenhoHTML(cards)}
   </div>`;
@@ -4695,7 +4727,7 @@ function fcTimelineHTML(cards){
         ${gc.map(c=>`<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="fcFlipGridCard('${c.id}')">
           <div style="width:6px;height:6px;border-radius:50%;background:${g.color};flex-shrink:0"></div>
           <div style="flex:1;min-width:0">
-            <div style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="fcgc-${c.id}">${c.pergunta}</div>
+            <div style="font-size:12px;font-weight:700;color:var(--text);overflow-wrap:break-word" id="fcgc-${c.id}">${c.pergunta}</div>
             <div id="fcga-${c.id}" style="display:none;font-size:11px;color:var(--text2);margin-top:4px;padding:6px 8px;background:var(--bg2);border-radius:6px;white-space:pre-wrap">${c.resposta}</div>
           </div>
           <div style="display:flex;gap:4px;flex-shrink:0" onclick="event.stopPropagation()">
