@@ -7846,57 +7846,74 @@ async function fcHandlePDF(file){
       throw new Error('Configure sua chave de API do Gemini primeiro (botão ⚙️ ao lado do upload de PDF).');
     }
 
-    if(statusTxt)statusTxt.textContent=`IA gerando flashcards (${texto.length} caracteres lidos)...`;
+    // PDFs grandes cortavam pra so os primeiros 25000 caracteres (~19% de um arquivo de
+    // 130k+ chars), entao boa parte do conteudo nunca chegava a virar flashcard - nao e a
+    // IA "gerando pouco", e o texto sendo truncado antes de sair daqui. Agora quebramos em
+    // pedacos de ate 25000 chars (cortando em quebra de linha, nao no meio da frase) e
+    // geramos um chunk de cada vez, com pausa entre eles pra nao estourar o limite de
+    // requisicoes por minuto da API - mesmo padrao ja usado no Simulado Geral.
+    const CHUNK_SIZE=25000;
+    const chunks=[];
+    {
+      let i=0;
+      while(i<texto.length){
+        let end=Math.min(i+CHUNK_SIZE,texto.length);
+        if(end<texto.length){
+          const lastBreak=texto.lastIndexOf('\n',end);
+          if(lastBreak>i+CHUNK_SIZE*0.5)end=lastBreak;
+        }
+        chunks.push(texto.slice(i,end));
+        i=end;
+      }
+    }
 
-    const prompt=`Você é um gerador de flashcards para concurso de enfermagem.
+    const allCards=[];
+    const falhas=[];
+    for(let idx=0;idx<chunks.length;idx++){
+      if(statusTxt)statusTxt.textContent=chunks.length>1
+        ?`IA gerando flashcards — parte ${idx+1}/${chunks.length} (${texto.length} caracteres no total)...`
+        :`IA gerando flashcards (${texto.length} caracteres lidos)...`;
+      const prompt=`Voce e um gerador de flashcards para concurso de enfermagem.
 
 TAREFA: Leia o texto e gere flashcards no formato JSON.
 
-REGRAS OBRIGATÓRIAS:
+REGRAS OBRIGATORIAS:
 - Responda APENAS com o array JSON, sem nenhum texto antes ou depois
-- Não use markdown, não use blocos de código, não use explicações
+- Nao use markdown, nao use blocos de codigo, nao use explicacoes
 - Comece sua resposta diretamente com [ e termine com ]
-- Gere quantos cards forem necessários para cobrir TODO o conteúdo
+- Gere quantos cards forem necessarios para cobrir TODO o conteudo abaixo
 
 FORMATO EXATO:
 [{"pergunta":"texto da pergunta","resposta":"texto da resposta","dificuldade":3,"tags":"tag1,tag2"}]
 
-dificuldade: 1=muito fácil, 2=fácil, 3=médio, 4=difícil, 5=muito difícil
+dificuldade: 1=muito facil, 2=facil, 3=medio, 4=dificil, 5=muito dificil
 
 TEXTO PARA GERAR FLASHCARDS:
-${texto.slice(0,25000)}
+${chunks[idx]}
 
-LEMBRE: responda APENAS com o JSON array, começando com [ e terminando com ]`;
+LEMBRE: responda APENAS com o JSON array, comecando com [ e terminando com ]`;
 
-    const raw=await callGeminiGenerate(apiKey,prompt);
-
-    if(statusTxt)statusTxt.textContent='Processando resposta da IA...';
-
-    // Extrair JSON de forma mais robusta
-    let cards=null;
-    // Tentar parse direto primeiro
-    try{cards=JSON.parse(raw);}catch(e){
-      // Tentar encontrar array JSON no meio do texto
-      const jsonMatch=raw.match(/\[[\s\S]*\]/);
-      if(jsonMatch){
-        try{cards=JSON.parse(jsonMatch[0]);}catch(e2){
-          // Tentar limpar e parsear
-          const clean=jsonMatch[0].replace(/[\u0000-\u001F\u007F-\u009F]/g,' ');
-          try{cards=JSON.parse(clean);}catch(e3){
-            throw new Error('IA retornou formato inválido. Tente com um PDF menor.');
-          }
-        }
-      } else {
-        throw new Error('IA não retornou JSON. Tente novamente.');
+      try{
+        const raw=await callGeminiGenerate(apiKey,prompt);
+        const parsed=extractAIJson(raw);
+        if(Array.isArray(parsed))allCards.push(...parsed);
+        else falhas.push(idx+1);
+      }catch(e){
+        console.error('PDF chunk '+(idx+1)+' error:',e);
+        falhas.push(idx+1);
       }
+      if(idx<chunks.length-1)await new Promise(r=>setTimeout(r,4000));
     }
-    if(!Array.isArray(cards)||!cards.length)throw new Error('Nenhum flashcard gerado. Tente com outro PDF.');
 
-    if(statusTxt)statusTxt.textContent=`Salvando ${cards.length} flashcards...`;
+    if(!allCards.length){
+      throw new Error(falhas.length?'Nenhum flashcard gerado — todas as partes falharam. Tente novamente.':'Nenhum flashcard gerado. Tente com outro PDF.');
+    }
+
+    if(statusTxt)statusTxt.textContent=`Salvando ${allCards.length} flashcards...`;
     fcInit();
     let count=0;
-    cards.forEach(c=>{
-      if(!c.pergunta||!c.resposta)return;
+    allCards.forEach(c=>{
+      if(!c||!c.pergunta||!c.resposta)return;
       const id='fc_'+genId();
       db.flashcards[id]={
         id,mbId:fcSelectedMb.id,
@@ -7909,7 +7926,11 @@ LEMBRE: responda APENAS com o JSON array, começando com [ e terminando com ]`;
     });
     saveDB();
     renderFCMbList();renderFCMain();updateFCBadge();
-    toast(`🃏 ${count} flashcards gerados com sucesso!`,'var(--green)');
+    if(falhas.length){
+      toast(`🃏 ${count} flashcards gerados! ⚠️ ${falhas.length} de ${chunks.length} parte(s) do PDF falharam — tente reenviar o mesmo arquivo pra completar.`,'var(--orange)');
+    }else{
+      toast(`🃏 ${count} flashcards gerados com sucesso!`,'var(--green)');
+    }
 
   }catch(e){
     console.error('PDF error:',e);
