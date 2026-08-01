@@ -3058,7 +3058,9 @@ function subItemHTML(s,topicId){
   const revLocked=!s.studied;
   const revStatusBadge=revLocked
     ? `<span style="background:rgba(107,114,128,0.1);color:var(--muted);border:1.5px solid var(--border);border-radius:8px;padding:2px 8px;font-size:9px;font-weight:800;display:inline-flex;align-items:center;gap:4px"><i class="fa fa-lock" style="font-size:8px"></i> REVISÕES BLOQUEADAS</span>`
-    : (overdueCount>0
+    : (s.revMastered
+        ? `<span style="background:rgba(21,128,61,0.1);color:var(--green);border:1.5px solid rgba(21,128,61,0.3);border-radius:8px;padding:2px 7px;font-size:9px;font-weight:900">🏆 Dominado</span>`
+        : overdueCount>0
         ? `<span style="background:rgba(220,38,38,0.1);color:var(--red);border:1.5px solid rgba(220,38,38,0.3);border-radius:8px;padding:2px 7px;font-size:9px;font-weight:900">${overdueCount} atrasada${overdueCount>1?'s':''}!</span>`
         : (revs.length>0
             ? `<span style="background:rgba(22,163,74,0.08);color:var(--green);border:1.5px solid rgba(22,163,74,0.25);border-radius:8px;padding:2px 7px;font-size:9px;font-weight:800">${done}/${revs.length} revisões</span>`
@@ -3517,7 +3519,7 @@ function toggleTimer(subId,topicId){
         const xpGain=sub.priority===100?150:sub.priority===70?80:50;
         gainXP(xpGain);
         saveDB();
-        toast(`🎯 Primeiro estudo! Revisões agendadas em 7, 14, 30 e 45 dias. +${xpGain} XP!`,'var(--green)');
+        toast(`🎯 Primeiro estudo! Primeira revisão agendada em 7 dias — as próximas se ajustam à sua dificuldade. +${xpGain} XP!`,'var(--green)');
       }
       refreshSubs(topic,topicId);
     }
@@ -4466,27 +4468,20 @@ function showSubRevisions(subId,topicId){
   db.kingdoms.forEach(k=>{(db.topics[k.id]||[]).forEach(t=>{const f=t.subtopics?.find(s=>s.id===subId);if(f){subName=f.name;sub=f;}});});
   const isStudied=sub&&sub.studied;
   let html='';
+  const qualityLbl={1:'😵 Esqueceu tudo',3:'😐 Difícil',4:'🙂 Lembrou bem',5:'😄 Sabia de cor'};
   if(!isStudied){
     html+=`<div style="background:linear-gradient(135deg,rgba(108,71,255,0.06),rgba(79,70,229,0.04));border:1.5px solid rgba(108,71,255,0.2);border-radius:14px;padding:16px;margin-bottom:16px;display:flex;gap:12px;align-items:center">
       <span style="font-size:32px">🔒</span>
       <div>
         <div style="font-size:13px;font-weight:900;color:var(--accent)">Revisões bloqueadas</div>
-        <div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5">Inicie o cronômetro de estudo para liberar as revisões.<br>As 4 revisões serão agendadas automaticamente a partir da data do seu primeiro estudo.</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5">Inicie o cronômetro de estudo para liberar as revisões.<br>A primeira revisão é agendada pra 7 dias após o estudo — as próximas se ajustam automaticamente: erra e volta pra amanhã, acerta fácil e o intervalo cresce (revisão espaçada).</div>
       </div>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px">
-      ${['7 dias','14 dias','30 dias','45 dias'].map((l,i)=>`
-        <div style="background:var(--bg2);border:1.5px dashed var(--border);border-radius:12px;padding:12px 8px;text-align:center;opacity:0.5">
-          <div style="font-size:20px;margin-bottom:6px">🔒</div>
-          <div style="font-size:10px;font-weight:900;color:var(--muted)">Revisão ${i+1}</div>
-          <div style="font-size:9px;color:var(--muted)">${l} após estudo</div>
-        </div>`).join('')}
     </div>`;
   } else {
-    const lbs=['7 dias','14 dias','30 dias','45 dias'];
     const rnCls=['rn-1','rn-2','rn-3','rn-4'];
-    // Filtrar apenas revisões válidas (date definida e string válida), máximo 4
-    const revsValidas=revs.filter(r=>r.date&&typeof r.date==='string'&&r.date.length===10).slice(0,4);
+    // Filtrar apenas revisões válidas (date definida e string válida) — sem cap fixo,
+    // com SM-2 a quantidade varia por assunto conforme o desempenho.
+    const revsValidas=revs.filter(r=>r.date&&typeof r.date==='string'&&r.date.length===10);
     html+=`<div style="background:rgba(22,163,74,0.04);border:1.5px solid rgba(22,163,74,0.2);border-radius:12px;padding:10px 14px;margin-bottom:16px;font-size:11px;color:var(--green);font-weight:700;display:flex;align-items:center;gap:8px">
       <i class="fa fa-calendar-check"></i> Revisões agendadas desde ${sub.studiedAt||'data do estudo'}
     </div>`;
@@ -4496,56 +4491,112 @@ function showSubRevisions(subId,topicId){
       const isPast=r.date<today;const isToday=r.date===today;
       const prevDone=revsValidas.slice(0,i).every(p=>p.completed);
       const isChainLocked=!prevDone&&!r.completed;
+      const prevDate=i===0?sub.studiedAt:revsValidas[i-1].date;
+      const intervalDays=prevDate?daysDiff(prevDate,r.date):null;
       html+=`<div style="background:${r.completed?'rgba(22,163,74,0.04)':isChainLocked?'rgba(107,114,128,0.04)':'var(--panel2)'};border:1.5px solid ${r.completed?'rgba(22,163,74,0.3)':isChainLocked?'rgba(107,114,128,0.2)':isPast&&!r.completed?'rgba(220,38,38,0.3)':'var(--border)'};border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:12px;${isChainLocked?'opacity:0.6':''}">
         <div class="rev-num-badge ${rnCls[i]||'rn-1'}">${i+1}</div>
         <div style="flex:1">
           <div style="font-size:13px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:6px">
-            Revisão ${i+1} — ${lbs[i]||''}
+            Revisão ${i+1}${intervalDays!==null?` — ${intervalDays}d após a anterior`:''}
             ${isChainLocked?'<i class="fa fa-link" style="font-size:10px;color:var(--muted)" title="Aguardando revisão anterior"></i>':''}
           </div>
-          <div style="font-size:10px;color:var(--muted);margin-top:2px">${r.date}${isToday&&!isChainLocked?' 🔥 HOJE!':isPast&&!r.completed&&!isChainLocked?' ⚠️ Atrasada':isChainLocked?' · aguardando Rev.'+(i)+' ser concluída':''}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px">${r.date}${isToday&&!isChainLocked?' 🔥 HOJE!':isPast&&!r.completed&&!isChainLocked?' ⚠️ Atrasada':isChainLocked?' · aguardando Rev.'+(i)+' ser concluída':''}${r.completed&&qualityLbl[r.quality]?' · '+qualityLbl[r.quality]:''}</div>
         </div>
         ${after?'<span class="after-exam-tag">⚠️ Após prova</span>':''}
         ${r.completed
           ?'<span style="color:var(--green);font-size:12px;font-weight:900">✓ CONCLUÍDA</span>'
           :isChainLocked
             ?'<span style="color:var(--muted);font-size:10px;font-weight:700;display:flex;align-items:center;gap:4px"><i class="fa fa-lock" style="font-size:9px"></i> Bloqueada</span>'
-            :`<button class="btn btn-sm btn-green-s" onclick="completeRev('${subId}',${revs.indexOf(r)})"><i class="fa fa-check"></i> Concluir</button>`}
+            :`<button class="btn btn-sm btn-green-s" onclick="openRevQualityPicker('${subId}',${revs.indexOf(r)})"><i class="fa fa-check"></i> Concluir</button>`}
       </div>`;
     });
     html+=`</div>`;
+    if(sub.revMastered){
+      html+=`<div style="background:rgba(21,128,61,0.08);border:1.5px solid rgba(21,128,61,0.3);border-radius:12px;padding:14px;margin-top:12px;text-align:center;font-size:12px;font-weight:800;color:var(--green)">🏆 Domínio total! Sem mais revisões agendadas por agora.</div>`;
+    }
   }
   openModal(`📅 Revisões — ${subName}`,html);
 }
 
-function completeRev(subId,idx,fromList){
-  let sub=null;
-  db.kingdoms.forEach(k=>{(db.topics[k.id]||[]).forEach(t=>{const f=t.subtopics?.find(s=>s.id===subId);if(f)sub=f;});});
+// ===== REVISÃO ESPAÇADA (SM-2) =====
+// Fórmula clássica do SuperMemo-2: quality vai de 0 (esqueceu tudo) a 5 (sabia de cor).
+// quality<3 reseta a sequência (volta pra revisar amanhã); quality>=3 aumenta o intervalo,
+// multiplicando pelo "fator de facilidade" (ef) daquele assunto específico — que só sobe
+// quando a lembrança é boa e nunca cai abaixo de 1.3 (piso padrão do algoritmo original).
+function sm2Next(state,quality){
+  let{ef,reps,interval}=state||{ef:2.5,reps:0,interval:1};
+  if(quality<3){
+    reps=0;
+    interval=1;
+  }else{
+    if(reps===0)interval=1;
+    else if(reps===1)interval=6;
+    else interval=Math.max(1,Math.round(interval*ef));
+    reps+=1;
+  }
+  ef=ef+(0.1-(5-quality)*(0.08+(5-quality)*0.02));
+  if(ef<1.3)ef=1.3;
+  return{ef:Math.round(ef*100)/100,reps,interval};
+}
+
+let pendingRevCompletion=null; // {subId,idx,mode} aguardando a nota de qualidade do usuário
+function openRevQualityPicker(subId,idx,mode){
+  pendingRevCompletion={subId,idx,mode:mode||'modal'};
+  openModal('🧠 Como foi lembrar?',revQualityPickerHTML());
+}
+function revQualityPickerHTML(){
+  const opts=[
+    {q:1,icon:'😵',lbl:'Esqueci tudo',sub:'vou precisar rever logo',color:'var(--red)',bg:'rgba(220,38,38,0.08)',bd:'rgba(220,38,38,0.3)'},
+    {q:3,icon:'😐',lbl:'Lembrei com dificuldade',sub:'tive que pensar bastante',color:'var(--orange)',bg:'rgba(194,65,12,0.08)',bd:'rgba(194,65,12,0.3)'},
+    {q:4,icon:'🙂',lbl:'Lembrei bem',sub:'com um pouco de esforço',color:'var(--green)',bg:'rgba(21,128,61,0.08)',bd:'rgba(21,128,61,0.3)'},
+    {q:5,icon:'😄',lbl:'Sabia de cor',sub:'lembrei na hora',color:'var(--cyan)',bg:'rgba(8,145,178,0.08)',bd:'rgba(8,145,178,0.3)'},
+  ];
+  return`<div style="text-align:center">
+    <p style="font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.6">Isso ajusta o intervalo até a próxima revisão desse assunto — quanto mais fácil foi lembrar, mais tempo até revisar de novo.</p>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${opts.map(o=>`<button class="btn btn-sm" style="justify-content:flex-start;text-align:left;background:${o.bg};border:1.5px solid ${o.bd};color:${o.color}" onclick="pickRevQuality(${o.q})">
+        <span style="font-size:16px">${o.icon}</span>&nbsp; <b>${o.lbl}</b> <span style="opacity:0.75;font-weight:600">— ${o.sub}</span>
+      </button>`).join('')}
+    </div>
+  </div>`;
+}
+function pickRevQuality(quality){
+  if(!pendingRevCompletion)return;
+  const{subId,idx,mode}=pendingRevCompletion;
+  pendingRevCompletion=null;
+  completeRev(subId,idx,mode,quality);
+}
+
+function completeRev(subId,idx,mode,quality){
+  let sub=null,subTopic=null;
+  db.kingdoms.forEach(k=>{(db.topics[k.id]||[]).forEach(t=>{const f=t.subtopics?.find(s=>s.id===subId);if(f){sub=f;subTopic=t;}});});
   if(sub&&!sub.studied){toast('⚠️ Estude o conteúdo antes de revisar!','var(--red)');return;}
   if(!db.revisions[subId])return;
+  if(typeof quality!=='number'){openRevQualityPicker(subId,idx,mode);return;}
 
-  // Limpar só as entradas com data inválida — NÃO truncar pra 4 aqui: alguém que já tem
-  // uma 5ª revisão "sobrando" (ex.: bug antigo do botão Intensivo, já corrigido) precisa
-  // conseguir concluí-la; truncar antes de checar o índice fazia o clique em "Concluir"
-  // não fazer nada silenciosamente pra revisões além da 4ª.
+  // Limpar só as entradas com data inválida — nunca truncar por quantidade aqui: com SM-2
+  // o número de revisões varia por assunto (não é mais sempre 4), então cortar por índice
+  // fixo faria o clique em "Concluir" não fazer nada silenciosamente pras revisões extras.
   db.revisions[subId]=db.revisions[subId]
     .filter(r=>r.date&&typeof r.date==='string'&&r.date.length===10);
 
   if(!db.revisions[subId][idx])return;
   db.revisions[subId][idx].completed=true;
+  db.revisions[subId][idx].quality=quality;
 
-  const INTERVALOS=[7,14,30,45];
-  const concluidas=db.revisions[subId].filter(r=>r.completed).length;
   const pendentes=db.revisions[subId].filter(r=>!r.completed).length;
 
-  // Só adicionar próxima se não há pendente e ainda há intervalos
-  if(pendentes===0&&concluidas<INTERVALOS.length){
-    const proxIntervalo=INTERVALOS[concluidas];
-    // Data a partir de HOJE (não da data antiga)
-    db.revisions[subId].push({date:addDays(todayStr(),proxIntervalo),completed:false});
-    toast(`✅ Revisão concluída! +100 XP · Próxima em ${proxIntervalo} dias 📅`,'var(--green)');
-  } else if(concluidas>=INTERVALOS.length){
-    toast('🎉 Domínio total! Todas as revisões concluídas! +100 XP','var(--green)');
+  if(pendentes===0){
+    if(!sub.sm2)sub.sm2={ef:2.5,reps:0,interval:1};
+    sub.sm2=sm2Next(sub.sm2,quality);
+    const mastered=sub.sm2.reps>=3&&sub.sm2.interval>=90&&quality>=4;
+    if(mastered){
+      sub.revMastered=true;
+      toast(`🎉 Domínio total! Você lembrou bem várias vezes seguidas — sem mais revisões agendadas por agora. +100 XP`,'var(--green)');
+    }else{
+      db.revisions[subId].push({date:addDays(todayStr(),sub.sm2.interval),completed:false});
+      toast(`✅ Revisão concluída! +100 XP · Próxima em ${sub.sm2.interval} dia${sub.sm2.interval>1?'s':''} 📅`,'var(--green)');
+    }
   } else {
     toast('✅ Revisão concluída! +100 XP','var(--green)');
   }
@@ -4564,7 +4615,10 @@ function completeRev(subId,idx,fromList){
 
   gainXP(100);saveDB();
   updateRevBadge();renderMap();renderHeader();
-  if(fromList)renderRevisions();else closeModal();
+  if(subTopic)refreshSubs(subTopic,subTopic.id);
+  if(mode==='list')renderRevisions();
+  else if(mode==='dashboard')renderDashboard();
+  else closeModal();
 }
 
 function intensiveTraining(topicId){
@@ -4886,7 +4940,7 @@ function renderRevisions(){
         ? isBlocked
           ? `<button class="btn btn-xs btn-ghost" style="opacity:0.4;cursor:not-allowed;" disabled><i class="fa fa-lock"></i></button>`
           : `<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
-               <button class="btn btn-xs btn-green-s" onclick="completeRev('${item.subId}',${item.idx},true)">✓ Feito</button>
+               <button class="btn btn-xs btn-green-s" onclick="openRevQualityPicker('${item.subId}',${item.idx},'list')">✓ Feito</button>
                <button class="btn btn-xs btn-primary" onclick="goToSubtopic('${item.subId}')"><i class="fa fa-book-open"></i> Revisar</button>
              </div>`
         : `<button class="btn btn-xs" style="background:rgba(108,71,255,0.08);color:var(--accent);border:1px solid var(--border)" onclick="goToSubtopic('${item.subId}')"><i class="fa fa-eye"></i> Ver</button>`
@@ -5098,7 +5152,7 @@ function renderDashboard(){
         <span style="font-size:18px">${item.kingdomIcon}</span>
         <div class="rev-info"><div class="rev-name">${item.subName}</div><div class="rev-sub">${item.kingdomName} · ${item.date}</div></div>
         <span class="rev-cd cd-over">${d}d atraso</span>
-        <button class="btn btn-xs btn-green-s" onclick="completeRev('${item.subId}',${item.idx},false);renderDashboard()"${!item.studied?' style="opacity:0.35;cursor:not-allowed;"':''}>✓</button>
+        <button class="btn btn-xs btn-green-s" onclick="openRevQualityPicker('${item.subId}',${item.idx},'dashboard')"${!item.studied?' style="opacity:0.35;cursor:not-allowed;"':''}>✓</button>
       </div>`;
     }).join('');
   }
