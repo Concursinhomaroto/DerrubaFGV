@@ -403,19 +403,19 @@ nav{
 /* ===== GAMIFICAÇÃO: STREAK / META DIÁRIA / BADGES ===== */
 /* Streak, meta e badges dividem a mesma linha (badges ocupam o espaço restante ao lado). */
 .dash-gamify-row{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:18px;align-items:stretch;}
-.gamify-card{display:flex;align-items:center;gap:14px;margin-bottom:0;flex:1 1 230px;}
+.gamify-card{display:flex;align-items:center;gap:10px;margin-bottom:0;flex:1 1 165px;padding:14px 16px;}
 .gamify-goal{cursor:pointer;transition:all 0.2s;}
 .gamify-goal:hover{transform:translateY(-2px);box-shadow:var(--shadow2);border-color:var(--border2);}
-.gamify-icon{font-size:40px;flex-shrink:0;transition:opacity 0.3s;}
+.gamify-icon{font-size:30px;flex-shrink:0;transition:opacity 0.3s;}
 .gamify-icon.streak-flame{animation:flamePulse 1.8s ease-in-out infinite;}
 @keyframes flamePulse{0%,100%{transform:scale(1);}50%{transform:scale(1.08);}}
 .gamify-info{flex:1;min-width:0;}
-.gamify-val{font-size:26px;font-weight:900;color:var(--text);line-height:1;}
-.gamify-lbl{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-top:4px;}
-.goal-ring-wrap{position:relative;width:70px;height:70px;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
-.goal-ring-wrap svg{width:70px;height:70px;}
+.gamify-val{font-size:20px;font-weight:900;color:var(--text);line-height:1;}
+.gamify-lbl{font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-top:3px;}
+.goal-ring-wrap{position:relative;width:52px;height:52px;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.goal-ring-wrap svg{width:52px;height:52px;}
 .goal-ring-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
-.goal-ring-pct{font-size:14px;font-weight:900;color:var(--text);}
+.goal-ring-pct{font-size:11px;font-weight:900;color:var(--text);}
 
 /* Cards de gamificação ganham cor forte só quando há algo real pra comemorar
    (streak ativo, meta batida) — evita "fingir" destaque sem conquista real. */
@@ -452,7 +452,7 @@ nav{
 #goal-card.goal-complete .gamify-val,#goal-card.goal-complete .goal-ring-pct{color:#fff;}
 #goal-card.goal-complete .gamify-lbl{color:rgba(255,255,255,0.85);}
 
-.gamify-badges-card{flex:2 1 340px;margin-bottom:0;display:flex;flex-direction:column;justify-content:center;cursor:pointer;transition:all 0.2s;}
+.gamify-badges-card{flex:3 1 420px;margin-bottom:0;display:flex;flex-direction:column;justify-content:center;cursor:pointer;transition:all 0.2s;}
 .gamify-badges-card:hover{transform:translateY(-2px);box-shadow:var(--shadow2);border-color:var(--border2);}
 .gamify-badges-title{font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
 .gamify-badges-summary{font-size:9.5px;font-weight:700;color:var(--accent);text-transform:none;letter-spacing:0;}
@@ -1209,7 +1209,7 @@ nav{
     <div class="section-card gamify-card gamify-goal" id="goal-card" onclick="openDailyGoalModal()" title="Clique para ajustar sua meta diária">
       <div class="goal-ring-wrap" id="goal-ring-wrap"></div>
       <div class="gamify-info">
-        <div class="gamify-val" style="font-size:13px">Meta diária</div>
+        <div class="gamify-val" style="font-size:11px">Meta diária</div>
         <div class="gamify-lbl" id="goal-lbl">0 / 60 min</div>
       </div>
     </div>
@@ -3634,7 +3634,7 @@ function renderBadges(){
   const highlights=statuses
     .filter(({a,st})=>!st.maxed&&!(a.secreta&&st.tierIdx<0))
     .sort((x,y)=>y.st.pctToNext-x.st.pctToNext)
-    .slice(0,6);
+    .slice(0,10);
   el.innerHTML=highlights.map(({a,st})=>{
     const label=st.tierIdx>=0?TIER_LABELS[st.tierIdx]:'—';
     const color=st.tierIdx>=0?TIER_COLORS[st.tierIdx]:null;
