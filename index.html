@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Vale dos Nomeados</title>
+<meta name="description" content="Dashboard gamificado de estudos para concurso federal.">
+<meta name="theme-color" content="#7c3aed">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Vale dos Nomeados">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
 :root{
@@ -111,6 +119,31 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 @keyframes dragonFloat{0%,100%{transform:translateY(0)rotate(-4deg);}50%{transform:translateY(-5px)rotate(4deg);}}
 .sidebar-logo h1{font-size:13px;font-weight:900;color:#fff;letter-spacing:1.5px;line-height:1.3;text-align:center;}
 .sidebar-logo small{font-size:8px;color:rgba(255,255,255,0.55);letter-spacing:2px;display:block;margin-top:3px;text-align:center;}
+
+/* ===== BUSCA GLOBAL ===== */
+.sidebar-search-btn{
+  margin:0 16px 14px;display:flex;align-items:center;gap:8px;width:calc(100% - 32px);
+  background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);
+  color:rgba(255,255,255,0.8);border-radius:12px;padding:9px 12px;
+  font-size:11px;font-weight:700;cursor:pointer;transition:all 0.2s;
+}
+.sidebar-search-btn:hover{background:rgba(255,255,255,0.22);color:#fff;}
+@media(max-width:768px){
+  .sidebar-search-btn{
+    position:fixed;left:12px;right:auto;bottom:calc(var(--mobile-navbar-h) + 12px);
+    margin:0;width:34px;height:34px;padding:0;border-radius:50%;
+    justify-content:center;background:rgba(124,58,237,0.85);border:1px solid rgba(255,255,255,0.3);
+    box-shadow:0 2px 10px rgba(0,0,0,0.2);z-index:210;
+  }
+  .search-btn-label{display:none;}
+}
+
+.gs-result{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;cursor:pointer;transition:all 0.15s;border:1.5px solid transparent;}
+.gs-result:hover{background:var(--bg2);border-color:var(--border);}
+.gs-icon{font-size:18px;flex-shrink:0;}
+.gs-title{font-size:12.5px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.gs-sub{font-size:10px;color:var(--muted);font-weight:600;margin-top:1px;}
+.gs-type{font-size:9px;font-weight:800;color:var(--accent);background:rgba(124,58,237,0.08);border-radius:8px;padding:2px 8px;flex-shrink:0;}
 
 /* Info no sidebar: data e XP */
 .sidebar-info{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.12);}
@@ -923,6 +956,11 @@ nav{
     <small>CONCURSO FEDERAL QUEST</small>
   </div>
 
+  <!-- Busca global -->
+  <button class="sidebar-search-btn" id="global-search-btn" onclick="openGlobalSearch()" title="Buscar em assuntos, flashcards, temas e redações">
+    <i class="fa fa-search"></i><span class="search-btn-label">Buscar...</span>
+  </button>
+
   <!-- Info: data e XP -->
   <div class="sidebar-info">
     <div class="exam-wrap">
@@ -1067,10 +1105,13 @@ nav{
     <div class="section-card" style="margin-bottom:0">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px">
         <div class="sec-title" style="margin-bottom:0;font-size:11px">📊 TEMPO ESTUDADO</div>
-        <div class="chart-tabs">
-          <button class="chart-tab active" id="ct-day" onclick="setChartTab('day',this)">Diário</button>
-          <button class="chart-tab" id="ct-week" onclick="setChartTab('week',this)">Semanal</button>
-          <button class="chart-tab" id="ct-month" onclick="setChartTab('month',this)">Mensal</button>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <div class="chart-tabs">
+            <button class="chart-tab active" id="ct-day" onclick="setChartTab('day',this)">Diário</button>
+            <button class="chart-tab" id="ct-week" onclick="setChartTab('week',this)">Semanal</button>
+            <button class="chart-tab" id="ct-month" onclick="setChartTab('month',this)">Mensal</button>
+          </div>
+          <button class="btn btn-xs btn-ghost" onclick="exportStudyCSV()" title="Baixar histórico de estudos em CSV"><i class="fa fa-download"></i> CSV</button>
         </div>
       </div>
       <div class="chart-svg-wrap" id="study-chart-wrap"></div>
@@ -1081,7 +1122,10 @@ nav{
   <!-- Revisões Atrasadas (metade) + O que estudei esta semana (metade) -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px" class="dash-two-col">
     <div class="section-card" style="margin-bottom:0;display:flex;flex-direction:column">
-      <div class="sec-title" style="margin-bottom:4px">⚠️ REVISÕES ATRASADAS</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+        <div class="sec-title" style="margin-bottom:4px">⚠️ REVISÕES ATRASADAS</div>
+        <button id="notif-permission-btn" class="btn btn-xs btn-ghost" style="display:none" onclick="requestNotifPermission()" title="Receber um aviso quando houver revisões atrasadas">🔔 Ativar lembretes</button>
+      </div>
       <div style="font-size:10px;color:var(--muted);margin-bottom:10px;font-weight:600">Revisões cujo prazo já passou</div>
       <div id="dash-overdue-revs" style="overflow-y:auto;flex:1;padding-right:4px;max-height:300px"></div>
     </div>
@@ -1573,6 +1617,37 @@ window.addEventListener('unhandledrejection',(e)=>{
   warnSyncIssue('⚠️ Algo deu errado. Se a tela parecer travada, recarregue a página.');
 });
 
+// ===== NOTIFICAÇÕES LOCAIS (revisões atrasadas) =====
+function requestNotifPermission(){
+  if(!('Notification' in window)){toast('Seu navegador não suporta notificações.','var(--red)');return;}
+  Notification.requestPermission().then(perm=>{
+    updateNotifBtn();
+    if(perm==='granted'){toast('🔔 Notificações ativadas!','var(--green)');checkOverdueNotifications(true);}
+    else if(perm==='denied'){toast('Notificações bloqueadas nas configurações do navegador.','var(--red)');}
+  });
+}
+function updateNotifBtn(){
+  const btn=document.getElementById('notif-permission-btn');
+  if(!btn)return;
+  btn.style.display=('Notification' in window)&&Notification.permission==='default'?'inline-flex':'none';
+}
+// Avisa (no máximo 1x/dia, a menos que forçado logo após ativar) sobre revisões atrasadas.
+function checkOverdueNotifications(force){
+  if(!('Notification' in window)||Notification.permission!=='granted')return;
+  const today=todayStr();
+  if(!force&&localStorage.getItem('vdn_last_notif_date')===today)return;
+  const overdueCount=getAllRevItems().filter(i=>!i.completed&&!i.locked&&i.studied&&i.date<today).length;
+  if(overdueCount>0){
+    try{
+      new Notification('🔔 Vale dos Nomeados',{
+        body:`Você tem ${overdueCount} revisão${overdueCount>1?'ões':''} atrasada${overdueCount>1?'s':''}. Hora de revisar!`,
+        icon:'icons/icon-192.png'
+      });
+    }catch(e){}
+  }
+  localStorage.setItem('vdn_last_notif_date',today);
+}
+
 function saveDB(){
   try{localStorage.setItem(LS_KEY,JSON.stringify(sanitizeForFirebase(db)));}catch(e){}
   if(useLocalFallback||!DB_REF)return;
@@ -1642,11 +1717,20 @@ loadDB(()=>{
   updateRevBadge();
   updateEditaisBadge();
   updateFCBadge();
+  updateNotifBtn();
+  checkOverdueNotifications();
   // Dashboard é a tela ativa, renderizar por último
   setTimeout(()=>renderDashboard(),50);
 });
 setInterval(tickTimers,1000);
 setInterval(updateRevBadge,30000);
+
+// ===== PWA: SERVICE WORKER =====
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').catch(e=>console.warn('Falha ao registrar service worker:',e));
+  });
+}
 
 // Force an immediate timer refresh when the tab becomes visible again
 // (browsers throttle setInterval in background tabs, causing visual delay —
@@ -2404,6 +2488,85 @@ function renderStudyChart(){
   <div id="chart-tip" style="text-align:center;font-size:10px;color:var(--accent);font-weight:800;min-height:14px;margin-top:2px"></div>`;
 
   if(totalEl) totalEl.textContent=totalSec>0?`Total no período: ${fmtTime(totalSec)}`:'Nenhum estudo registrado neste período';
+}
+
+// ===== BUSCA GLOBAL =====
+function openGlobalSearch(){
+  openModal('🔍 Busca Global',`
+    <input type="text" id="global-search-input" class="inp" placeholder="Buscar assunto, flashcard, tema de repertório, redação..." style="width:100%;margin-bottom:14px" oninput="renderGlobalSearchResults()">
+    <div id="global-search-results" style="max-height:50vh;overflow-y:auto;display:flex;flex-direction:column;gap:4px"></div>
+  `);
+  setTimeout(()=>document.getElementById('global-search-input')?.focus(),80);
+}
+let globalSearchDebounce=null;
+function renderGlobalSearchResults(){
+  clearTimeout(globalSearchDebounce);
+  globalSearchDebounce=setTimeout(()=>{
+    const q=(document.getElementById('global-search-input')?.value||'').trim().toLowerCase();
+    const resultsEl=document.getElementById('global-search-results');
+    if(!resultsEl)return;
+    if(q.length<2){resultsEl.innerHTML='<div class="empty" style="padding:16px"><p>Digite ao menos 2 letras...</p></div>';window._gsResults=[];return;}
+    const results=globalSearch(q);
+    window._gsResults=results;
+    if(!results.length){resultsEl.innerHTML=`<div class="empty" style="padding:16px"><p>Nada encontrado pra "${q}"</p></div>`;return;}
+    resultsEl.innerHTML=results.slice(0,40).map((r,i)=>`
+      <div class="gs-result" onclick="globalSearchGo(${i})">
+        <span class="gs-icon">${r.icon}</span>
+        <div style="flex:1;min-width:0">
+          <div class="gs-title">${r.title}</div>
+          <div class="gs-sub">${r.sub}</div>
+        </div>
+        <span class="gs-type">${r.typeLabel}</span>
+      </div>`).join('');
+  },150);
+}
+function globalSearchGo(i){
+  const r=(window._gsResults||[])[i];
+  if(r&&r.action)r.action();
+}
+function globalSearch(q){
+  const results=[];
+  db.kingdoms.forEach(k=>{
+    (db.topics[k.id]||[]).forEach(t=>{
+      (t.subtopics||[]).forEach(s=>{
+        if((s.name||'').toLowerCase().includes(q)){
+          results.push({icon:k.icon||'🏰',title:s.name,sub:`${k.name} · ${t.name}`,typeLabel:'Assunto',action:()=>{closeModal();showScreen('map');goToSubtopic(s.id);}});
+        }
+      });
+    });
+  });
+  Object.values(db.flashcards||{}).forEach(c=>{
+    if((c.pergunta||'').toLowerCase().includes(q)){
+      results.push({icon:'🃏',title:c.pergunta,sub:'Flashcard',typeLabel:'Flashcard',action:()=>{closeModal();showScreen('flashcards');selectFCBoss(c.mbId);}});
+    }
+  });
+  Object.values((db.repertorio&&db.repertorio.temas)||{}).forEach(t=>{
+    if((t.nome||'').toLowerCase().includes(q)){
+      results.push({icon:'🧠',title:t.nome,sub:'Repertório',typeLabel:'Repertório',action:()=>{closeModal();showScreen('repertorio');repSelectTema(t.id);}});
+    }
+  });
+  Object.values((db.redacoes&&db.redacoes.topics)||{}).forEach(t=>{
+    if((t.name||'').toLowerCase().includes(q)){
+      results.push({icon:'📝',title:t.name,sub:'Redações',typeLabel:'Redação',action:()=>{closeModal();showScreen('redacoes');rdSelectTopic(t.id);}});
+    }
+  });
+  return results;
+}
+
+// ===== EXPORTAR CSV =====
+function exportStudyCSV(){
+  const sessions=db.sessions||{};
+  const dates=Object.keys(sessions).sort();
+  if(!dates.length){toast('Nenhum dado de estudo pra exportar ainda.','var(--red)');return;}
+  let csv='Data,Minutos estudados\n';
+  dates.forEach(d=>{csv+=`${d},${Math.round(sessions[d]/60)}\n`;});
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`vale-dos-nomeados-historico-${todayStr()}.csv`;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('📥 CSV exportado!','var(--green)');
 }
 
 // ===== REVISIONS =====
