@@ -1255,6 +1255,7 @@ nav{
   <div class="sidebar-bottom-row">
     <button class="theme-toggle-btn" id="theme-toggle" onclick="toggleTheme()" title="Alternar tema claro/escuro">🌙</button>
     <button class="sidebar-timer-btn" id="float-timer-btn" onclick="floatTimerOpen()" title="Cronômetro de Sessão">⏱️</button>
+    <button class="sidebar-timer-btn" id="auth-logout-btn" onclick="authSignOut()" title="Sair da conta" style="display:none">🚪</button>
   </div>
 </div>
 
@@ -1673,7 +1674,7 @@ nav{
   <div class="loading-brand">
     <div class="loading-logo">🐉</div>
     <div class="loading-title">VALE DOS NOMEADOS</div>
-    <div id="loading-msg" class="loading-msg">Conectando ao banco de dados...</div>
+    <div id="loading-msg" class="loading-msg">Verificando sessão...</div>
     <div id="loading-error" class="loading-error" style="display:none">
       <div id="loading-error-msg" class="loading-error-msg"></div>
       <button onclick="location.reload()" class="btn-retry">↺ Tentar novamente</button>
@@ -1709,7 +1710,36 @@ nav{
 .loading-error{text-align:center;margin-top:4px;}
 .loading-error-msg{font-size:13px;color:var(--red);font-weight:700;}
 .btn-retry{margin-top:12px;padding:10px 24px;background:var(--accent);color:#fff;border:none;border-radius:var(--r-md);font-size:13px;font-weight:700;cursor:pointer;}
+
+.auth-brand{max-width:340px;width:90%;gap:14px;}
+.auth-tabs{display:flex;gap:4px;background:var(--bg2);border-radius:10px;padding:3px;width:100%;}
+.auth-tab{flex:1;background:none;border:none;color:var(--muted);font-size:12px;font-weight:800;padding:9px;border-radius:8px;cursor:pointer;transition:all .15s;letter-spacing:0.3px;}
+.auth-tab.active{background:var(--accent);color:#fff;}
+.auth-error{display:none;font-size:12px;color:var(--red);font-weight:700;text-align:center;width:100%;line-height:1.4;}
+.auth-divider{width:100%;text-align:center;font-size:10px;color:var(--muted);font-weight:800;letter-spacing:0.5px;position:relative;}
+.auth-forgot{background:none;border:none;color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;text-decoration:underline;padding:2px;}
 </style>
+
+<!-- TELA DE LOGIN / CADASTRO — gate de autenticação, some assim que o usuário loga -->
+<div id="screen-login" class="loading-overlay" style="display:none">
+  <div class="loading-brand auth-brand">
+    <div class="loading-logo">🐉</div>
+    <div class="loading-title">VALE DOS NOMEADOS</div>
+    <div class="auth-tabs">
+      <button type="button" class="auth-tab active" id="auth-tab-login" onclick="authSetTab('login')">Entrar</button>
+      <button type="button" class="auth-tab" id="auth-tab-signup" onclick="authSetTab('signup')">Criar conta</button>
+    </div>
+    <div class="auth-error" id="auth-error"></div>
+    <form id="auth-form" style="width:100%;display:flex;flex-direction:column;gap:10px" onsubmit="event.preventDefault();authSubmit();">
+      <input type="email" id="auth-email" class="inp" placeholder="E-mail" style="width:100%" autocomplete="email" required>
+      <input type="password" id="auth-password" class="inp" placeholder="Senha (mín. 6 caracteres)" style="width:100%" autocomplete="current-password" required minlength="6">
+      <button type="submit" class="btn btn-primary" id="auth-submit-btn" style="width:100%;justify-content:center">Entrar</button>
+    </form>
+    <button type="button" id="auth-forgot-btn" class="auth-forgot" onclick="authForgotPassword()">Esqueci minha senha</button>
+    <div class="auth-divider">— ou —</div>
+    <button type="button" class="btn btn-ghost" style="width:100%;justify-content:center" onclick="authSignInGoogle()"><i class="fa-brands fa-google"></i> Entrar com Google</button>
+  </div>
+</div>
 
 </div><!-- #app -->
 
@@ -1789,6 +1819,7 @@ nav{
 <!-- Firebase SDK compat — funciona em qualquer ambiente (GitHub Pages, file://, etc) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 
 <!-- D3 + topojson-client — só usados pelo "O Mapa do Vale" (mapa real do Brasil) -->
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
@@ -1873,6 +1904,155 @@ try{
 
 function sanitizeForFirebase(obj){
   return JSON.parse(JSON.stringify(obj));
+}
+
+// ===== AUTENTICAÇÃO (Firebase Auth — Google + e-mail/senha) =====
+// Sub-passo 0.1 da preparação comercial: só o login, ainda sem isolar os dados por usuário
+// (isso vem no 0.2/0.3). O app inteiro fica atrás desse gate — só chama bootApp() depois
+// que o Firebase confirma se há (ou não) uma sessão válida.
+let currentUser=null;
+let authMode='login'; // 'login' | 'signup'
+let authFirebase=null;
+let appBooted=false;
+try{
+  if(!useLocalFallback)authFirebase=firebase.auth();
+}catch(e){
+  console.warn('Firebase Auth init failed:',e);
+}
+
+function authSetTab(mode){
+  authMode=mode;
+  document.getElementById('auth-tab-login')?.classList.toggle('active',mode==='login');
+  document.getElementById('auth-tab-signup')?.classList.toggle('active',mode==='signup');
+  const btn=document.getElementById('auth-submit-btn');
+  if(btn)btn.textContent=mode==='login'?'Entrar':'Criar conta';
+  const forgot=document.getElementById('auth-forgot-btn');
+  if(forgot)forgot.style.display=mode==='login'?'inline':'none';
+  authClearError();
+}
+function authClearError(){
+  const el=document.getElementById('auth-error');
+  if(el){el.style.display='none';el.textContent='';}
+}
+function authShowError(msg){
+  const el=document.getElementById('auth-error');
+  if(el){el.style.display='block';el.textContent=msg;}
+}
+// Mensagens de erro do Firebase Auth traduzidas — a pessoa não deveria ver "auth/wrong-password" na tela.
+function authErrorMessage(code){
+  const map={
+    'auth/invalid-email':'E-mail inválido.',
+    'auth/user-disabled':'Esta conta foi desativada.',
+    'auth/user-not-found':'Não existe conta com esse e-mail.',
+    'auth/wrong-password':'Senha incorreta.',
+    'auth/invalid-credential':'E-mail ou senha incorretos.',
+    'auth/email-already-in-use':'Já existe uma conta com esse e-mail — tente entrar em vez de criar uma nova.',
+    'auth/weak-password':'A senha precisa ter pelo menos 6 caracteres.',
+    'auth/missing-password':'Digite uma senha.',
+    'auth/too-many-requests':'Muitas tentativas seguidas. Aguarde um pouco e tente de novo.',
+    'auth/network-request-failed':'Falha de conexão. Verifique sua internet e tente de novo.',
+    'auth/popup-closed-by-user':'Login com Google cancelado.',
+    'auth/cancelled-popup-request':'Login com Google cancelado.',
+    'auth/popup-blocked':'O navegador bloqueou a janela de login do Google. Permita pop-ups e tente de novo.',
+  };
+  return map[code]||'Não foi possível autenticar agora. Tente novamente.';
+}
+function authSubmit(){
+  if(!authFirebase){authShowError('Autenticação indisponível neste momento.');return;}
+  const email=(document.getElementById('auth-email')?.value||'').trim();
+  const password=document.getElementById('auth-password')?.value||'';
+  authClearError();
+  if(!email||!password){authShowError('Preencha e-mail e senha.');return;}
+  const btn=document.getElementById('auth-submit-btn');
+  const originalLabel=authMode==='login'?'Entrar':'Criar conta';
+  if(btn){btn.disabled=true;btn.textContent='Aguarde...';}
+  const restore=()=>{if(btn){btn.disabled=false;btn.textContent=originalLabel;}};
+  const action=authMode==='login'
+    ?authFirebase.signInWithEmailAndPassword(email,password)
+    :authFirebase.createUserWithEmailAndPassword(email,password);
+  action.then((cred)=>{
+    if(authMode==='signup'&&cred.user&&!cred.user.emailVerified){
+      cred.user.sendEmailVerification().catch(()=>{});
+    }
+    // onAuthStateChanged cuida do resto (esconder tela de login, iniciar o app)
+  }).catch(e=>{
+    console.warn('Auth error:',e);
+    authShowError(authErrorMessage(e.code));
+    restore();
+  });
+}
+function authSignInGoogle(){
+  if(!authFirebase){authShowError('Autenticação indisponível neste momento.');return;}
+  authClearError();
+  const provider=new firebase.auth.GoogleAuthProvider();
+  authFirebase.signInWithPopup(provider).catch(e=>{
+    console.warn('Google sign-in error:',e);
+    if(e.code!=='auth/popup-closed-by-user'&&e.code!=='auth/cancelled-popup-request'){
+      authShowError(authErrorMessage(e.code));
+    }
+  });
+}
+function authForgotPassword(){
+  if(!authFirebase){authShowError('Autenticação indisponível neste momento.');return;}
+  const email=(document.getElementById('auth-email')?.value||'').trim();
+  if(!email){authShowError('Digite seu e-mail no campo acima e clique de novo em "Esqueci minha senha".');return;}
+  authClearError();
+  authFirebase.sendPasswordResetEmail(email).then(()=>{
+    toast('📧 E-mail de redefinição enviado! Confira sua caixa de entrada.','var(--green)');
+  }).catch(e=>{
+    console.warn('Password reset error:',e);
+    authShowError(authErrorMessage(e.code));
+  });
+}
+function authSignOut(){
+  if(!authFirebase)return;
+  if(!confirm('Sair da sua conta?'))return;
+  authFirebase.signOut();
+}
+function authShowLoginScreen(){
+  const overlay=document.getElementById('loading-overlay');
+  const login=document.getElementById('screen-login');
+  if(overlay)overlay.style.display='none';
+  if(login){
+    login.style.display='flex';
+    const form=document.getElementById('auth-form');
+    if(form)form.reset();
+    authSetTab('login');
+  }
+}
+function authUpdateLogoutBtn(){
+  const btn=document.getElementById('auth-logout-btn');
+  if(!btn)return;
+  if(currentUser){
+    btn.style.display='inline-flex';
+    btn.title=`Sair (${currentUser.email||'conta conectada'})`;
+  }else{
+    btn.style.display='none';
+  }
+}
+if(authFirebase){
+  authFirebase.onAuthStateChanged((user)=>{
+    currentUser=user;
+    authUpdateLogoutBtn();
+    if(user){
+      const login=document.getElementById('screen-login');
+      if(login)login.style.display='none';
+      if(!appBooted){appBooted=true;bootApp();}
+    }else{
+      if(appBooted){
+        // Sessão encerrada com o app já rodando (logout manual) — recarrega limpo
+        // pra garantir que nenhuma tela fique mostrando dados da sessão anterior.
+        location.reload();
+        return;
+      }
+      authShowLoginScreen();
+    }
+  });
+}else{
+  // Sem SDK de Auth disponível (ex.: bloqueado por rede) — não trava o usuário fora do
+  // app nesta fase de transição; cai direto pro fluxo antigo (dados ainda não isolados).
+  appBooted=true;
+  bootApp();
 }
 
 let db={kingdoms:[],topics:{},times:{},revisions:{},xp:0,examDate:'',sessions:{}};
@@ -2188,20 +2368,25 @@ let mbFilter='all';
 let errFilter='pending';
 
 // ===== INIT =====
-loadDB(()=>{
-  renderHeader();
-  renderMap();
-  updateRevBadge();
-  updateEditaisBadge();
-  updateErrosBadge();
-  updateFCBadge();
-  updateNotifBtn();
-  checkOverdueNotifications();
-  // Dashboard é a tela ativa, renderizar por último
-  setTimeout(()=>renderDashboard(),50);
-});
-setInterval(tickTimers,1000);
-setInterval(updateRevBadge,30000);
+// Só roda depois que o gate de autenticação (ver bloco "AUTENTICAÇÃO" acima) confirma que
+// há uma sessão válida — chamado por onAuthStateChanged, não mais direto no carregamento
+// do script.
+function bootApp(){
+  loadDB(()=>{
+    renderHeader();
+    renderMap();
+    updateRevBadge();
+    updateEditaisBadge();
+    updateErrosBadge();
+    updateFCBadge();
+    updateNotifBtn();
+    checkOverdueNotifications();
+    // Dashboard é a tela ativa, renderizar por último
+    setTimeout(()=>renderDashboard(),50);
+  });
+  setInterval(tickTimers,1000);
+  setInterval(updateRevBadge,30000);
+}
 
 // ===== PWA: SERVICE WORKER =====
 if('serviceWorker' in navigator){
