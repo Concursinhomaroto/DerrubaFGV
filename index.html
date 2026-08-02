@@ -6837,6 +6837,9 @@ let fcPdfGenerating=false;
 let fcVoiceMode=false;  // leitura por voz (síntese do navegador) no modo estudo
 let fcVoiceLastKey='';  // evita repetir a fala ao re-renderizar o mesmo card/lado
 let fcVoiceTimer=null;  // timeout entre ler a pergunta e virar o card sozinho
+let fcAutoMode=false;   // modo 100% automático: ouve a nota de confiança e passa sozinho
+let fcRecognition=null; // instância única de SpeechRecognition (reaproveitada entre cards)
+let fcAutoListenTimer=null; // limite de segurança pra nunca travar esperando resposta
 
 const DIFF_COLORS=['','#22c55e','#84cc16','#f59e0b','#f97316','#ef4444'];
 const DIFF_LABELS=['','Fácil','Fácil+','Médio','Difícil','Difícil+'];
@@ -7147,6 +7150,7 @@ function renderFCMain(){
           <button class="fc-mode-btn${fcMode==='timeline'?' active':''}" onclick="fcSetMode('timeline')">📅 Agenda</button>
         </div>
         <button class="btn btn-sm${fcVoiceMode?' btn-primary':' btn-ghost'}" onclick="fcToggleVoiceMode()" title="Lê a pergunta em voz alta, espera 6s e vira o card sozinho lendo a resposta — pra estudar sem precisar olhar pra tela">${fcVoiceMode?'🔊':'🔇'} Voz</button>
+        <button class="btn btn-sm${fcAutoMode?' btn-primary':' btn-ghost'}" onclick="fcToggleAutoMode()" title="Além de ler pergunta e resposta, pergunta 'Como foi?' e OUVE sua resposta falada (fácil/difícil/não lembrei) pra passar pro próximo card sozinho — 100% sem tocar na tela">${fcAutoMode?'🤖':'⚙️'} Automático</button>
         <button class="btn btn-ghost btn-sm" onclick="fcExportDeck()" title="Baixar todos os cards deste chefão em JSON"><i class="fa fa-download"></i> Exportar</button>
         <button class="btn btn-ghost btn-sm" onclick="fcImportDeckPrompt()" title="Importar cards de um arquivo JSON"><i class="fa fa-upload"></i> Importar</button>
         <input type="file" id="fc-import-input" accept="application/json" style="display:none" onchange="fcImportDeckFile(this)">
@@ -7517,10 +7521,11 @@ function fcStudyHTML(cards){
 // ===== LEITURA POR VOZ (síntese do navegador — dá pra estudar sem precisar olhar pra tela,
 // sem precisar de Alexa/skill nenhuma) =====
 // Lê a pergunta em voz alta, espera 6s (tempo pra responder em voz alta, como um flashcard
-// físico de verdade), depois vira o card sozinho e lê a resposta. O usuário ainda clica
-// manualmente num dos 4 botões de confiança pra seguir — a voz só automatiza a LEITURA, a
-// avaliação continua manual porque é ela que alimenta o SM-2 (não dá pra adivinhar sozinho
-// se a pessoa "lembrou fácil" ou "lembrou com dificuldade" só pelo áudio).
+// físico de verdade), depois vira o card sozinho e lê a resposta. No modo simples (só "Voz")
+// o usuário ainda clica manualmente num dos 4 botões de confiança pra seguir. No modo
+// "Automático" (que exige reconhecimento de fala do navegador), depois de ler a resposta ele
+// pergunta "Como foi?" e ouve a resposta falada, convertendo pra uma das 4 notas sozinho —
+// aí sim passa pro próximo card sem precisar tocar em nada.
 function fcSpeak(text,onEnd){
   if(!('speechSynthesis' in window))return;
   window.speechSynthesis.cancel();
@@ -7535,14 +7540,76 @@ function fcSpeak(text,onEnd){
 function fcVoiceStop(){
   if('speechSynthesis' in window)window.speechSynthesis.cancel();
   if(fcVoiceTimer){clearTimeout(fcVoiceTimer);fcVoiceTimer=null;}
+  if(fcAutoListenTimer){clearTimeout(fcAutoListenTimer);fcAutoListenTimer=null;}
+  if(fcRecognition){try{fcRecognition.onresult=null;fcRecognition.onerror=null;fcRecognition.onend=null;fcRecognition.abort();}catch(e){}}
 }
 function fcToggleVoiceMode(){
   if(!('speechSynthesis' in window)){toast('⚠️ Seu navegador não suporta leitura por voz.','var(--red)');return;}
   fcVoiceMode=!fcVoiceMode;
+  if(!fcVoiceMode)fcAutoMode=false; // sem voz não tem como o modo automático funcionar
   fcVoiceLastKey='';
   if(!fcVoiceMode)fcVoiceStop();
   renderFCMain();
   if(fcVoiceMode)fcVoiceMaybeSpeak();
+}
+function fcSpeechRecognitionSupported(){
+  return!!(window.SpeechRecognition||window.webkitSpeechRecognition);
+}
+function fcToggleAutoMode(){
+  if(!fcSpeechRecognitionSupported()){toast('⚠️ Seu navegador não suporta reconhecimento de fala — o modo automático precisa disso pra "ouvir" sua resposta.','var(--red)');return;}
+  fcAutoMode=!fcAutoMode;
+  if(fcAutoMode&&!fcVoiceMode)fcVoiceMode=true; // automático liga a voz junto, senão não faz sentido
+  fcVoiceLastKey='';
+  fcVoiceStop();
+  renderFCMain();
+  if(fcAutoMode)fcVoiceMaybeSpeak();
+}
+// Converte o que a pessoa falou ("fácil", "difícil", "não lembrei"...) numa das 4 notas de
+// confiança. "não" precisa ser checado ANTES de "lembrei" pra "não lembrei" não cair no caso
+// de "lembrei" por engano. Qualquer coisa não reconhecida vira nota neutra (3, "Lembrei") em
+// vez de travar o fluxo ou contar como erro — melhor errar pra um valor neutro do que
+// atrapalhar a sessão inteira.
+function fcParseConfidence(text){
+  const t=(text||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+  if(/\b(nao|esqueci|errei|nada|zero)\b/.test(t))return 1;
+  if(/\bfacil\b/.test(t))return 4;
+  if(/\bdificil\b/.test(t))return 2;
+  return 3;
+}
+function fcListenForConfidence(cardId){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){fcStudyConf(cardId,3);return;}
+  if(!fcRecognition){
+    fcRecognition=new SR();
+    fcRecognition.lang='pt-BR';
+    fcRecognition.continuous=false;
+    fcRecognition.interimResults=false;
+    fcRecognition.maxAlternatives=1;
+  }
+  const rec=fcRecognition;
+  let resolved=false;
+  const finish=(conf)=>{
+    if(resolved)return;
+    resolved=true;
+    if(fcAutoListenTimer){clearTimeout(fcAutoListenTimer);fcAutoListenTimer=null;}
+    rec.onresult=null;rec.onerror=null;rec.onend=null;
+    try{rec.stop();}catch(e){}
+    fcStudyConf(cardId,conf);
+  };
+  rec.onresult=(ev)=>{
+    const text=ev.results&&ev.results[0]&&ev.results[0][0]?ev.results[0][0].transcript:'';
+    finish(fcParseConfidence(text));
+  };
+  rec.onerror=(ev)=>{
+    if(ev&&(ev.error==='not-allowed'||ev.error==='service-not-allowed')){
+      fcAutoMode=false;
+      toast('⚠️ Sem permissão pro microfone — modo automático desligado. Você pode continuar no modo "Voz" simples.','var(--red)');
+    }
+    finish(3);
+  };
+  rec.onend=()=>{if(!resolved)finish(3);};
+  fcAutoListenTimer=setTimeout(()=>finish(3),8000);
+  try{rec.start();}catch(e){finish(3);}
 }
 // Chamado a cada render do modo estudo — só fala se o card OU o lado (pergunta/resposta)
 // mudou desde a última fala, senão um simples re-render (ex: digitar em outro campo)
@@ -7562,6 +7629,13 @@ function fcVoiceMaybeSpeak(){
         if(!fcVoiceMode)return;
         fcStudyFlip();
       },6000);
+    });
+  }else if(fcAutoMode){
+    fcSpeak(c.resposta,()=>{
+      fcSpeak('Como foi?',()=>{
+        if(!fcAutoMode)return;
+        fcListenForConfidence(c.id);
+      });
     });
   }else{
     fcSpeak(c.resposta);
