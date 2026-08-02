@@ -867,9 +867,14 @@ nav{
 
 /* MODO ESTUDO */
 .fc-study-wrap{perspective:1200px;margin-bottom:20px;}
-.fc-card-3d{width:100%;min-height:260px;position:relative;transform-style:preserve-3d;transition:transform .55s cubic-bezier(.4,0,.2,1);cursor:pointer;}
+.fc-card-3d{width:100%;min-height:300px;max-height:min(65vh,520px);position:relative;transform-style:preserve-3d;transition:transform .55s cubic-bezier(.4,0,.2,1);cursor:pointer;}
 .fc-card-3d.flipped{transform:rotateY(180deg);}
-.fc-face{position:absolute;inset:0;backface-visibility:hidden;border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 28px;text-align:center;}
+/* Pergunta/resposta longa (ex: artigo de lei inteiro) não pode estourar o card por cima dos
+   outros elementos da tela — .fc-face vira a área rolável, e o "margin:auto" no wrapper
+   interno centraliza texto curto normalmente mas ainda deixa o topo do texto longo acessível
+   ao rolar (diferente de só usar justify-content:center, que corta o início do overflow). */
+.fc-face{position:absolute;inset:0;backface-visibility:hidden;border-radius:20px;display:flex;padding:28px 24px;overflow-y:auto;}
+.fc-face-inner{margin:auto;width:100%;text-align:center;}
 .fc-front{background:linear-gradient(135deg,var(--accent) 0%,#4f46e5 100%);box-shadow:0 8px 32px rgba(108,71,255,0.3);}
 .fc-back{background:var(--panel);border:2px solid var(--border);transform:rotateY(180deg);box-shadow:0 8px 32px rgba(0,0,0,0.08);}
 .fc-face-hint{font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;opacity:.6;margin-bottom:14px;}
@@ -7477,15 +7482,19 @@ function fcStudyHTML(cards){
     <div class="fc-study-wrap" onclick="fcStudyFlip()">
       <div class="fc-card-3d${fcStudyFlipped?' flipped':''}" id="fc-study-card">
         <div class="fc-face fc-front">
-          <div class="fc-face-hint">📋 Pergunta · clique para ver a resposta</div>
-          <div class="fc-face-text" style="white-space:pre-wrap">${c.pergunta}</div>
-          <div style="margin-top:12px;font-size:9px;font-weight:800;color:rgba(255,255,255,0.6)">${fcStatusLabel(st,c)}</div>
-          <div class="fc-diff-dots">${[1,2,3,4,5].map(n=>`<div class="fc-diff-dot" style="background:${n<=(c.dificuldade||3)?DIFF_COLORS[c.dificuldade||3]:'rgba(255,255,255,0.2)'}"></div>`).join('')}</div>
+          <div class="fc-face-inner">
+            <div class="fc-face-hint">📋 Pergunta · clique para ver a resposta</div>
+            <div class="fc-face-text" style="white-space:pre-wrap">${c.pergunta}</div>
+            <div style="margin-top:12px;font-size:9px;font-weight:800;color:rgba(255,255,255,0.6)">${fcStatusLabel(st,c)}</div>
+            <div class="fc-diff-dots">${[1,2,3,4,5].map(n=>`<div class="fc-diff-dot" style="background:${n<=(c.dificuldade||3)?DIFF_COLORS[c.dificuldade||3]:'rgba(255,255,255,0.2)'}"></div>`).join('')}</div>
+          </div>
         </div>
         <div class="fc-face fc-back">
-          <div class="fc-face-hint">💡 Resposta</div>
-          <div class="fc-face-text" style="white-space:pre-wrap">${c.resposta}</div>
-          ${c.tags?`<div style="margin-top:12px;display:flex;gap:4px;flex-wrap:wrap;justify-content:center">${c.tags.split(',').filter(t=>t.trim()).map(t=>`<span class="fc-card-tag">#${t.trim()}</span>`).join('')}</div>`:''}
+          <div class="fc-face-inner">
+            <div class="fc-face-hint">💡 Resposta</div>
+            <div class="fc-face-text" style="white-space:pre-wrap">${c.resposta}</div>
+            ${c.tags?`<div style="margin-top:12px;display:flex;gap:4px;flex-wrap:wrap;justify-content:center">${c.tags.split(',').filter(t=>t.trim()).map(t=>`<span class="fc-card-tag">#${t.trim()}</span>`).join('')}</div>`:''}
+          </div>
         </div>
       </div>
     </div>
