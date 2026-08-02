@@ -1895,7 +1895,9 @@ const LS_KEY='vdn_local_v1';
 try{
   firebase.initializeApp(firebaseConfig);
   firebaseDB=firebase.database();
-  DB_REF=firebaseDB.ref('vdn_v1');
+  // DB_REF não é montado aqui: só sabemos o uid depois que o login resolve (ver
+  // userRef()/bootApp() mais abaixo, no bloco de AUTENTICAÇÃO). connectedRef é um caminho
+  // especial do próprio Firebase (não é dado de usuário), esse pode ser montado já.
   connectedRef=firebaseDB.ref('.info/connected');
 }catch(e){
   console.warn('Firebase init failed, using localStorage:',e);
@@ -1907,9 +1909,9 @@ function sanitizeForFirebase(obj){
 }
 
 // ===== AUTENTICAÇÃO (Firebase Auth — Google + e-mail/senha) =====
-// Sub-passo 0.1 da preparação comercial: só o login, ainda sem isolar os dados por usuário
-// (isso vem no 0.2/0.3). O app inteiro fica atrás desse gate — só chama bootApp() depois
-// que o Firebase confirma se há (ou não) uma sessão válida.
+// Fase 0.1: login/cadastro/logout. Fase 0.2: dados namespaced por usuário (userRef() abaixo).
+// O app inteiro fica atrás desse gate — só chama bootApp() depois que o Firebase confirma
+// se há (ou não) uma sessão válida.
 let currentUser=null;
 let authMode='login'; // 'login' | 'signup'
 let authFirebase=null;
@@ -1918,6 +1920,17 @@ try{
   if(!useLocalFallback)authFirebase=firebase.auth();
 }catch(e){
   console.warn('Firebase Auth init failed:',e);
+}
+
+// Camada única de acesso aos dados: monta o caminho já isolado por usuário
+// (users/{uid}/...) em vez de um caminho global compartilhado. Toda leitura/escrita no
+// Firebase Database passa por aqui — nunca chame firebaseDB.ref(...) direto pra dados de
+// usuário em outro lugar do código. Sem usuário logado ainda (ou Auth indisponível),
+// retorna null; quem chama trata isso como "sem Firebase disponível" e cai no fallback de
+// localStorage, do mesmo jeito que já acontece quando o Firebase inteiro está fora do ar.
+function userRef(path){
+  if(!firebaseDB||!currentUser)return null;
+  return firebaseDB.ref(`users/${currentUser.uid}/${path}`);
 }
 
 function authSetTab(mode){
@@ -2372,6 +2385,10 @@ let errFilter='pending';
 // há uma sessão válida — chamado por onAuthStateChanged, não mais direto no carregamento
 // do script.
 function bootApp(){
+  // Fase 0.2: dados isolados por usuário. Sem usuário logado (fallback de Auth
+  // indisponível), userRef() retorna null e loadDB()/saveDB() já sabem cair pro
+  // localStorage — mesmo caminho que usam quando o Firebase inteiro está fora do ar.
+  DB_REF=userRef('vdn_v1');
   loadDB(()=>{
     renderHeader();
     renderMap();
