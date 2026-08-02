@@ -116,6 +116,13 @@ Ordem conforme priorização pedida: **mobile responsivo → design system → n
 - Planos Free/Pro (gates de limite), onboarding guiado, landing page, painel admin de métricas.
 - **Impacto:** altíssimo para o modelo de negócio, mas é a fase mais arriscada tecnicamente — não deve começar sem confirmação explícita, dado que envolve regras de segurança e dados reais de produção.
 - **Esforço:** XL (dias, não horas).
+- **Status:** Fase 0.1–0.4 concluídas (Auth, isolamento por usuário via `users/{uid}/...`, migração dos dados antigos, Security Rules publicadas e validadas com conta real + conta nova).
+
+#### Decisão pendente: chave de API do Gemini (revisitar antes de vender)
+Hoje cada usuário cola a própria chave de API do Gemini nas configurações (`db.geminiApiKey`, isolada por conta desde a Fase 0.2) — funciona pra vários usuários sem custo de API pra quem administra o site, mas exige que cada pessoa crie conta no Google AI Studio, o que é fricção alta pra um público não-técnico.
+
+Decisão (2026-08-02): manter o modelo atual por enquanto. Revisitar quando a plataforma for finalizada pra venda de verdade. Opção considerada pra esse momento:
+- **Chave centralizada + proxy backend com limite por plano**: dono do site paga uma única chave, cada usuário tem uma cota (ex.: X gerações/dia no Free, mais no Pro). Só é seguro com um backend fazendo o proxy (a chave nunca pode ficar exposta no JS do navegador, senão qualquer usuário abre o DevTools e rouba/abusa dela) — provavelmente reaproveitando o formato do Cloudflare Worker que existia antes de ser removido (commit `77e42c4`), agora validando o token de Auth do Firebase pra aplicar a cota por usuário.
 
 ## 4. Como cada fase será validada
 Checklist manual por tela (mapa, chefão, revisões, dashboard, editais, flashcards em 3 modos, redações com cálculo NPD, repertório) em 375px e 1440px, em Chrome e Firefox, antes e depois de cada fase — documentado neste arquivo conforme evolui.
