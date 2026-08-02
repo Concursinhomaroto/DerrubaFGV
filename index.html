@@ -1895,7 +1895,9 @@ const LS_KEY='vdn_local_v1';
 try{
   firebase.initializeApp(firebaseConfig);
   firebaseDB=firebase.database();
-  DB_REF=firebaseDB.ref('vdn_v1');
+  // DB_REF não é montado aqui: só sabemos o uid depois que o login resolve (ver
+  // userRef()/bootApp() mais abaixo, no bloco de AUTENTICAÇÃO). connectedRef é um caminho
+  // especial do próprio Firebase (não é dado de usuário), esse pode ser montado já.
   connectedRef=firebaseDB.ref('.info/connected');
 }catch(e){
   console.warn('Firebase init failed, using localStorage:',e);
@@ -1907,9 +1909,9 @@ function sanitizeForFirebase(obj){
 }
 
 // ===== AUTENTICAÇÃO (Firebase Auth — Google + e-mail/senha) =====
-// Sub-passo 0.1 da preparação comercial: só o login, ainda sem isolar os dados por usuário
-// (isso vem no 0.2/0.3). O app inteiro fica atrás desse gate — só chama bootApp() depois
-// que o Firebase confirma se há (ou não) uma sessão válida.
+// Fase 0.1: login/cadastro/logout. Fase 0.2: dados namespaced por usuário (userRef() abaixo).
+// O app inteiro fica atrás desse gate — só chama bootApp() depois que o Firebase confirma
+// se há (ou não) uma sessão válida.
 let currentUser=null;
 let authMode='login'; // 'login' | 'signup'
 let authFirebase=null;
@@ -1918,6 +1920,17 @@ try{
   if(!useLocalFallback)authFirebase=firebase.auth();
 }catch(e){
   console.warn('Firebase Auth init failed:',e);
+}
+
+// Camada única de acesso aos dados: monta o caminho já isolado por usuário
+// (users/{uid}/...) em vez de um caminho global compartilhado. Toda leitura/escrita no
+// Firebase Database passa por aqui — nunca chame firebaseDB.ref(...) direto pra dados de
+// usuário em outro lugar do código. Sem usuário logado ainda (ou Auth indisponível),
+// retorna null; quem chama trata isso como "sem Firebase disponível" e cai no fallback de
+// localStorage, do mesmo jeito que já acontece quando o Firebase inteiro está fora do ar.
+function userRef(path){
+  if(!firebaseDB||!currentUser)return null;
+  return firebaseDB.ref(`users/${currentUser.uid}/${path}`);
 }
 
 function authSetTab(mode){
@@ -2183,6 +2196,7 @@ function loadDB(callback){
     if(!firebaseReady){
       firebaseReady=true;
       overlay.style.display='none';
+      if(!data)checkForLegacyMigration();
       if(callback)callback();
     }else{
       overlay.style.display='none';
@@ -2209,6 +2223,72 @@ function loadDB(callback){
       warnSyncIssue('⚠️ Conexão com o banco de dados perdida. Suas alterações continuam sendo salvas neste dispositivo.');
     }
   });
+}
+
+// ===== MIGRAÇÃO DE DADOS ANTIGOS (Fase 0.3) =====
+// Antes do isolamento por usuário (Fase 0.2), todo mundo lia/escrevia no mesmo caminho
+// global compartilhado 'vdn_v1'. Se a conta que acabou de logar ainda não tem nada no
+// caminho novo (users/{uid}/vdn_v1 — 'data' veio vazio no primeiro load), checamos se
+// existe algo no caminho antigo pra OFERECER migração — nunca migra sozinho, e nunca
+// apaga o caminho antigo (fica como rede de segurança até validar manualmente que a cópia
+// deu certo, conforme o checkpoint 0.3b).
+let legacyMigrationData=null;
+function checkForLegacyMigration(){
+  if(!firebaseDB||!currentUser)return;
+  firebaseDB.ref('vdn_v1').once('value').then(snap=>{
+    const old=snap.val();
+    if(!old)return;
+    const c=countDataSummary(old);
+    if(c.reinos+c.flashcards+c.redacoes+c.temas===0)return; // nada relevante pra oferecer
+    legacyMigrationData=old;
+    renderLegacyMigrationBanner();
+  }).catch(e=>console.warn('Falha ao checar dados antigos pra migração:',e));
+}
+function countDataSummary(data){
+  if(!data)return{reinos:0,flashcards:0,redacoes:0,temas:0};
+  return{
+    reinos:(data.kingdoms||[]).length,
+    flashcards:data.flashcards?Object.keys(data.flashcards).length:0,
+    redacoes:(data.redacoes&&data.redacoes.textos)?Object.keys(data.redacoes.textos).length:0,
+    temas:(data.repertorio&&data.repertorio.temas)?Object.keys(data.repertorio.temas).length:0,
+  };
+}
+function renderLegacyMigrationBanner(){
+  if(!legacyMigrationData)return;
+  const oldC=countDataSummary(legacyMigrationData);
+  const curC=countDataSummary(db);
+  openModal('📦 Dados antigos encontrados',`
+    <div style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.5">
+      Encontramos dados salvos antes do login (caminho compartilhado antigo). Sua conta
+      atual ainda não tem esses dados. Quer copiá-los pra cá agora?<br><br>
+      <b>Nada é apagado do caminho antigo</b> — fica como backup até você confirmar que
+      está tudo certo.
+    </div>
+    <table style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:16px">
+      <tr style="text-align:left;color:var(--muted)"><th></th><th>Dados antigos</th><th>Nesta conta agora</th></tr>
+      <tr><td>Reinos</td><td><b>${oldC.reinos}</b></td><td>${curC.reinos}</td></tr>
+      <tr><td>Flashcards</td><td><b>${oldC.flashcards}</b></td><td>${curC.flashcards}</td></tr>
+      <tr><td>Redações</td><td><b>${oldC.redacoes}</b></td><td>${curC.redacoes}</td></tr>
+      <tr><td>Temas de repertório</td><td><b>${oldC.temas}</b></td><td>${curC.temas}</td></tr>
+    </table>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost" style="flex:1;justify-content:center" onclick="closeModal()">Agora não</button>
+      <button class="btn btn-primary" style="flex:1;justify-content:center" onclick="migrateLegacyData()">Migrar meus dados</button>
+    </div>
+  `);
+}
+function migrateLegacyData(){
+  if(!legacyMigrationData)return;
+  const oldC=countDataSummary(legacyMigrationData);
+  Object.assign(db,legacyMigrationData);
+  applyDefaults();
+  saveDB();
+  legacyMigrationData=null;
+  closeModal();
+  toast(`✅ Dados migrados! ${oldC.reinos} reinos, ${oldC.flashcards} flashcards, ${oldC.redacoes} redações, ${oldC.temas} temas.`,'var(--green)');
+  renderHeader();renderMap();updateRevBadge();updateEditaisBadge();updateFCBadge();
+  const sc=document.querySelector('.screen.active')?.id;
+  if(sc==='screen-dashboard')renderDashboard();
 }
 
 // Evita bombardear o usuário de toasts se os mesmos erros se repetirem em sequência.
@@ -2372,6 +2452,10 @@ let errFilter='pending';
 // há uma sessão válida — chamado por onAuthStateChanged, não mais direto no carregamento
 // do script.
 function bootApp(){
+  // Fase 0.2: dados isolados por usuário. Sem usuário logado (fallback de Auth
+  // indisponível), userRef() retorna null e loadDB()/saveDB() já sabem cair pro
+  // localStorage — mesmo caminho que usam quando o Firebase inteiro está fora do ar.
+  DB_REF=userRef('vdn_v1');
   loadDB(()=>{
     renderHeader();
     renderMap();
