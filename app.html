@@ -200,6 +200,13 @@ nav{
 .upsell-price b{font-size:22px;}
 .pix-box{background:var(--panel2);border:1.5px solid var(--border2);border-radius:14px;padding:20px;text-align:left;margin-bottom:6px;}
 .pix-box-title{font-size:13px;font-weight:900;color:var(--text);margin-bottom:10px;}
+.pix-tier-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+.pix-tier-tab{background:var(--panel);border:1.5px solid var(--border2);border-radius:10px;padding:9px 6px;text-align:center;font-size:11px;font-weight:700;color:var(--text2);cursor:pointer;transition:all .15s;font-family:inherit;}
+.pix-tier-tab b{display:inline-block;margin-top:2px;font-size:13px;color:var(--text);}
+.pix-tier-tab.active{border-color:var(--accent);background:color-mix(in srgb, var(--accent) 14%, var(--panel));}
+.pix-tier-tab.active b{color:var(--accent);}
+.pix-tier-tab.disabled{opacity:0.4;cursor:not-allowed;}
+.pix-tier-note{background:color-mix(in srgb, var(--accent) 12%, transparent);border:1px solid var(--border2);border-radius:8px;padding:8px 10px;font-size:11px;font-weight:700;color:var(--accent);margin-bottom:12px;}
 .pix-steps{margin:0 0 14px;padding-left:18px;font-size:12px;color:var(--muted);line-height:1.7;}
 .pix-steps b{color:var(--accent);}
 .pix-copia-cola{width:100%;min-height:64px;resize:vertical;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border2);background:var(--panel);color:var(--text2);font-family:monospace;font-size:10.5px;word-break:break-all;margin-bottom:10px;}
@@ -1639,10 +1646,16 @@ nav{
     <span class="upsell-icon" id="upsell-icon">🔒</span>
     <h2 id="upsell-title">Recurso exclusivo do plano completo</h2>
     <p id="upsell-desc">Esse recurso faz parte do plano pago do Vale dos Nomeados.</p>
-    <div class="upsell-price">Plano Nomeado — <b>R$ 19,90</b>/mês</div>
+    <div class="upsell-price">Escolha seu plano abaixo</div>
 
     <div class="pix-box">
       <div class="pix-box-title">💠 Pague com Pix</div>
+      <div class="pix-tier-tabs" id="pix-tier-tabs">
+        <button class="pix-tier-tab" data-tier="mensal" onclick="selectPixTier('mensal')">Mensal<br><b>R$19,90</b></button>
+        <button class="pix-tier-tab" data-tier="anual" onclick="selectPixTier('anual')">Anual<br><b>R$149,90</b></button>
+        <button class="pix-tier-tab" data-tier="vitalicio" onclick="selectPixTier('vitalicio')">Vitalício<br><b>R$397</b></button>
+      </div>
+      <div id="pix-tier-note" class="pix-tier-note" style="display:none"></div>
       <ol class="pix-steps">
         <li>Copie o código Pix abaixo</li>
         <li>Cole no app do seu banco, na opção "Pix Copia e Cola"</li>
@@ -1953,17 +1966,30 @@ const firebaseConfig = {
   appId: "1:737113678098:web:31fae3686442c90c7393cb"
 };
 
-let firebaseDB=null, DB_REF=null, connectedRef=null;
+let firebaseDB=null, DB_REF=null, connectedRef=null, promoRef=null;
 let useLocalFallback=false;
 const LS_KEY='vdn_local_v1';
+// Estado da promoção de vagas vitalícias — lido de um caminho PÚBLICO (promo/lifetime),
+// fora de users/{uid}, então não depende de login pra aparecer no seletor de plano.
+// Você controla isso manualmente no Firebase Console (não tem escrita pelo app):
+//   promo/lifetime/enabled    -> true liga a oferta, false desliga
+//   promo/lifetime/slotsLeft  -> quantas vagas restam (decrementa a cada venda confirmada)
+//   promo/lifetime/deadline   -> data limite "YYYY-MM-DD" (ex: 15 dias a partir do lançamento)
+let promoLifetime={enabled:false,slotsLeft:0,deadline:''};
 
 try{
   firebase.initializeApp(firebaseConfig);
   firebaseDB=firebase.database();
   // DB_REF não é montado aqui: só sabemos o uid depois que o login resolve (ver
-  // userRef()/bootApp() mais abaixo, no bloco de AUTENTICAÇÃO). connectedRef é um caminho
-  // especial do próprio Firebase (não é dado de usuário), esse pode ser montado já.
+  // userRef()/bootApp() mais abaixo, no bloco de AUTENTICAÇÃO). connectedRef e promoRef são
+  // caminhos especiais/públicos (não são dado de usuário), esses podem ser montados já.
   connectedRef=firebaseDB.ref('.info/connected');
+  promoRef=firebaseDB.ref('promo/lifetime');
+  promoRef.on('value',(snap)=>{
+    const v=snap.val();
+    promoLifetime=Object.assign({enabled:false,slotsLeft:0,deadline:''},v||{});
+    if(document.getElementById('pix-tier-tabs'))renderPixTierUI();
+  });
 }catch(e){
   console.warn('Firebase init failed, using localStorage:',e);
   useLocalFallback=true;
@@ -2193,12 +2219,17 @@ function applyDefaults(){
   // genuinamente nova (ver loadDB()), então contas que já existiam antes desse campo nunca
   // ficam travadas por engano.
   if(typeof db.plan!=='string')db.plan='full';
-  // Data (YYYY-MM-DD) do último pagamento confirmado manualmente — ainda sem gateway
-  // integrado, então é você quem escreve esse valor. Pra liberar alguém que pagou via Pix:
-  // Firebase Console → Realtime Database → users/{uid}/lastPaymentAt → coloca a data de
-  // hoje (é só isso, o app calcula sozinho os 30 dias de acesso a partir daí — ver
-  // hasFullAccess()). Renovou de novo mês que vem? Só atualizar de novo com a nova data.
+  // Confirmação manual de pagamento (ainda sem gateway integrado) — Firebase Console →
+  // Realtime Database → users/{uid}/... Três planos, três jeitos de confirmar:
+  //   • Mensal: lastPaymentAt = data de hoje, planType = "mensal" (ou deixa em branco,
+  //     "mensal" é o padrão) -> libera 30 dias a partir de hoje.
+  //   • Anual: lastPaymentAt = data de hoje, planType = "anual" -> libera 365 dias.
+  //   • Vitalício: plan = "full" direto (sem mexer em lastPaymentAt/planType) -> acesso
+  //     nunca expira, igual conta antiga. Lembra de descontar 1 vaga em
+  //     promo/lifetime/slotsLeft quando confirmar uma venda vitalícia.
+  // Renovou de novo? Só atualizar lastPaymentAt de novo com a data nova (mesmo planType).
   if(typeof db.lastPaymentAt!=='string')db.lastPaymentAt='';
+  if(typeof db.planType!=='string')db.planType='mensal';
   if(!Array.isArray(db.paymentHistory))db.paymentHistory=[];
 
   // Limpar revisões inválidas (date=undefined ou extras além de 4)
@@ -2292,7 +2323,7 @@ function loadDB(callback){
     // carrega com um lastPaymentAt que já existia de antes.
     if(wasReady&&data&&data.lastPaymentAt&&data.lastPaymentAt!==prevLastPayment){
       db.paymentHistory=db.paymentHistory||[];
-      db.paymentHistory.push({date:data.lastPaymentAt,confirmadoEm:new Date().toISOString()});
+      db.paymentHistory.push({date:data.lastPaymentAt,planType:db.planType||'mensal',confirmadoEm:new Date().toISOString()});
       saveDB();
     }
     applyPlanGating();
@@ -2807,18 +2838,34 @@ const LOCKED_SCREEN_INFO={
 };
 const WHATSAPP_NUMBER_APP='558195820859';
 const PIX_KEY='11803871474';
-const PIX_PRICE=19.90;
-const PIX_ACCESS_DAYS=30;
+// Três faixas de assinatura. accessDays é usado por daysOfAccessLeft() pra calcular até
+// quando o acesso vale a partir de lastPaymentAt — vitalício não usa isso (ver instrução
+// em LOCKED_SCREEN_INFO/renderLockedScreen: pra vitalício você marca db.plan='full' direto,
+// sem lastPaymentAt, então nunca expira, igual conta antiga/legada).
+const PIX_PLANS={
+  mensal:{label:'Mensal',price:19.90,accessDays:30,periodLabel:'/mês'},
+  anual:{label:'Anual',price:149.90,accessDays:365,periodLabel:'/ano'},
+  vitalicio:{label:'Vitalício',price:397.00,accessDays:null,periodLabel:'pagamento único'},
+};
+const PIX_ACCESS_DAYS=30; // fallback pra lastPaymentAt sem planType (contas de antes dessa mudança)
 // Quantos dias de acesso restam a partir do último pagamento confirmado (negativo = já
 // venceu). null quando a conta nunca pagou (plano trial sem nenhum lastPaymentAt ainda).
 function daysOfAccessLeft(){
   if(!db.lastPaymentAt)return null;
-  return daysDiff(todayStr(),addDays(db.lastPaymentAt,PIX_ACCESS_DAYS));
+  const plan=PIX_PLANS[db.planType];
+  const days=(plan&&plan.accessDays)||PIX_ACCESS_DAYS;
+  return daysDiff(todayStr(),addDays(db.lastPaymentAt,days));
 }
 function hasFullAccess(){
-  if(db.plan!=='trial')return true; // conta antiga/legada, sem trava — sempre teve acesso.
+  if(db.plan!=='trial')return true; // conta antiga/legada OU vitalícia, sem trava — acesso permanente.
   const left=daysOfAccessLeft();
   return left!==null&&left>=0;
+}
+function isLifetimeAvailable(){
+  if(!promoLifetime.enabled)return false;
+  if((promoLifetime.slotsLeft||0)<=0)return false;
+  if(promoLifetime.deadline&&todayStr()>promoLifetime.deadline)return false;
+  return true;
 }
 // ===== GERAÇÃO DO CÓDIGO PIX (copia e cola) — padrão BR Code / EMV do Banco Central =====
 // Implementado na mão (sem lib externa) porque o proxy de rede deste ambiente bloqueia CDNs
@@ -2841,11 +2888,44 @@ function buildPixPayload({key,amount,name,city,txid}){
   const payload=pixTLV('00','01')+pixTLV('01','11')+merchantAccountInfo+pixTLV('52','0000')+pixTLV('53','986')+amountField+pixTLV('58','BR')+pixTLV('59',name.slice(0,25))+pixTLV('60',city.slice(0,15))+pixTLV('62',pixTLV('05',txid||'***'))+'6304';
   return payload+pixCRC16(payload);
 }
-function getPixCopiaCola(){
-  return buildPixPayload({key:PIX_KEY,amount:PIX_PRICE,name:'VALE DOS NOMEADOS',city:'BRASIL',txid:'***'});
+let selectedPixTier='mensal';
+function getPixCopiaCola(tier){
+  const plan=PIX_PLANS[tier]||PIX_PLANS.mensal;
+  return buildPixPayload({key:PIX_KEY,amount:plan.price,name:'VALE DOS NOMEADOS',city:'BRASIL',txid:'***'});
+}
+function selectPixTier(tier){
+  if(tier==='vitalicio'&&!isLifetimeAvailable())return;
+  selectedPixTier=tier;
+  renderPixTierUI();
+}
+function renderPixTierUI(){
+  const tabs=document.getElementById('pix-tier-tabs');
+  if(!tabs)return;
+  const vitAvail=isLifetimeAvailable();
+  if(selectedPixTier==='vitalicio'&&!vitAvail)selectedPixTier='mensal';
+  tabs.querySelectorAll('.pix-tier-tab').forEach(b=>{
+    b.classList.toggle('active',b.dataset.tier===selectedPixTier);
+    if(b.dataset.tier==='vitalicio')b.classList.toggle('disabled',!vitAvail);
+  });
+  const note=document.getElementById('pix-tier-note');
+  if(selectedPixTier==='vitalicio'){
+    note.textContent=`🔥 Oferta de lançamento: restam ${promoLifetime.slotsLeft} vaga${promoLifetime.slotsLeft===1?'':'s'}, até ${fmtDateBR(promoLifetime.deadline)}.`;
+    note.style.display='block';
+  }else if(selectedPixTier==='anual'){
+    note.textContent='Equivale a R$12,49/mês — bem mais em conta que pagar mês a mês.';
+    note.style.display='block';
+  }else{
+    note.style.display='none';
+  }
+  document.getElementById('pix-copia-cola').value=getPixCopiaCola(selectedPixTier);
+  const email=(currentUser&&currentUser.email)||'';
+  const planLabel=(PIX_PLANS[selectedPixTier]||PIX_PLANS.mensal).label;
+  const msg='Olá! Fiz o Pix do plano '+planLabel+' pra assinar o Vale dos Nomeados (email da conta: '+email+'). Pode confirmar meu acesso?';
+  const waBtn=document.getElementById('upsell-whatsapp-btn');
+  if(waBtn)waBtn.href='https://wa.me/'+WHATSAPP_NUMBER_APP+'?text='+encodeURIComponent(msg);
 }
 function copyPixCode(){
-  const code=getPixCopiaCola();
+  const code=getPixCopiaCola(selectedPixTier);
   navigator.clipboard.writeText(code).then(()=>{
     toast('✅ Código Pix copiado — cole no app do seu banco','var(--green)');
   }).catch(()=>{
@@ -2876,14 +2956,17 @@ function renderLockedScreen(name){
   document.getElementById('upsell-desc').textContent=info.desc;
   const email=(currentUser&&currentUser.email)||'';
   document.getElementById('pix-account-email').textContent=email;
-  document.getElementById('pix-copia-cola').value=getPixCopiaCola();
-  const msg='Olá! Fiz o Pix pra assinar o Vale dos Nomeados (email da conta: '+email+'). Pode confirmar meu acesso?';
-  document.getElementById('upsell-whatsapp-btn').href='https://wa.me/'+WHATSAPP_NUMBER_APP+'?text='+encodeURIComponent(msg);
+  selectedPixTier='mensal';
+  renderPixTierUI();
   const histBox=document.getElementById('payment-history-box');
   const histList=document.getElementById('payment-history-list');
   if(db.paymentHistory&&db.paymentHistory.length){
     histBox.style.display='block';
-    histList.innerHTML=db.paymentHistory.slice().reverse().map(p=>`<div>✅ Renovado em ${fmtDateBR(p.date)} — acesso até ${fmtDateBR(addDays(p.date,PIX_ACCESS_DAYS))}</div>`).join('');
+    histList.innerHTML=db.paymentHistory.slice().reverse().map(p=>{
+      const days=(PIX_PLANS[p.planType]&&PIX_PLANS[p.planType].accessDays)||PIX_ACCESS_DAYS;
+      const planLabel=(PIX_PLANS[p.planType]||PIX_PLANS.mensal).label;
+      return `<div>✅ ${planLabel} renovado em ${fmtDateBR(p.date)} — acesso até ${fmtDateBR(addDays(p.date,days))}</div>`;
+    }).join('');
   }else{
     histBox.style.display='none';
   }

@@ -133,15 +133,22 @@ header{position:sticky;top:0;z-index:20;background:color-mix(in srgb, var(--bg2)
 @media(max-width:560px){.proof-grid{grid-template-columns:repeat(2,1fr);}}
 
 /* ===== PRICING ===== */
-.pricing-card{max-width:440px;margin:0 auto;background:var(--panel);border:2px solid var(--accent2);border-radius:var(--r-xl);padding:40px;text-align:center;box-shadow:var(--shadow);position:relative;}
-.pricing-badge{position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:11px;font-weight:800;letter-spacing:0.5px;padding:6px 16px;border-radius:999px;white-space:nowrap;}
-.pricing-name{font-family:'Cinzel',serif;font-size:18px;font-weight:700;color:var(--accent);margin-bottom:8px;}
+.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;max-width:1080px;margin:0 auto;align-items:start;}
+.pricing-card{background:var(--panel);border:2px solid var(--border2);border-radius:var(--r-xl);padding:36px 28px;text-align:center;box-shadow:var(--shadow);position:relative;margin-top:14px;}
+.pricing-card.featured{border-color:var(--accent2);}
+.pricing-card.lifetime{border-color:#f97316;}
+.pricing-badge{position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:10.5px;font-weight:800;letter-spacing:0.4px;padding:6px 14px;border-radius:999px;white-space:nowrap;}
+.pricing-card.lifetime .pricing-badge{background:linear-gradient(135deg,#f97316,#ea580c);}
+.pricing-name{font-family:'Cinzel',serif;font-size:17px;font-weight:700;color:var(--accent);margin-bottom:8px;}
+.pricing-note{font-size:11.5px;color:var(--muted);font-weight:700;margin:-2px 0 18px;}
 .pricing-price{display:flex;align-items:baseline;justify-content:center;gap:4px;margin-bottom:4px;}
-.pricing-price .currency{font-size:18px;font-weight:800;color:var(--text2);}
-.pricing-price .amount{font-family:'Cinzel',serif;font-size:48px;font-weight:900;color:var(--text);}
-.pricing-price .period{font-size:14px;color:var(--muted);font-weight:600;}
-.pricing-trial{font-size:13px;color:var(--accent);font-weight:700;margin-bottom:24px;}
-.pricing-card .check-list{text-align:left;margin-bottom:28px;}
+.pricing-price .currency{font-size:16px;font-weight:800;color:var(--text2);}
+.pricing-price .amount{font-family:'Cinzel',serif;font-size:38px;font-weight:900;color:var(--text);}
+.pricing-price .period{font-size:13px;color:var(--muted);font-weight:600;}
+.pricing-trial{font-size:12.5px;color:var(--accent);font-weight:700;margin-bottom:22px;min-height:17px;}
+.pricing-card .check-list{text-align:left;margin-bottom:26px;}
+.pricing-card .check-list li{font-size:13.5px;}
+@media(max-width:860px){.pricing-grid{grid-template-columns:1fr;max-width:440px;}}
 
 /* ===== FAQ ===== */
 .faq{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:12px;}
@@ -407,25 +414,52 @@ footer{border-top:1px solid var(--border);padding:28px 0;margin-top:20px;}
 <section class="section" id="precos" data-tab="precos">
   <div class="wrap">
     <div class="section-head">
-      <h2>Um plano só, tudo incluído</h2>
-      <p>Sem letra miúda: um preço, acesso completo a todas as ferramentas.</p>
+      <h2>Escolha seu plano</h2>
+      <p>Sem letra miúda: qualquer plano dá acesso completo a todas as ferramentas. Comece com 7 dias grátis e decida depois.</p>
     </div>
-    <div class="pricing-card">
-      <span class="pricing-badge">7 DIAS GRÁTIS PRA TESTAR</span>
-      <div class="pricing-name">Plano Nomeado</div>
-      <div class="pricing-price"><span class="currency">R$</span><span class="amount">19,90</span></div>
-      <div class="pricing-price"><span class="period">por mês</span></div>
-      <div class="pricing-trial">Comece grátis — só cobra depois dos 7 dias</div>
-      <ul class="check-list">
-        <li>Flashcards ilimitados com revisão espaçada (SM-2)</li>
-        <li>Simulados por assunto e Simulado Geral cronometrado</li>
-        <li>Correção de redação por IA com cálculo de NPD</li>
-        <li>Modo de estudo por voz, automático</li>
-        <li>Gamificação completa: streak, meta diária, conquistas</li>
-        <li>PWA instalável, funciona offline</li>
-        <li>Cancele quando quiser, sem multa</li>
-      </ul>
-      <a class="btn btn-primary btn-lg" href="app.html" style="width:100%">Começar teste grátis</a>
+    <div class="pricing-grid">
+      <div class="pricing-card">
+        <span class="pricing-badge">7 DIAS GRÁTIS PRA TESTAR</span>
+        <div class="pricing-name">Mensal</div>
+        <div class="pricing-price"><span class="currency">R$</span><span class="amount">19,90</span></div>
+        <div class="pricing-price"><span class="period">por mês</span></div>
+        <div class="pricing-trial">Comece grátis — só cobra depois dos 7 dias</div>
+        <ul class="check-list">
+          <li>Flashcards ilimitados com revisão espaçada (SM-2)</li>
+          <li>Simulados por assunto e Simulado Geral cronometrado</li>
+          <li>Correção de redação por IA com cálculo de NPD</li>
+          <li>Gamificação completa: streak, meta diária, conquistas</li>
+          <li>Cancele quando quiser, sem multa</li>
+        </ul>
+        <a class="btn btn-primary btn-lg" href="app.html" style="width:100%">Começar teste grátis</a>
+      </div>
+      <div class="pricing-card featured">
+        <span class="pricing-badge">MELHOR CUSTO-BENEFÍCIO</span>
+        <div class="pricing-name">Anual</div>
+        <div class="pricing-price"><span class="currency">R$</span><span class="amount">149,90</span></div>
+        <div class="pricing-price"><span class="period">por ano</span></div>
+        <div class="pricing-trial">Equivale a R$12,49/mês — 37% mais barato</div>
+        <ul class="check-list">
+          <li>Tudo do plano mensal incluído</li>
+          <li>Um pagamento só, sem se preocupar todo mês</li>
+          <li>Mesmo preço garantido pelos 12 meses</li>
+          <li>Ideal pra quem já decidiu que vai estudar o ano todo</li>
+        </ul>
+        <a class="btn btn-primary btn-lg" href="app.html" style="width:100%">Começar teste grátis</a>
+      </div>
+      <div class="pricing-card lifetime">
+        <span class="pricing-badge">🔥 LANÇAMENTO: SÓ 30 VAGAS</span>
+        <div class="pricing-name">Vitalício</div>
+        <div class="pricing-price"><span class="currency">R$</span><span class="amount">397</span></div>
+        <div class="pricing-price"><span class="period">pagamento único</span></div>
+        <div class="pricing-trial">Paga uma vez, usa pra sempre — oferta por tempo limitado</div>
+        <ul class="check-list">
+          <li>Tudo do plano completo, sem mensalidade nunca mais</li>
+          <li>Reservado só pros 30 primeiros alunos</li>
+          <li>Acesso a todas as atualizações futuras da plataforma</li>
+        </ul>
+        <a class="btn btn-primary btn-lg" href="app.html" style="width:100%">Garantir minha vaga</a>
+      </div>
     </div>
   </div>
 </section>
@@ -438,7 +472,7 @@ footer{border-top:1px solid var(--border);padding:28px 0;margin-top:20px;}
     <div class="faq" id="faq-list">
       <div class="faq-item">
         <button class="faq-q">Quanto custa e como funciona o teste grátis?<span></span></button>
-        <div class="faq-a">R$ 19,90 por mês, com 7 dias grátis pra testar tudo antes de decidir. Sem taxa de adesão, sem contrato de fidelidade.</div>
+        <div class="faq-a">R$19,90/mês, R$149,90/ano ou R$397 no plano vitalício (por tempo limitado, só 30 vagas) — todos com 7 dias grátis pra testar tudo antes de decidir. Sem taxa de adesão, sem contrato de fidelidade.</div>
       </div>
       <div class="faq-item">
         <button class="faq-q">Posso cancelar quando quiser?<span></span></button>
