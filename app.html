@@ -4462,8 +4462,9 @@ REGRAS:
 - Evite pegadinhas de português; o foco é o conteúdo técnico do assunto.
 - Se for citar lei/norma específica, use apenas referência que você tenha certeza que existe; se não tiver certeza do número exato, formule a questão sem citar número de lei.
 - Inclua uma explicação curta (1 a 3 frases) do porquê a alternativa correta está certa.
+- IMPORTANTE — distribuição das respostas: a letra correta deve variar entre A, B, C, D e E ao longo das ${quantidade} questões, o mais equilibrado possível (evite concentrar a resposta certa sempre nas mesmas letras, como só B/C — cada letra de A a E deve aparecer como correta em uma proporção parecida das questões geradas).
 
-RESPONDA APENAS COM UM JSON (array de ${quantidade} itens), sem markdown, no formato exato:
+RESPONDA APENAS COM UM JSON (array de ${quantidade} itens), sem markdown, no formato exato (o "correta" abaixo é só ilustrativo do formato — varie a letra certa em cada questão real, seguindo a regra de distribuição acima):
 [{"questao":"...","alternativas":[{"letra":"A","texto":"..."},{"letra":"B","texto":"..."},{"letra":"C","texto":"..."},{"letra":"D","texto":"..."},{"letra":"E","texto":"..."}],"correta":"B","explicacao":"..."}]`;
 
   const raw=await callGeminiGenerate(apiKey,prompt);
