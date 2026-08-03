@@ -2313,16 +2313,20 @@ function migrateLegacyData(){
 
 // ===== ONBOARDING GUIADO (contas novas) =====
 // Só dispara pra quem acabou de criar conta e não tinha dados antigos pra migrar (ver
-// checkForLegacyMigration()). Wizard de 3 passos reaproveitando o modal padrão do app:
-// 1) boas-vindas, 2) escolher quais reinos padrão fazem sentido pro edital da pessoa,
-// 3) atalhos pros primeiros passos. Fecha marcando db.onboardingCompleted=true — nunca
-// mais aparece de novo pra essa conta depois disso.
+// checkForLegacyMigration()). Tour de 7 passos reaproveitando o modal padrão do app —
+// e, a partir do passo 3, navegando pras telas reais por trás do modal (dashboard,
+// reino, flashcards, conquistas) e chamando as MESMAS funções que o app usa quando a
+// pessoa clica manualmente (addTopic/addSubtopic/fcSaveCard/openAISettingsModal), pra
+// gerar dados 100% reais em vez de simular. Fecha marcando db.onboardingCompleted=true —
+// nunca mais aparece de novo pra essa conta depois disso.
 let onboardStep=1;
 let onboardKingdomChoices=null;
+let onboardCreatedTopic=null; // {kingdom,topic} — preenchido no passo 4, usado no passo 5
 function maybeStartOnboarding(){
   if(db.onboardingCompleted)return;
   onboardStep=1;
   onboardKingdomChoices={};
+  onboardCreatedTopic=null;
   db.kingdoms.forEach(k=>{onboardKingdomChoices[k.id]=true;});
   renderOnboardStep();
 }
@@ -2336,8 +2340,8 @@ function renderOnboardStep(){
   if(onboardStep===1){
     openModal('🐉 Bem-vindo ao Vale dos Nomeados!',`
       <div style="font-size:13.5px;color:var(--text2);line-height:1.6;margin-bottom:16px">
-        Vamos te mostrar o essencial em menos de 1 minuto. Aqui você organiza os estudos
-        pra concurso com:
+        Vamos te mostrar o essencial em poucos minutos, criando seu primeiro conteúdo de
+        verdade. Aqui você organiza os estudos pra concurso com:
       </div>
       <ul style="font-size:13px;color:var(--text);line-height:2;margin:0 0 20px;padding-left:20px">
         <li>🃏 Flashcards com revisão espaçada de verdade (SM-2)</li>
@@ -2365,14 +2369,64 @@ function renderOnboardStep(){
       </div>
     `);
   }else if(onboardStep===3){
-    openModal('🚀 Pronto pra começar',`
-      <div style="font-size:13px;color:var(--text2);margin-bottom:16px">Escolha por onde quer começar:</div>
-      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">
-        <button class="btn btn-ghost" style="justify-content:flex-start;padding:14px" onclick="onboardFinish();showScreen('flashcards')">🃏 Criar meu primeiro flashcard</button>
-        <button class="btn btn-ghost" style="justify-content:flex-start;padding:14px" onclick="onboardFinish();openAISettingsModal()">⚙️ Configurar minha chave de IA</button>
-        <button class="btn btn-ghost" style="justify-content:flex-start;padding:14px" onclick="onboardFinish();showScreen('map')">🗺️ Explorar o Mapa dos Reinos</button>
+    showScreen('dashboard');
+    openModal('🏆 Seu Painel do Herói',`
+      <div style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:18px">
+        Essa é a tela que abre toda vez que você entra. De cara você vê:
       </div>
-      <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="onboardFinish()">Já entendi, fechar</button>
+      <ul style="font-size:13px;color:var(--text);line-height:2;margin:0 0 20px;padding-left:20px">
+        <li>🔥 Sua <b>streak</b> de dias seguidos estudando</li>
+        <li>🎯 A <b>meta diária</b>, com anel de progresso</li>
+        <li>🏅 <b>Conquistas</b> desbloqueadas conforme você avança</li>
+        <li>📊 Tempo estudado por matéria e o que revisar hoje</li>
+      </ul>
+      <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="onboardStep=4;renderOnboardStep()">Entendi, continuar →</button>
+    `);
+  }else if(onboardStep===4){
+    const options=db.kingdoms.map(k=>`<option value="${k.id}">${k.icon||'🏰'} ${k.name}</option>`).join('');
+    openModal('⚔️ Crie seu primeiro chefão',`
+      <div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:14px">
+        No Vale, cada <b>reino</b> é uma matéria, cada <b>chefão</b> é um tópico dela, e
+        cada <b>miniboss</b> é um subtema dentro do chefão — é isso que alimenta suas
+        revisões. Vamos criar o primeiro de verdade:
+      </div>
+      <select class="inp" id="ob-kingdom-select" style="width:100%;margin-bottom:10px">${options}</select>
+      <input class="inp" id="ob-topic-name" placeholder="Nome do chefão (ex: Urgência e Emergência)" style="width:100%;margin-bottom:10px">
+      <input class="inp" id="ob-sub-name" placeholder="Nome do miniboss (ex: Parada cardiorrespiratória)" style="width:100%;margin-bottom:16px">
+      <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="onboardCreateTopicAndSub()">Criar chefão e miniboss →</button>
+      <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:8px" onclick="onboardStep=6;renderOnboardStep()">Pular esse passo</button>
+    `);
+  }else if(onboardStep===5){
+    if(!onboardCreatedTopic){onboardStep=6;renderOnboardStep();return;}
+    openModal('🃏 Crie seu primeiro flashcard',`
+      <div style="font-size:13px;color:var(--text2);margin-bottom:14px">
+        Flashcard pro chefão <b>${onboardCreatedTopic.topic.icon||'⚔️'} ${onboardCreatedTopic.topic.name}</b> que você acabou de criar:
+      </div>
+      <textarea class="inp" id="ob-fc-q" placeholder="Pergunta..." style="width:100%;margin-bottom:8px;min-height:60px;resize:vertical"></textarea>
+      <textarea class="inp" id="ob-fc-a" placeholder="Resposta..." style="width:100%;margin-bottom:16px;min-height:60px;resize:vertical"></textarea>
+      <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="onboardCreateFlashcard()">Salvar flashcard →</button>
+      <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:8px" onclick="onboardStep=6;renderOnboardStep()">Pular esse passo</button>
+    `);
+  }else if(onboardStep===6){
+    showScreen('conquistas');
+    openModal('🏅 Conquistas',`
+      <div style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:18px">
+        Cada ação que você fizer no Vale — estudar, revisar, manter a streak — desbloqueia
+        conquistas em níveis, de comuns a secretas. É um jeito extra de ver seu progresso
+        e manter a motivação nos dias mais difíceis do estudo.
+      </div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="onboardStep=7;renderOnboardStep()">Último passo →</button>
+    `);
+  }else if(onboardStep===7){
+    const hasKey=!!(db.geminiApiKey||'').trim();
+    openModal('⚙️ Configure sua chave de IA',`
+      <div style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:18px">
+        Simulados, correção de redação e geração automática de flashcards por PDF usam a
+        IA do Google Gemini. Você mesmo cola sua chave gratuita nas configurações — leva
+        menos de 2 minutos em <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:var(--accent)">aistudio.google.com/apikey</a>.
+      </div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="onboardFinish();openAISettingsModal()">${hasKey?'Ver minha chave':'Configurar agora'} →</button>
+      <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:8px" onclick="onboardFinish()">Fazer isso depois</button>
     `);
   }
 }
@@ -2389,6 +2443,47 @@ function onboardApplyKingdoms(){
   db.kingdoms=chosen;
   saveDB();renderMap();
   onboardStep=3;renderOnboardStep();
+}
+// Cria o chefão/miniboss chamando as MESMAS funções reais de sempre (addTopic/
+// addSubtopic), só preenchendo os campos delas por baixo do modal — os inputs da tela
+// de reino existem no DOM assim que openKingdom()/renderTopics() rodam, mesmo com o
+// modal por cima, então o resultado é idêntico a criar manualmente.
+function onboardCreateTopicAndSub(){
+  const kId=document.getElementById('ob-kingdom-select')?.value;
+  const k=db.kingdoms.find(x=>x.id===kId);
+  const topicName=(document.getElementById('ob-topic-name')?.value||'').trim();
+  const subName=(document.getElementById('ob-sub-name')?.value||'').trim();
+  if(!k){toast('⚠️ Escolha um reino','var(--red)');return;}
+  if(!topicName){toast('⚠️ Digite o nome do chefão','var(--red)');return;}
+  openKingdom(k);
+  const nameEl=document.getElementById('new-topic-name'),iconEl=document.getElementById('new-topic-icon');
+  if(!nameEl||!iconEl)return;
+  nameEl.value=topicName;iconEl.value='';
+  setTopicPrio(2);
+  addTopic();
+  const topics=db.topics[k.id]||[];
+  const newTopic=topics[topics.length-1];
+  if(!newTopic)return;
+  onboardCreatedTopic={kingdom:k,topic:newTopic};
+  if(subName){
+    const subNameEl=document.getElementById('sn-'+newTopic.id),subPrioEl=document.getElementById('sp-'+newTopic.id);
+    if(subNameEl&&subPrioEl){subNameEl.value=subName;subPrioEl.value='70';addSubtopic(newTopic.id);}
+  }
+  onboardStep=5;renderOnboardStep();
+}
+function onboardCreateFlashcard(){
+  if(!onboardCreatedTopic)return;
+  const pergunta=(document.getElementById('ob-fc-q')?.value||'').trim();
+  const resposta=(document.getElementById('ob-fc-a')?.value||'').trim();
+  if(!pergunta||!resposta){toast('⚠️ Preencha pergunta e resposta','var(--red)');return;}
+  showScreen('flashcards');
+  selectFCBoss(onboardCreatedTopic.topic.id);
+  fcOpenForm();
+  const qEl=document.getElementById('fc-inp-q'),aEl=document.getElementById('fc-inp-a');
+  if(!qEl||!aEl)return;
+  qEl.value=pergunta;aEl.value=resposta;
+  fcSaveCard();
+  onboardStep=6;renderOnboardStep();
 }
 
 // Evita bombardear o usuário de toasts se os mesmos erros se repetirem em sequência.
