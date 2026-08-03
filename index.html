@@ -43,9 +43,12 @@ header{position:sticky;top:0;z-index:20;background:color-mix(in srgb, var(--bg2)
 .header-inner{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 24px;max-width:1180px;margin:0 auto;}
 .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:15px;letter-spacing:0.5px;flex-shrink:0;}
 .brand-logo{font-size:26px;}
-.header-nav{display:flex;gap:22px;}
-.header-nav a{font-size:13.5px;font-weight:700;color:var(--text2);text-decoration:none;white-space:nowrap;transition:color .15s;}
+.header-nav{display:flex;gap:28px;}
+.header-nav a{font-size:15.5px;font-weight:800;color:var(--text2);text-decoration:none;white-space:nowrap;transition:color .15s;position:relative;padding:4px 2px;}
 .header-nav a:hover{color:var(--accent);}
+.header-nav a.active{color:var(--accent);}
+.header-nav a.active::after{content:'';position:absolute;left:0;right:0;bottom:-6px;height:3px;border-radius:3px;background:linear-gradient(135deg,var(--accent),var(--accent2));}
+.brand{text-decoration:none;cursor:pointer;}
 .header-cta{display:flex;gap:10px;flex-shrink:0;}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 22px;border-radius:12px;border:none;cursor:pointer;font-size:14px;font-weight:800;text-decoration:none;transition:transform .15s, box-shadow .15s;white-space:nowrap;}
 .btn:hover{transform:translateY(-1px);}
@@ -158,7 +161,9 @@ footer{border-top:1px solid var(--border);padding:28px 0;margin-top:20px;}
 .footer-legal{max-width:1180px;margin:0 auto;padding:0 24px 18px;font-size:11px;color:var(--muted);line-height:1.6;}
 
 @media(max-width:900px){
-  .header-nav{display:none;}
+  .header-inner{flex-wrap:wrap;row-gap:10px;}
+  .header-nav{order:3;width:100%;overflow-x:auto;gap:24px;padding-top:10px;border-top:1px solid var(--border);scrollbar-width:none;}
+  .header-nav::-webkit-scrollbar{display:none;}
 }
 @media(max-width:860px){
   .hero-inner{grid-template-columns:1fr;}
@@ -185,12 +190,12 @@ footer{border-top:1px solid var(--border);padding:28px 0;margin-top:20px;}
 
 <header>
   <div class="header-inner">
-    <div class="brand"><span class="brand-logo">🐉</span> VALE DOS NOMEADOS</div>
+    <a class="brand" href="#" onclick="return goTab('home')"><span class="brand-logo">🐉</span> VALE DOS NOMEADOS</a>
     <nav class="header-nav">
-      <a href="#sobre">Sobre nós</a>
-      <a href="#plataforma">Plataforma</a>
-      <a href="#contato">Fale conosco</a>
-      <a href="#precos">Preços</a>
+      <a href="#sobre" data-tab="sobre" onclick="return goTab('sobre')">Sobre nós</a>
+      <a href="#plataforma" data-tab="plataforma" onclick="return goTab('plataforma')">Plataforma</a>
+      <a href="#contato" data-tab="contato" onclick="return goTab('contato')">Fale conosco</a>
+      <a href="#precos" data-tab="precos" onclick="return goTab('precos')">Preços</a>
     </nav>
     <div class="header-cta">
       <a class="btn btn-ghost" href="app.html">Entrar</a>
@@ -199,7 +204,7 @@ footer{border-top:1px solid var(--border);padding:28px 0;margin-top:20px;}
   </div>
 </header>
 
-<section class="hero">
+<section class="hero" data-tab="home">
   <div class="wrap hero-inner">
     <div>
       <span class="eyebrow">🎯 Foco total em concurso federal</span>
@@ -217,7 +222,7 @@ footer{border-top:1px solid var(--border);padding:28px 0;margin-top:20px;}
   </div>
 </section>
 
-<section class="section" id="sobre">
+<section class="section" id="sobre" data-tab="sobre">
   <div class="wrap">
     <div class="section-head">
       <h2>Quem somos</h2>
@@ -248,7 +253,7 @@ footer{border-top:1px solid var(--border);padding:28px 0;margin-top:20px;}
   </div>
 </section>
 
-<section class="section">
+<section class="section" data-tab="home">
   <div class="wrap">
     <div class="section-head">
       <h2>Todo o arsenal pra sua aprovação</h2>
@@ -289,7 +294,7 @@ footer{border-top:1px solid var(--border);padding:28px 0;margin-top:20px;}
   </div>
 </section>
 
-<section class="section" id="plataforma">
+<section class="section" id="plataforma" data-tab="plataforma">
   <div class="wrap">
     <div class="section-head">
       <h2>Por dentro da plataforma</h2>
@@ -342,7 +347,7 @@ footer{border-top:1px solid var(--border);padding:28px 0;margin-top:20px;}
   </div>
 </section>
 
-<section class="section">
+<section class="section" data-tab="home">
   <div class="wrap">
     <div class="stats-band">
       <div>
@@ -365,7 +370,7 @@ footer{border-top:1px solid var(--border);padding:28px 0;margin-top:20px;}
   </div>
 </section>
 
-<section class="section" id="precos">
+<section class="section" id="precos" data-tab="precos">
   <div class="wrap">
     <div class="section-head">
       <h2>Um plano só, tudo incluído</h2>
@@ -391,7 +396,7 @@ footer{border-top:1px solid var(--border);padding:28px 0;margin-top:20px;}
   </div>
 </section>
 
-<section class="section">
+<section class="section" data-tab="precos">
   <div class="wrap">
     <div class="section-head">
       <h2>Perguntas frequentes</h2>
@@ -425,7 +430,7 @@ footer{border-top:1px solid var(--border);padding:28px 0;margin-top:20px;}
   </div>
 </section>
 
-<section class="section">
+<section class="section" data-tab="home">
   <div class="wrap">
     <div class="final-cta">
       <h2>Bora dominar o edital?</h2>
@@ -435,7 +440,7 @@ footer{border-top:1px solid var(--border);padding:28px 0;margin-top:20px;}
   </div>
 </section>
 
-<section class="section" id="contato">
+<section class="section" id="contato" data-tab="contato">
   <div class="wrap">
     <div class="section-head">
       <h2>Fale conosco</h2>
@@ -474,6 +479,19 @@ footer{border-top:1px solid var(--border);padding:28px 0;margin-top:20px;}
 </footer>
 
 <script>
+// ===== NAVEGAÇÃO POR ABAS =====
+const TAB_NAMES=['home','sobre','plataforma','contato','precos'];
+const TAB_SECTIONS=Array.from(document.querySelectorAll('section[data-tab]'));
+function goTab(tab){
+  if(!TAB_NAMES.includes(tab))tab='home';
+  TAB_SECTIONS.forEach(el=>{ el.style.display = el.dataset.tab===tab ? '' : 'none'; });
+  document.querySelectorAll('.header-nav a').forEach(a=>a.classList.toggle('active', a.dataset.tab===tab));
+  window.scrollTo(0,0);
+  history.replaceState(null,'', tab==='home' ? location.pathname : '#'+tab);
+  return false;
+}
+goTab(TAB_NAMES.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'home');
+
 document.querySelectorAll('.faq-q').forEach(btn=>{
   btn.addEventListener('click',()=>{
     const item=btn.closest('.faq-item');
