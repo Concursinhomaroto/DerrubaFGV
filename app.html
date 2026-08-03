@@ -2333,6 +2333,7 @@ function loadDB(callback){
     clearTimeout(safetyTimer);
     const wasReady=firebaseReady;
     const prevLastPayment=db.lastPaymentAt;
+    const prevAccountEmail=db.accountEmail;
     const data=snapshot.val();
     if(data){
       Object.assign(db,data);
@@ -2351,6 +2352,11 @@ function loadDB(callback){
     if(wasReady&&data&&data.lastPaymentAt&&data.lastPaymentAt!==prevLastPayment){
       db.paymentHistory=db.paymentHistory||[];
       db.paymentHistory.push({date:data.lastPaymentAt,planType:db.planType||'mensal',confirmadoEm:new Date().toISOString()});
+      saveDB();
+    }else if(db.accountEmail!==prevAccountEmail){
+      // applyDefaults() só atualiza accountEmail em memória — sem isso, uma conta que loga
+      // e não faz mais nenhuma ação (ex: só entrou pra conferir algo) nunca chega a salvar
+      // o e-mail no Firebase, e some da busca do Painel Admin.
       saveDB();
     }
     applyPlanGating();
