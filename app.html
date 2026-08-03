@@ -5072,6 +5072,7 @@ function markDailyActivity(dateStr,kingdomId,modulo,periodo){
   if(!db.dailyActivity[dateStr])db.dailyActivity[dateStr]={kingdoms:[],flashcard:false,redacao:false,repertorio:false,periodos:[]};
   const day=db.dailyActivity[dateStr];
   if(!day.periodos)day.periodos=[];
+  if(!day.kingdoms)day.kingdoms=[];
   if(kingdomId&&!day.kingdoms.includes(kingdomId))day.kingdoms.push(kingdomId);
   if(modulo==='flashcard')day.flashcard=true;
   if(modulo==='redacao')day.redacao=true;
