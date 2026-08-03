@@ -151,6 +151,13 @@ header{position:sticky;top:0;z-index:20;background:color-mix(in srgb, var(--bg2)
 @media(max-width:860px){.proof-grid{grid-template-columns:repeat(3,1fr);}}
 @media(max-width:560px){.proof-grid{grid-template-columns:repeat(2,1fr);}}
 
+/* ===== FAIXA DE URGÊNCIA (promoção vitalício) ===== */
+.promo-banner{background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;text-align:center;padding:10px 16px;font-size:13px;font-weight:700;}
+.promo-banner-inner{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;}
+.promo-banner b{font-weight:900;}
+.promo-banner-cta{color:#fff;text-decoration:underline;font-weight:800;white-space:nowrap;}
+.promo-banner-cta:hover{opacity:0.85;}
+
 /* ===== PRICING ===== */
 .pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;max-width:1080px;margin:0 auto;align-items:start;}
 .pricing-card{background:var(--panel);border:2px solid var(--border2);border-radius:var(--r-xl);padding:36px 28px;text-align:center;box-shadow:var(--shadow);position:relative;margin-top:14px;}
@@ -227,8 +234,19 @@ footer{border-top:1px solid var(--border);padding:28px 0;margin-top:20px;}
   .whatsapp-float svg{width:26px;height:26px;}
 }
 </style>
+<!-- SDK do Firebase (compat) — usado só pra leitura pública de promo/lifetime (faixa de
+     vagas do vitalício). Sem login aqui, é uma página estática de qualquer forma. -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 </head>
 <body>
+
+<div id="promo-banner" class="promo-banner" style="display:none">
+  <div class="wrap promo-banner-inner">
+    <span>🔥 <b>Vitalício por tempo limitado</b> — restam <b id="promo-slots">–</b> de 30 vagas, encerra em <b id="promo-days">–</b></span>
+    <a href="app.html" class="promo-banner-cta">Garantir vaga →</a>
+  </div>
+</div>
 
 <header>
   <div class="header-inner">
@@ -467,7 +485,7 @@ footer{border-top:1px solid var(--border);padding:28px 0;margin-top:20px;}
         <a class="btn btn-primary btn-lg" href="app.html" style="width:100%">Começar teste grátis</a>
       </div>
       <div class="pricing-card lifetime">
-        <span class="pricing-badge">🔥 LANÇAMENTO: SÓ 30 VAGAS</span>
+        <span class="pricing-badge" id="promo-badge-price">🔥 LANÇAMENTO: SÓ 30 VAGAS</span>
         <div class="pricing-name">Vitalício</div>
         <div class="pricing-price"><span class="currency">R$</span><span class="amount">397</span></div>
         <div class="pricing-price"><span class="period">pagamento único</span></div>
@@ -477,7 +495,7 @@ footer{border-top:1px solid var(--border);padding:28px 0;margin-top:20px;}
           <li>Reservado só pros 30 primeiros alunos</li>
           <li>Acesso a todas as atualizações futuras da plataforma</li>
         </ul>
-        <a class="btn btn-primary btn-lg" href="app.html" style="width:100%">Garantir minha vaga</a>
+        <a class="btn btn-primary btn-lg" href="app.html" style="width:100%" id="promo-cta-price">Garantir minha vaga</a>
       </div>
     </div>
   </div>
@@ -603,6 +621,48 @@ function sendSuggestion(){
 }
 
 document.getElementById('footer-year').textContent=new Date().getFullYear();
+
+// ===== FAIXA DE URGÊNCIA (promoção vitalício) =====
+// Lê o mesmo caminho público (promo/lifetime) que o app usa — sem login, só leitura —
+// pra não deixar a landing com um número de vagas estático que pode ficar errado depois
+// que alguém compra ou o prazo vence. Some sozinho se a promoção não estiver ativa.
+function initPromoBanner(){
+  try{
+    firebase.initializeApp({
+      apiKey: "AIzaSyAlLEfgUlGP_GwDX_sgdScgwHLK3f1-iJY",
+      authDomain: "vale-dos-nomeados.firebaseapp.com",
+      databaseURL: "https://vale-dos-nomeados-default-rtdb.firebaseio.com",
+      projectId: "vale-dos-nomeados",
+      storageBucket: "vale-dos-nomeados.firebasestorage.app",
+      messagingSenderId: "737113678098",
+      appId: "1:737113678098:web:31fae3686442c90c7393cb"
+    });
+    firebase.database().ref('promo/lifetime').once('value').then(snap=>{
+      const promo=snap.val()||{};
+      const todayStr=new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD local
+      const active=promo.enabled&&(promo.slotsLeft||0)>0&&(!promo.deadline||todayStr<=promo.deadline);
+      if(!active)return; // deixa o banner escondido e o card de preço com o texto padrão
+
+      let daysLabel='em breve';
+      if(promo.deadline){
+        const days=Math.round((new Date(promo.deadline+'T00:00:00')-new Date(todayStr+'T00:00:00'))/86400000);
+        daysLabel=days<=0?'hoje':(days===1?'1 dia':days+' dias');
+      }
+      const slotsEl=document.getElementById('promo-slots');
+      const daysEl=document.getElementById('promo-days');
+      const bannerEl=document.getElementById('promo-banner');
+      if(slotsEl)slotsEl.textContent=promo.slotsLeft;
+      if(daysEl)daysEl.textContent=daysLabel;
+      if(bannerEl)bannerEl.style.display='block';
+
+      const badgeEl=document.getElementById('promo-badge-price');
+      if(badgeEl)badgeEl.textContent=`🔥 RESTAM ${promo.slotsLeft} DE 30 VAGAS`;
+    }).catch(e=>console.warn('Promo banner: falha ao ler promo/lifetime:',e));
+  }catch(e){
+    console.warn('Promo banner: Firebase indisponível:',e);
+  }
+}
+initPromoBanner();
 </script>
 
 </body>
