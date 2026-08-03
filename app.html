@@ -8448,6 +8448,7 @@ function fcStudyHTML(cards){
     <div class="fc-study-nav">
       <span class="fc-study-counter">Card ${fcStudyIdx+1}/${sorted.length} · <span style="color:var(--green)">✓${fcScoreRight}</span> <span style="color:var(--red)">✗${fcScoreWrong}</span></span>
       <div class="fc-study-actions">
+        <button class="fc-btn-skip" onclick="fcEditCard('${c.id}')" title="Ajustar pergunta, resposta ou dificuldade deste card"><i class="fa fa-pen"></i> Editar</button>
         <button class="fc-btn-skip" onclick="fcStudySkip()">⟶ Pular</button>
       </div>
     </div>
