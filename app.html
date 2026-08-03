@@ -2289,6 +2289,22 @@ function applyDefaults(){
     });
   }
   db.kingdoms.forEach(k=>{if(!db.topics[k.id])db.topics[k.id]=[];});
+
+  // Corrige flashcards de erro de simulado criados antes do fix de criarFlashcardDeQuestaoErrada
+  // (ver comentário lá): ficavam com mbId apontando pro subtópico, mas a tela de Flashcards só
+  // reconhece cards com mbId de tópico ("chefão") — esses cards ficavam criados só que
+  // invisíveis, pra sempre. Idempotente: uma vez corrigido, o mbId já bate com um tópico
+  // válido e a condição abaixo não entra mais nele.
+  if(db.flashcards){
+    const validTopicIds=new Set();
+    db.kingdoms.forEach(k=>{(db.topics[k.id]||[]).forEach(t=>validTopicIds.add(t.id));});
+    Object.values(db.flashcards).forEach(c=>{
+      if(c&&c.tags==='banco-de-erros'&&!validTopicIds.has(c.mbId)){
+        const topicId=findTopicIdForSub(c.mbId);
+        if(topicId)c.mbId=topicId;
+      }
+    });
+  }
 }
 
 function loadDB(callback){
@@ -4370,19 +4386,30 @@ function simSelectAnswer(subId,qIdx,letra){
   const wrap=document.getElementById('sim-'+subId);
   if(wrap&&sub)wrap.innerHTML=simPanelHTML(sub);
 }
+// A tela de Flashcards agrupa cards por TÓPICO ("chefão" — ver getAllFCForTopic), não por
+// subtópico. Um card com mbId de subtópico nunca aparece em lugar nenhum.
+function findTopicIdForSub(subId){
+  for(const k of db.kingdoms){
+    const t=(db.topics[k.id]||[]).find(t=>(t.subtopics||[]).some(s=>s.id===subId));
+    if(t)return t.id;
+  }
+  return null;
+}
 // Toda questão errada num simulado já vira flashcard automaticamente, sem precisar de
 // nenhuma ação do usuário — reaproveita o mesmo deck/tela de flashcards que já existe,
 // então essas questões entram na revisão normal como qualquer outro card. Evita duplicar
-// se a mesma questão (por texto) já tiver virado card nesse miniboss antes.
+// se a mesma questão (por texto) já tiver virado card nesse tópico antes.
 function criarFlashcardDeQuestaoErrada(subId,q){
   if(!db.flashcards)db.flashcards={};
+  const topicId=findTopicIdForSub(subId);
+  if(!topicId)return;
   const pergunta=q.questao+'\n\n'+(q.alternativas||[]).map(a=>`${a.letra}) ${a.texto}`).join('\n');
-  const jaExiste=Object.values(db.flashcards).some(c=>c.mbId===subId&&c.pergunta===pergunta);
+  const jaExiste=Object.values(db.flashcards).some(c=>c.mbId===topicId&&c.pergunta===pergunta);
   if(jaExiste)return;
   const altCorreta=(q.alternativas||[]).find(a=>a.letra===q.correta);
   const resposta=`Resposta certa: ${q.correta}) ${altCorreta?altCorreta.texto:''}${q.explicacao?'\n\n'+q.explicacao:''}`;
   const id=genId();
-  db.flashcards[id]={id,mbId:subId,pergunta,resposta,tags:'banco-de-erros',dificuldade:2,acertos:0,erros:0,lastConf:0,criacao:new Date().toISOString(),ultimaRevisao:null};
+  db.flashcards[id]={id,mbId:topicId,pergunta,resposta,tags:'banco-de-erros',dificuldade:2,acertos:0,erros:0,lastConf:0,criacao:new Date().toISOString(),ultimaRevisao:null};
 }
 function simCorrigir(subId){
   const active=simActive[subId];
