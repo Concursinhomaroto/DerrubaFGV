@@ -8999,9 +8999,16 @@ LEMBRE: responda APENAS com o JSON array, comecando com [ e terminando com ]`;
 
     if(statusTxt)statusTxt.textContent=`Salvando ${allCards.length} flashcards...`;
     fcInit();
-    let count=0;
+    // Evita duplicar se o mesmo PDF (ou um com conteúdo parecido) for reenviado pro mesmo
+    // chefão — mesma checagem por texto da pergunta já usada em criarFlashcardDeQuestaoErrada.
+    const existingPerguntas=new Set(
+      Object.values(db.flashcards).filter(c=>c.mbId===fcSelectedMb.id).map(c=>c.pergunta)
+    );
+    let count=0,duplicadas=0;
     allCards.forEach(c=>{
       if(!c||!c.pergunta||!c.resposta)return;
+      if(existingPerguntas.has(c.pergunta)){duplicadas++;return;}
+      existingPerguntas.add(c.pergunta);
       const id='fc_'+genId();
       db.flashcards[id]={
         id,mbId:fcSelectedMb.id,
@@ -9014,10 +9021,12 @@ LEMBRE: responda APENAS com o JSON array, comecando com [ e terminando com ]`;
     });
     saveDB();
     renderFCMbList();renderFCMain();updateFCBadge();
-    if(falhas.length){
-      toast(`🃏 ${count} flashcards gerados! ⚠️ ${falhas.length} de ${chunks.length} parte(s) do PDF falharam — tente reenviar o mesmo arquivo pra completar.`,'var(--orange)');
+    if(!count&&duplicadas){
+      toast(`ℹ️ Nenhum flashcard novo — os ${duplicadas} gerados já existiam pra esse chefão.`,'var(--muted)');
+    }else if(falhas.length){
+      toast(`🃏 ${count} flashcards gerados!${duplicadas?` (${duplicadas} repetido${duplicadas>1?'s':''} ignorado${duplicadas>1?'s':''})`:''} ⚠️ ${falhas.length} de ${chunks.length} parte(s) do PDF falharam — tente reenviar o mesmo arquivo pra completar.`,'var(--orange)');
     }else{
-      toast(`🃏 ${count} flashcards gerados com sucesso!`,'var(--green)');
+      toast(`🃏 ${count} flashcards gerados com sucesso!${duplicadas?` (${duplicadas} repetido${duplicadas>1?'s':''} ignorado${duplicadas>1?'s':''})`:''}`,'var(--green)');
     }
 
   }catch(e){
