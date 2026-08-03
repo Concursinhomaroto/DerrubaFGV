@@ -1917,6 +1917,11 @@ nav{
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 
+<!-- EmailJS — envia e-mail transacional (boas-vindas, confirmação de plano) direto do
+     navegador, sem precisar de servidor/backend próprio. A Public Key é feita pra ficar
+     exposta no client (não é um segredo, é assim que o serviço funciona). -->
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+
 <!-- D3 + topojson-client — só usados pelo "O Mapa do Vale" (mapa real do Brasil), que foi
      suprimido da navegação (ver showScreen() e o nav 'MAPA DOS REINOS' mais abaixo): tela
      mais pesada (essas duas libs + geometria buscada de terceiros a cada visita, sem
@@ -2036,6 +2041,27 @@ try{
   console.warn('Firebase Auth init failed:',e);
 }
 
+// ===== E-MAIL TRANSACIONAL (EmailJS — sem backend próprio) =====
+const EMAILJS_PUBLIC_KEY='fAf8nvy9uRfH-YQkr';
+const EMAILJS_SERVICE_ID='service_hzchu68';
+const EMAILJS_TEMPLATE_WELCOME='template_8kgmngp';
+const EMAILJS_TEMPLATE_PLAN='template_kpuh2s4';
+try{
+  if(window.emailjs)emailjs.init(EMAILJS_PUBLIC_KEY);
+}catch(e){
+  console.warn('EmailJS init failed:',e);
+}
+function sendWelcomeEmail(toEmail){
+  if(!window.emailjs||!toEmail)return;
+  emailjs.send(EMAILJS_SERVICE_ID,EMAILJS_TEMPLATE_WELCOME,{to_email:toEmail,to_name:toEmail.split('@')[0]})
+    .catch(e=>console.warn('EmailJS (boas-vindas) falhou:',e));
+}
+function sendPlanConfirmedEmail(toEmail,planName){
+  if(!window.emailjs||!toEmail)return;
+  emailjs.send(EMAILJS_SERVICE_ID,EMAILJS_TEMPLATE_PLAN,{to_email:toEmail,to_name:toEmail.split('@')[0],plan_name:planName})
+    .catch(e=>console.warn('EmailJS (plano confirmado) falhou:',e));
+}
+
 // Camada única de acesso aos dados: monta o caminho já isolado por usuário
 // (users/{uid}/...) em vez de um caminho global compartilhado. Toda leitura/escrita no
 // Firebase Database passa por aqui — nunca chame firebaseDB.ref(...) direto pra dados de
@@ -2100,6 +2126,7 @@ function authSubmit(){
   action.then((cred)=>{
     if(authMode==='signup'&&cred.user&&!cred.user.emailVerified){
       cred.user.sendEmailVerification().catch(()=>{});
+      sendWelcomeEmail(cred.user.email);
     }
     // onAuthStateChanged cuida do resto (esconder tela de login, iniciar o app)
   }).catch(e=>{
@@ -2112,7 +2139,11 @@ function authSignInGoogle(){
   if(!authFirebase){authShowError('Autenticação indisponível neste momento.');return;}
   authClearError();
   const provider=new firebase.auth.GoogleAuthProvider();
-  authFirebase.signInWithPopup(provider).catch(e=>{
+  authFirebase.signInWithPopup(provider).then((cred)=>{
+    if(cred.additionalUserInfo&&cred.additionalUserInfo.isNewUser&&cred.user){
+      sendWelcomeEmail(cred.user.email);
+    }
+  }).catch(e=>{
     console.warn('Google sign-in error:',e);
     if(e.code!=='auth/popup-closed-by-user'&&e.code!=='auth/cancelled-popup-request'){
       authShowError(authErrorMessage(e.code));
@@ -2956,17 +2987,20 @@ function renderAdminResults(matches){
 function adminConfirmPayment(uid,planType){
   const label=(PIX_PLANS[planType]||PIX_PLANS.mensal).label;
   if(!confirm(`Confirmar plano ${label} pra essa conta?`))return;
+  const accountEmail=adminUsersCache&&adminUsersCache[uid]&&adminUsersCache[uid].vdn_v1&&adminUsersCache[uid].vdn_v1.accountEmail;
   const ref=firebaseDB.ref('users/'+uid+'/vdn_v1');
   if(planType==='vitalicio'){
     ref.update({plan:'full'}).then(()=>{
       const slotsRef=firebaseDB.ref('promo/lifetime/slotsLeft');
       slotsRef.transaction(cur=>Math.max(0,(cur||0)-1));
       toast('✅ Vitalício confirmado','var(--green)');
+      sendPlanConfirmedEmail(accountEmail,label);
       adminSearchUsers(document.getElementById('admin-search-input').value);
     }).catch(e=>toast('⚠️ Erro: '+e.message,'var(--red)'));
   }else{
     ref.update({lastPaymentAt:todayStr(),planType}).then(()=>{
       toast('✅ '+label+' confirmado','var(--green)');
+      sendPlanConfirmedEmail(accountEmail,label);
       adminSearchUsers(document.getElementById('admin-search-input').value);
     }).catch(e=>toast('⚠️ Erro: '+e.message,'var(--red)'));
   }
