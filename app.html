@@ -2268,6 +2268,10 @@ function applyDefaults(){
   // por e-mail. Mantém sempre sincronizado, caso a pessoa troque o e-mail de login algum dia.
   if(currentUser&&currentUser.email&&db.accountEmail!==currentUser.email)db.accountEmail=currentUser.email;
 
+  // Guarda o plano que a pessoa clicou na landing (?plano=...), uma vez só — não sobrescreve
+  // se ela já tinha uma intenção salva, nem se essa visita não veio com o parâmetro.
+  if(URL_PLANO_INTENT&&!db.intendedPlan)db.intendedPlan=URL_PLANO_INTENT;
+
   // Limpar revisões inválidas (date=undefined ou extras além de 4)
   const INTERVALOS_MAX=4;
   if(db.revisions){
@@ -2908,6 +2912,13 @@ const PIX_PLANS={
   vitalicio:{label:'Vitalício',price:397.00,accessDays:null,periodLabel:'pagamento único'},
 };
 const PIX_ACCESS_DAYS=30; // fallback pra lastPaymentAt sem planType (contas de antes dessa mudança)
+// Plano que a pessoa clicou na landing (?plano=anual, por ex.) — capturado uma vez em
+// applyDefaults() pra db.intendedPlan (ver mais abaixo) e usado como padrão na tela de
+// pagamento, em vez de sempre cair no Mensal sem relação com o que ela escolheu no site.
+const URL_PLANO_INTENT=(()=>{
+  const p=new URLSearchParams(location.search).get('plano');
+  return Object.prototype.hasOwnProperty.call(PIX_PLANS,p)?p:null;
+})();
 // Quantos dias de acesso restam a partir do último pagamento confirmado (negativo = já
 // venceu). null quando a conta nunca pagou (plano trial sem nenhum lastPaymentAt ainda).
 function daysOfAccessLeft(){
@@ -3162,7 +3173,7 @@ function renderLockedScreen(name){
   document.getElementById('upsell-desc').textContent=info.desc;
   const email=(currentUser&&currentUser.email)||'';
   document.getElementById('pix-account-email').textContent=email;
-  selectedPixTier='mensal';
+  selectedPixTier=(db.intendedPlan&&PIX_PLANS[db.intendedPlan])?db.intendedPlan:'mensal';
   renderPixTierUI();
   const histBox=document.getElementById('payment-history-box');
   const histList=document.getElementById('payment-history-list');
