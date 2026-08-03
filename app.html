@@ -188,6 +188,16 @@ nav{
    badge de contagem pra fora da sidebar — flex-shrink:0 é o padrão em item de flex
    com min-width:auto, então precisa ser explícito pra permitir truncar com "...". */
 .nav-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.nav-btn.plan-locked{opacity:0.55;}
+.nav-lock-icon{margin-left:auto;font-size:11px;flex-shrink:0;}
+
+/* ===== UPSELL (recurso travado no plano trial) ===== */
+.upsell-card{max-width:520px;margin:60px auto 0;text-align:center;background:var(--panel);border:1.5px solid var(--border2);border-radius:20px;padding:44px 36px;}
+.upsell-icon{font-size:44px;margin-bottom:16px;display:inline-block;}
+.upsell-card h2{font-size:20px;font-weight:900;margin-bottom:10px;color:var(--text);}
+.upsell-card p{font-size:13.5px;color:var(--muted);margin-bottom:22px;line-height:1.6;}
+.upsell-price{font-size:13px;font-weight:800;color:var(--accent);margin-bottom:22px;}
+.upsell-price b{font-size:22px;}
 
 /* ===== MAIN CONTENT ===== */
 #main-content{
@@ -1605,6 +1615,17 @@ nav{
   <div id="conquistas-grid"></div>
 </div>
 
+<!-- ===== TELA DE UPSELL (recursos travados no plano trial) ===== -->
+<div class="screen" id="screen-locked">
+  <div class="upsell-card">
+    <span class="upsell-icon" id="upsell-icon">🔒</span>
+    <h2 id="upsell-title">Recurso exclusivo do plano completo</h2>
+    <p id="upsell-desc">Esse recurso faz parte do plano pago do Vale dos Nomeados.</p>
+    <div class="upsell-price">Plano Nomeado — <b>R$ 19,90</b>/mês</div>
+    <a class="btn btn-primary btn-lg" id="upsell-whatsapp-btn" target="_blank" rel="noopener" href="#">Assinar e desbloquear</a>
+  </div>
+</div>
+
 <div class="screen" id="screen-vale">
   <div class="vale-shell" id="vale-shell">
     <div class="vale-glow-a"></div><div class="vale-glow-b"></div>
@@ -2128,6 +2149,14 @@ function applyDefaults(){
   // (ver loadDB()), então esse default aqui nunca reativa o onboarding pra ninguém que já
   // vinha usando o app.
   if(typeof db.onboardingCompleted!=='boolean')db.onboardingCompleted=true;
+  // Plano de acesso: 'trial' = só as telas de LOCKED_SCREENS ficam travadas (ver
+  // showScreen()); qualquer outro valor (inclusive undefined vindo de conta antiga) é
+  // tratado como acesso completo. Só vira 'trial' explicitamente no primeiro load de uma
+  // conta genuinamente nova (ver loadDB()), então contas que já existiam antes desse campo
+  // nunca ficam travadas por engano. Pra liberar alguém que pagou fora do app (Pix/WhatsApp,
+  // ainda sem gateway integrado): Firebase Console → Realtime Database →
+  // users/{uid}/plan → trocar o valor de "trial" pra "full".
+  if(typeof db.plan!=='string')db.plan='full';
 
   // Limpar revisões inválidas (date=undefined ou extras além de 4)
   const INTERVALOS_MAX=4;
@@ -2206,10 +2235,13 @@ function loadDB(callback){
       Object.assign(db,data);
     }else if(!firebaseReady){
       // Conta genuinamente nova (primeiro load, sem nada salvo ainda) — marca explícito
-      // pra applyDefaults() não sobrescrever com o default "true" (pular onboarding).
+      // pra applyDefaults() não sobrescrever com o default "true" (pular onboarding), e
+      // entra no plano trial (acesso só às telas liberadas, ver LOCKED_SCREENS).
       db.onboardingCompleted=false;
+      db.plan='trial';
     }
     applyDefaults();
+    applyPlanGating();
     try{localStorage.setItem(LS_KEY,JSON.stringify(db));}catch(e){}
     if(!firebaseReady){
       firebaseReady=true;
@@ -2220,6 +2252,13 @@ function loadDB(callback){
       overlay.style.display='none';
       renderHeader();renderMap();updateRevBadge();updateEditaisBadge();updateFCBadge();
       const sc=document.querySelector('.screen.active')?.id;
+      // Se o plano foi liberado (ex: Leo confirmou pagamento no Firebase Console) enquanto
+      // a pessoa via a tela de upsell, já reabre a tela real na hora, sem precisar recarregar.
+      if(sc==='screen-locked'&&hasFullAccess()){
+        const lockedNav=document.querySelector('.nav-btn.active');
+        const pending=lockedNav?lockedNav.id.replace('nav-',''):null;
+        if(pending)showScreen(pending);
+      }
       if(sc==='screen-revisions')renderRevisions();
       if(sc==='screen-dashboard')renderDashboard();
       if(sc==='screen-editais')renderEditais();
@@ -2698,8 +2737,55 @@ function updateDaysLeft(){
 function isAfterExam(dateStr){return db.examDate&&dateStr>db.examDate;}
 
 // ===== SCREENS =====
+// ===== PLANO DE ACESSO (trial x completo) =====
+// Telas liberadas no trial: dashboard, map, flashcards, conquistas. As demais só abrem
+// com acesso completo (ver applyDefaults() pra como db.plan é definido/liberado).
+const LOCKED_SCREENS=['revisions','erros','simgeral','editais','redacoes','repertorio'];
+const LOCKED_SCREEN_INFO={
+  revisions:{icon:'🔔',title:'Revisões é um recurso do plano completo',desc:'A fila de revisões espaçadas (SM-2) — atrasadas, de hoje e dos próximos dias — libera junto com o plano completo.'},
+  erros:{icon:'📕',title:'Banco de Erros é um recurso do plano completo',desc:'O histórico de questões erradas em simulados, organizado pra revisão, libera junto com o plano completo.'},
+  simgeral:{icon:'🏛️',title:'Simulado Geral é um recurso do plano completo',desc:'O simulado cronometrado multi-matéria libera junto com o plano completo.'},
+  editais:{icon:'📋',title:'Editais é um recurso do plano completo',desc:'O acompanhamento de editais libera junto com o plano completo.'},
+  redacoes:{icon:'📝',title:'Redações é um recurso do plano completo',desc:'A correção de redação por IA com cálculo de NPD libera junto com o plano completo.'},
+  repertorio:{icon:'🧠',title:'Repertório é um recurso do plano completo',desc:'O banco de repertório sociocultural libera junto com o plano completo.'},
+};
+const WHATSAPP_NUMBER_APP='558195820859';
+function hasFullAccess(){return db.plan!=='trial';}
+function applyPlanGating(){
+  const full=hasFullAccess();
+  LOCKED_SCREENS.forEach(name=>{
+    const btn=document.getElementById('nav-'+name);
+    if(!btn)return;
+    btn.classList.toggle('plan-locked',!full);
+    let lock=btn.querySelector('.nav-lock-icon');
+    if(!full&&!lock){
+      lock=document.createElement('span');
+      lock.className='nav-lock-icon';
+      lock.textContent='🔒';
+      btn.appendChild(lock);
+    }else if(full&&lock){
+      lock.remove();
+    }
+  });
+}
+function renderLockedScreen(name){
+  const info=LOCKED_SCREEN_INFO[name]||{icon:'🔒',title:'Recurso exclusivo do plano completo',desc:'Esse recurso faz parte do plano pago do Vale dos Nomeados.'};
+  document.getElementById('upsell-icon').textContent=info.icon;
+  document.getElementById('upsell-title').textContent=info.title;
+  document.getElementById('upsell-desc').textContent=info.desc;
+  const msg='Olá! Quero assinar o Vale dos Nomeados pra desbloquear todos os recursos (email da conta: '+(currentUser&&currentUser.email||'')+').';
+  document.getElementById('upsell-whatsapp-btn').href='https://wa.me/'+WHATSAPP_NUMBER_APP+'?text='+encodeURIComponent(msg);
+}
 function showScreen(name){
   if(name!=='flashcards'&&typeof fcVoiceStop==='function')fcVoiceStop();
+  if(LOCKED_SCREENS.includes(name)&&!hasFullAccess()){
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+    document.getElementById('screen-locked').classList.add('active');
+    const nb=document.getElementById('nav-'+name);if(nb)nb.classList.add('active');
+    renderLockedScreen(name);
+    return;
+  }
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('screen-'+name).classList.add('active');
