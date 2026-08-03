@@ -30,6 +30,8 @@
 }
 *{box-sizing:border-box;}
 html,body{overflow-x:hidden;}
+html{scroll-behavior:smooth;}
+#sobre,#plataforma,#contato,#precos{scroll-margin-top:96px;}
 body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',system-ui,-apple-system,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased;}
 h1,h2,h3{font-family:'Cinzel',serif;margin:0;}
 a{color:inherit;}
@@ -38,10 +40,13 @@ img{max-width:100%;display:block;}
 
 /* ===== HEADER ===== */
 header{position:sticky;top:0;z-index:20;background:color-mix(in srgb, var(--bg2) 88%, transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);}
-.header-inner{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;max-width:1180px;margin:0 auto;}
-.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:15px;letter-spacing:0.5px;}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 24px;max-width:1180px;margin:0 auto;}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:15px;letter-spacing:0.5px;flex-shrink:0;}
 .brand-logo{font-size:26px;}
-.header-cta{display:flex;gap:10px;}
+.header-nav{display:flex;gap:22px;}
+.header-nav a{font-size:13.5px;font-weight:700;color:var(--text2);text-decoration:none;white-space:nowrap;transition:color .15s;}
+.header-nav a:hover{color:var(--accent);}
+.header-cta{display:flex;gap:10px;flex-shrink:0;}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 22px;border-radius:12px;border:none;cursor:pointer;font-size:14px;font-weight:800;text-decoration:none;transition:transform .15s, box-shadow .15s;white-space:nowrap;}
 .btn:hover{transform:translateY(-1px);}
 .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;box-shadow:0 6px 18px rgba(124,58,237,0.35);}
@@ -61,6 +66,23 @@ header{position:sticky;top:0;z-index:20;background:color-mix(in srgb, var(--bg2)
 .hero-shot{position:relative;}
 .hero-shot img{border-radius:var(--r-xl);box-shadow:var(--shadow);border:1px solid var(--border);}
 .hero-shot::before{content:'';position:absolute;inset:-30px;background:radial-gradient(circle at 30% 20%, rgba(124,58,237,0.18), transparent 60%);z-index:-1;}
+
+/* ===== SOBRE NÓS ===== */
+.about-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+.about-card{background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);padding:28px;}
+.about-card .about-icon{font-size:26px;margin-bottom:12px;display:inline-block;}
+.about-card h3{font-family:'Cinzel',serif;font-size:16px;font-weight:700;color:var(--accent);margin-bottom:10px;}
+.about-card p{font-size:13.5px;color:var(--text2);margin:0;}
+.about-card ul{margin:0;padding-left:18px;font-size:13.5px;color:var(--text2);display:flex;flex-direction:column;gap:6px;}
+
+/* ===== SOBRE A PLATAFORMA ===== */
+.platform-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;}
+.platform-item{background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;transition:transform .15s, box-shadow .15s;}
+.platform-item:hover{transform:translateY(-3px);box-shadow:var(--shadow);}
+.platform-item .platform-shot{width:100%;aspect-ratio:16/10;object-fit:cover;object-position:top left;border-bottom:1px solid var(--border);background:var(--panel2);}
+.platform-item-body{padding:18px 20px;}
+.platform-item-body h3{font-family:'Inter',sans-serif;font-size:15px;font-weight:800;margin-bottom:6px;display:flex;align-items:center;gap:8px;}
+.platform-item-body p{font-size:13px;color:var(--text2);margin:0;}
 
 /* ===== SECTION HEADINGS ===== */
 .section{padding:64px 0;}
@@ -116,22 +138,46 @@ header{position:sticky;top:0;z-index:20;background:color-mix(in srgb, var(--bg2)
 .final-cta h2{font-size:clamp(24px,3vw,32px);margin-bottom:14px;}
 .final-cta p{color:var(--text2);margin-bottom:26px;}
 
+/* ===== FALE CONOSCO ===== */
+.contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:stretch;max-width:900px;margin:0 auto;}
+.contact-whatsapp-card{background:var(--panel);border:1px solid var(--border);border-radius:var(--r-xl);padding:36px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;}
+.contact-whatsapp-card h3{font-family:'Inter',sans-serif;font-size:16px;font-weight:800;margin:2px 0 4px;}
+.contact-whatsapp-card p{font-size:13.5px;color:var(--text2);margin:0 0 14px;}
+.suggest-card{max-width:640px;margin:0 auto;background:var(--panel);border:1px solid var(--border);border-radius:var(--r-xl);padding:36px;text-align:center;}
+.suggest-card textarea{width:100%;min-height:100px;resize:vertical;padding:12px 14px;border-radius:var(--r-md);border:1.5px solid var(--border2);background:var(--panel2);color:var(--text);font-family:inherit;font-size:14px;margin-bottom:12px;}
+.suggest-card input{width:100%;padding:11px 14px;border-radius:var(--r-md);border:1.5px solid var(--border2);background:var(--panel2);color:var(--text);font-family:inherit;font-size:14px;margin-bottom:12px;}
+
+/* ===== BOTÃO FLUTUANTE WHATSAPP ===== */
+.whatsapp-float{position:fixed;bottom:22px;right:22px;z-index:50;width:58px;height:58px;border-radius:50%;background:#25D366;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px rgba(37,211,102,0.45);transition:transform .15s;}
+.whatsapp-float:hover{transform:scale(1.08);}
+.whatsapp-float svg{width:30px;height:30px;fill:#fff;}
+
 /* ===== FOOTER ===== */
 footer{border-top:1px solid var(--border);padding:28px 0;margin-top:20px;}
 .footer-inner{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;font-size:12.5px;color:var(--muted);}
+.footer-legal{max-width:1180px;margin:0 auto;padding:0 24px 18px;font-size:11px;color:var(--muted);line-height:1.6;}
 
+@media(max-width:900px){
+  .header-nav{display:none;}
+}
 @media(max-width:860px){
   .hero-inner{grid-template-columns:1fr;}
   .hero p{max-width:none;}
   .features-grid{grid-template-columns:1fr 1fr;}
+  .about-grid{grid-template-columns:1fr;}
+  .platform-grid{grid-template-columns:1fr 1fr;}
+  .contact-grid{grid-template-columns:1fr;}
   .showcase{grid-template-columns:1fr;}
   .showcase-img{order:-1;}
   .stats-band{grid-template-columns:1fr 1fr;}
 }
 @media(max-width:560px){
   .features-grid{grid-template-columns:1fr;}
+  .platform-grid{grid-template-columns:1fr;}
   .header-cta .btn-ghost{display:none;}
   .stats-band{padding:28px 18px;}
+  .whatsapp-float{width:52px;height:52px;bottom:16px;right:16px;}
+  .whatsapp-float svg{width:26px;height:26px;}
 }
 </style>
 </head>
@@ -140,8 +186,13 @@ footer{border-top:1px solid var(--border);padding:28px 0;margin-top:20px;}
 <header>
   <div class="header-inner">
     <div class="brand"><span class="brand-logo">🐉</span> VALE DOS NOMEADOS</div>
+    <nav class="header-nav">
+      <a href="#sobre">Sobre nós</a>
+      <a href="#plataforma">Plataforma</a>
+      <a href="#contato">Fale conosco</a>
+      <a href="#precos">Preços</a>
+    </nav>
     <div class="header-cta">
-      <a class="btn btn-ghost" href="#precos" style="background:none;border:none;box-shadow:none">Preços</a>
       <a class="btn btn-ghost" href="app.html">Entrar</a>
       <a class="btn btn-primary" href="app.html">Teste grátis por 7 dias</a>
     </div>
@@ -161,7 +212,38 @@ footer{border-top:1px solid var(--border);padding:28px 0;margin-top:20px;}
       <div class="hero-note">7 dias grátis, depois R$ 19,90/mês. Cancele quando quiser.</div>
     </div>
     <div class="hero-shot">
-      <img src="dashboard.png" alt="Painel do Herói do Vale dos Nomeados, mostrando streak, meta diária, conquistas e tempo estudado por matéria" loading="eager">
+      <img src="landing-assets/dashboard.png" alt="Painel do Herói do Vale dos Nomeados, mostrando streak, meta diária, conquistas e tempo estudado por matéria" loading="eager">
+    </div>
+  </div>
+</section>
+
+<section class="section" id="sobre">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>Quem somos</h2>
+      <p>O Vale dos Nomeados nasceu de uma dor comum a quem estuda pra concurso sozinho: perder o fio da meada entre cadernos, planilhas e apps soltos, sem saber de verdade o que já foi revisado.</p>
+    </div>
+    <div class="about-grid">
+      <div class="about-card">
+        <span class="about-icon">🎯</span>
+        <h3>Missão</h3>
+        <p>Tornar o estudo pra concurso público mais organizado, consistente e menos solitário — unindo tecnologia e ciência da aprendizagem (repetição espaçada de verdade) numa ferramenta que qualquer concurseiro consegue usar todo dia, sem fricção.</p>
+      </div>
+      <div class="about-card">
+        <span class="about-icon">🔭</span>
+        <h3>Visão</h3>
+        <p>Ser a plataforma de estudos mais confiável pra quem se prepara pra concursos federais no Brasil, reconhecida pela seriedade do método e pelo cuidado real com quem estuda — não só mais um app de flashcards genérico.</p>
+      </div>
+      <div class="about-card">
+        <span class="about-icon">🧭</span>
+        <h3>Valores</h3>
+        <ul>
+          <li>Constância importa mais que intensidade</li>
+          <li>Dados e método acima de achismo</li>
+          <li>Transparência com quem estuda</li>
+          <li>Evolução constante da plataforma</li>
+        </ul>
+      </div>
     </div>
   </div>
 </section>
@@ -207,21 +289,54 @@ footer{border-top:1px solid var(--border);padding:28px 0;margin-top:20px;}
   </div>
 </section>
 
-<section class="section">
+<section class="section" id="plataforma">
   <div class="wrap">
-    <div class="showcase">
-      <div>
-        <h2>Veja seu progresso por matéria num único mapa</h2>
-        <p>Cada reino é uma matéria: quantos chefões (tópicos) e minibosses (subtópicos) você já domina, quanto tempo estudou e quantas revisões estão atrasadas — tudo visível de cara, sem precisar caçar informação.</p>
-        <ul class="check-list">
-          <li>Progresso por matéria em porcentagem, atualizado em tempo real</li>
-          <li>Alertas visuais pra revisões atrasadas por reino</li>
-          <li>Cronômetro de sessão flutuante — modo livre ou Pomodoro</li>
-          <li>Adicione novas matérias conforme o edital mudar</li>
-        </ul>
+    <div class="section-head">
+      <h2>Por dentro da plataforma</h2>
+      <p>Cada canto do Vale, na prática — telas reais do app, do jeito que você vai usar todo dia.</p>
+    </div>
+    <div class="platform-grid">
+      <div class="platform-item">
+        <img class="platform-shot" src="landing-assets/dashboard.png" alt="Painel do Herói" loading="lazy">
+        <div class="platform-item-body">
+          <h3>🏆 Painel do Herói</h3>
+          <p>Sua tela inicial ao entrar: veja seu streak de dias seguidos, a meta diária com anel de progresso, as conquistas mais recentes desbloqueadas e quanto tempo você já estudou em cada matéria — tudo num painel só, sem precisar caçar informação espalhada.</p>
+        </div>
       </div>
-      <div class="showcase-img">
-        <img src="mapareinos.png" alt="Tela do Mapa dos Reinos mostrando cards de progresso por matéria" loading="lazy">
+      <div class="platform-item">
+        <img class="platform-shot" src="landing-assets/mapa-reinos.png" alt="Mapa dos Reinos" loading="lazy">
+        <div class="platform-item-body">
+          <h3>🗺️ Mapa dos Reinos</h3>
+          <p>Cada matéria vira um reino com seu próprio card: progresso de estudo, tempo dedicado e revisões atrasadas aparecem de cara, então você sempre sabe pra onde ir estudar em seguida sem precisar abrir planilha nenhuma.</p>
+        </div>
+      </div>
+      <div class="platform-item">
+        <img class="platform-shot" src="landing-assets/revisoes.png" alt="Câmara de Revisões" loading="lazy">
+        <div class="platform-item-body">
+          <h3>🔔 Revisões</h3>
+          <p>Uma fila só, organizada em atrasadas, de hoje e dos próximos dias — o algoritmo SM-2 (o mesmo do Anki) calcula sozinho a hora certa de cada assunto voltar pra revisão, então você nunca esquece nem revisa cedo demais.</p>
+        </div>
+      </div>
+      <div class="platform-item">
+        <img class="platform-shot" src="landing-assets/flashcards.png" alt="Flashcards" loading="lazy">
+        <div class="platform-item-body">
+          <h3>🃏 Flashcards</h3>
+          <p>Organizados por chefão (o assunto) e miniboss (o subtema), com status visual de revisão em dia ou vencida. Crie os cards manualmente ou gere um lote inteiro automaticamente a partir de um PDF, usando IA.</p>
+        </div>
+      </div>
+      <div class="platform-item">
+        <img class="platform-shot" src="landing-assets/redacoes.png" alt="Redações" loading="lazy">
+        <div class="platform-item-body">
+          <h3>📝 Redações</h3>
+          <p>Cada tema guarda o histórico completo dos seus textos, com cálculo automático de NPD (Nota Padrão de Desempenho) e correção detalhada por IA — feedback de verdade em vez de escrever no escuro.</p>
+        </div>
+      </div>
+      <div class="platform-item">
+        <img class="platform-shot" src="landing-assets/conquistas.png" alt="Conquistas" loading="lazy">
+        <div class="platform-item-body">
+          <h3>🏅 Conquistas</h3>
+          <p>Mais de 160 níveis de conquistas espalhados por categorias diferentes — streak, flashcards criados, tempo estudado, redações escritas — pra manter a motivação alta até nos dias mais difíceis de sentar e estudar.</p>
+        </div>
       </div>
     </div>
   </div>
@@ -320,10 +435,41 @@ footer{border-top:1px solid var(--border);padding:28px 0;margin-top:20px;}
   </div>
 </section>
 
+<section class="section" id="contato">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>Fale conosco</h2>
+      <p>Dúvida, sugestão ou crítica — a gente responde direto, sem central de atendimento automatizada.</p>
+    </div>
+    <div class="contact-grid">
+      <div class="contact-whatsapp-card">
+        <span class="about-icon">💬</span>
+        <h3>Fale direto no WhatsApp</h3>
+        <p>Manda sua dúvida ou pedido de ajuda direto pra gente — resposta de gente de verdade, sem robô.</p>
+        <a class="btn btn-primary" id="whatsapp-cta-btn" target="_blank" rel="noopener" href="#">Chamar no WhatsApp</a>
+      </div>
+      <div class="suggest-card" style="padding:32px">
+        <h3 style="margin-bottom:8px;font-size:16px">Tem uma sugestão?</h3>
+        <p style="color:var(--text2);font-size:13.5px;margin-bottom:16px">Conta o que você gostaria de ver no Vale — sua mensagem abre no WhatsApp.</p>
+        <input type="text" id="suggest-name" placeholder="Seu nome (opcional)">
+        <textarea id="suggest-text" placeholder="Sua sugestão, ideia ou crítica..."></textarea>
+        <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="sendSuggestion()">Enviar sugestão pelo WhatsApp</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<a class="whatsapp-float" id="whatsapp-float-btn" href="#" target="_blank" rel="noopener" aria-label="Falar no WhatsApp">
+  <svg viewBox="0 0 24 24"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.9-4.45 9.9-9.91 0-2.65-1.03-5.14-2.9-7.01A9.87 9.87 0 0 0 12.04 2m0 1.67a8.2 8.2 0 0 1 5.83 2.42 8.19 8.19 0 0 1 2.41 5.82c0 4.55-3.7 8.24-8.25 8.24a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.18 8.18 0 0 1-1.26-4.38c0-4.55 3.7-8.24 8.25-8.24m-4.53 4.72c-.16 0-.42.06-.64.3s-.85.83-.85 2.03.87 2.36.99 2.52c.12.16 1.7 2.72 4.2 3.7 2.07.82 2.49.65 2.94.61.45-.04 1.44-.59 1.65-1.16s.2-1.05.14-1.16c-.06-.1-.22-.16-.46-.28s-1.44-.71-1.66-.79-.39-.12-.55.12-.63.79-.78.96c-.14.16-.28.18-.53.06s-1.03-.38-1.96-1.21c-.72-.65-1.21-1.44-1.35-1.68s-.02-.38.1-.5c.11-.11.24-.28.36-.42.12-.14.16-.24.24-.4.08-.16.04-.3-.02-.42s-.55-1.33-.76-1.82c-.2-.48-.4-.42-.55-.42h-.47" /></svg>
+</a>
+
 <footer>
   <div class="wrap footer-inner">
     <div>🐉 Vale dos Nomeados — Concurso Federal Quest</div>
     <div><a href="app.html" style="text-decoration:underline">Ir para o app</a></div>
+  </div>
+  <div class="footer-legal">
+    <p>© <span id="footer-year"></span> Vale dos Nomeados. Todos os direitos reservados. A propriedade intelectual desta plataforma — incluindo marca, layout, código-fonte e conteúdo — é protegida pela Lei de Propriedade Industrial (Lei nº 9.279/1996) e pela Lei de Direitos Autorais (Lei nº 9.610/1998). Reprodução, cópia ou uso não autorizado é proibido.</p>
   </div>
 </footer>
 
@@ -336,6 +482,22 @@ document.querySelectorAll('.faq-q').forEach(btn=>{
     if(!wasOpen)item.classList.add('open');
   });
 });
+
+// ===== WHATSAPP =====
+const WHATSAPP_NUMBER='558195820859';
+const WHATSAPP_LINK='https://wa.me/'+WHATSAPP_NUMBER+'?text='+encodeURIComponent('Olá! Vim pelo site do Vale dos Nomeados e queria saber mais 🐉');
+document.getElementById('whatsapp-float-btn').href=WHATSAPP_LINK;
+document.getElementById('whatsapp-cta-btn').href=WHATSAPP_LINK;
+
+function sendSuggestion(){
+  const name=(document.getElementById('suggest-name')?.value||'').trim();
+  const text=(document.getElementById('suggest-text')?.value||'').trim();
+  if(!text){document.getElementById('suggest-text')?.focus();return;}
+  const msg='Sugestão pro Vale dos Nomeados'+(name?' — de '+name:'')+':\n\n'+text;
+  window.open('https://wa.me/'+WHATSAPP_NUMBER+'?text='+encodeURIComponent(msg),'_blank','noopener');
+}
+
+document.getElementById('footer-year').textContent=new Date().getFullYear();
 </script>
 
 </body>
