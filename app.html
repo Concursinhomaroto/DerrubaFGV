@@ -198,6 +198,17 @@ nav{
 .upsell-card p{font-size:13.5px;color:var(--muted);margin-bottom:22px;line-height:1.6;}
 .upsell-price{font-size:13px;font-weight:800;color:var(--accent);margin-bottom:22px;}
 .upsell-price b{font-size:22px;}
+.pix-box{background:var(--panel2);border:1.5px solid var(--border2);border-radius:14px;padding:20px;text-align:left;margin-bottom:6px;}
+.pix-box-title{font-size:13px;font-weight:900;color:var(--text);margin-bottom:10px;}
+.pix-steps{margin:0 0 14px;padding-left:18px;font-size:12px;color:var(--muted);line-height:1.7;}
+.pix-steps b{color:var(--accent);}
+.pix-copia-cola{width:100%;min-height:64px;resize:vertical;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border2);background:var(--panel);color:var(--text2);font-family:monospace;font-size:10.5px;word-break:break-all;margin-bottom:10px;}
+.pix-key-note{text-align:center;font-size:11px;color:var(--muted);margin-top:10px;}
+.upsell-renewal-banner{display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,var(--accent2),var(--accent));border-radius:16px;padding:16px 20px;margin-bottom:18px;color:#fff;}
+.upsell-renewal-banner .rb-icon{font-size:26px;flex-shrink:0;}
+.upsell-renewal-banner .rb-text{flex:1;font-size:12.5px;font-weight:700;line-height:1.5;}
+.upsell-renewal-banner .rb-text b{font-size:15px;}
+.upsell-renewal-banner .rb-btn{flex-shrink:0;}
 
 /* ===== MAIN CONTENT ===== */
 #main-content{
@@ -1357,6 +1368,13 @@ nav{
 <div class="screen active" id="screen-dashboard">
   <div class="sec-title">🏆 Painel do Herói</div>
 
+  <!-- Aviso de renovação (só aparece perto do vencimento do acesso pago via Pix) -->
+  <div class="upsell-renewal-banner" id="renewal-banner" style="display:none">
+    <span class="rb-icon">⏳</span>
+    <div class="rb-text" id="renewal-banner-text"></div>
+    <button class="btn btn-ghost btn-xs rb-btn" style="background:rgba(255,255,255,0.2);color:#fff;border-color:rgba(255,255,255,0.4)" onclick="openRenewalScreen()">Renovar agora</button>
+  </div>
+
   <!-- Streak + Meta diária + Conquistas -->
   <div class="dash-gamify-row">
     <div class="section-card gamify-card" id="streak-card">
@@ -1622,7 +1640,26 @@ nav{
     <h2 id="upsell-title">Recurso exclusivo do plano completo</h2>
     <p id="upsell-desc">Esse recurso faz parte do plano pago do Vale dos Nomeados.</p>
     <div class="upsell-price">Plano Nomeado — <b>R$ 19,90</b>/mês</div>
-    <a class="btn btn-primary btn-lg" id="upsell-whatsapp-btn" target="_blank" rel="noopener" href="#">Assinar e desbloquear</a>
+
+    <div class="pix-box">
+      <div class="pix-box-title">💠 Pague com Pix</div>
+      <ol class="pix-steps">
+        <li>Copie o código Pix abaixo</li>
+        <li>Cole no app do seu banco, na opção "Pix Copia e Cola"</li>
+        <li>Na descrição do Pix, escreva o e-mail da sua conta: <b id="pix-account-email"></b></li>
+        <li>Pronto! Seu acesso é liberado manualmente em até algumas horas.</li>
+      </ol>
+      <textarea id="pix-copia-cola" class="pix-copia-cola" readonly onclick="this.select()"></textarea>
+      <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="copyPixCode()">Copiar código Pix</button>
+      <div class="pix-key-note">Chave Pix (CPF): <b>118.038.714-74</b></div>
+    </div>
+
+    <div id="payment-history-box" style="display:none;text-align:left;margin-top:14px">
+      <div class="pix-box-title" style="font-size:11px;margin-bottom:6px">📜 Seus pagamentos</div>
+      <div id="payment-history-list" style="font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:4px"></div>
+    </div>
+
+    <a class="btn btn-ghost" id="upsell-whatsapp-btn" style="margin-top:14px" target="_blank" rel="noopener" href="#">Já paguei ou tenho dúvida — falar no WhatsApp</a>
   </div>
 </div>
 
@@ -2149,14 +2186,20 @@ function applyDefaults(){
   // (ver loadDB()), então esse default aqui nunca reativa o onboarding pra ninguém que já
   // vinha usando o app.
   if(typeof db.onboardingCompleted!=='boolean')db.onboardingCompleted=true;
-  // Plano de acesso: 'trial' = só as telas de LOCKED_SCREENS ficam travadas (ver
-  // showScreen()); qualquer outro valor (inclusive undefined vindo de conta antiga) é
-  // tratado como acesso completo. Só vira 'trial' explicitamente no primeiro load de uma
-  // conta genuinamente nova (ver loadDB()), então contas que já existiam antes desse campo
-  // nunca ficam travadas por engano. Pra liberar alguém que pagou fora do app (Pix/WhatsApp,
-  // ainda sem gateway integrado): Firebase Console → Realtime Database →
-  // users/{uid}/plan → trocar o valor de "trial" pra "full".
+  // Plano de acesso: 'trial' = só as telas de LOCKED_SCREENS ficam travadas, a não ser que
+  // haja um pagamento válido (ver hasFullAccess()); qualquer outro valor (inclusive
+  // undefined vindo de conta antiga) é tratado como acesso completo permanente, sem
+  // depender de pagamento. Só vira 'trial' explicitamente no primeiro load de uma conta
+  // genuinamente nova (ver loadDB()), então contas que já existiam antes desse campo nunca
+  // ficam travadas por engano.
   if(typeof db.plan!=='string')db.plan='full';
+  // Data (YYYY-MM-DD) do último pagamento confirmado manualmente — ainda sem gateway
+  // integrado, então é você quem escreve esse valor. Pra liberar alguém que pagou via Pix:
+  // Firebase Console → Realtime Database → users/{uid}/lastPaymentAt → coloca a data de
+  // hoje (é só isso, o app calcula sozinho os 30 dias de acesso a partir daí — ver
+  // hasFullAccess()). Renovou de novo mês que vem? Só atualizar de novo com a nova data.
+  if(typeof db.lastPaymentAt!=='string')db.lastPaymentAt='';
+  if(!Array.isArray(db.paymentHistory))db.paymentHistory=[];
 
   // Limpar revisões inválidas (date=undefined ou extras além de 4)
   const INTERVALOS_MAX=4;
@@ -2230,6 +2273,8 @@ function loadDB(callback){
     if(isSaving&&firebaseReady){isSaving=false;return;}
     isSaving=false;
     clearTimeout(safetyTimer);
+    const wasReady=firebaseReady;
+    const prevLastPayment=db.lastPaymentAt;
     const data=snapshot.val();
     if(data){
       Object.assign(db,data);
@@ -2241,6 +2286,15 @@ function loadDB(callback){
       db.plan='trial';
     }
     applyDefaults();
+    // Histórico de pagamentos: detecta quando lastPaymentAt muda (você confirmou uma
+    // renovação no Firebase Console) e registra no histórico. Só depois do primeiro load
+    // (wasReady), senão logaria uma "renovação" falsa toda vez que a conta simplesmente
+    // carrega com um lastPaymentAt que já existia de antes.
+    if(wasReady&&data&&data.lastPaymentAt&&data.lastPaymentAt!==prevLastPayment){
+      db.paymentHistory=db.paymentHistory||[];
+      db.paymentHistory.push({date:data.lastPaymentAt,confirmadoEm:new Date().toISOString()});
+      saveDB();
+    }
     applyPlanGating();
     try{localStorage.setItem(LS_KEY,JSON.stringify(db));}catch(e){}
     if(!firebaseReady){
@@ -2613,6 +2667,7 @@ function getBrasiliaDate(){const n=new Date();return new Date(n.getTime()+(n.get
 function localDateStrFromDate(dt){const b=new Date(dt.getTime()+(dt.getTimezoneOffset()*60000)+(-3*3600000));return b.getFullYear()+'-'+String(b.getMonth()+1).padStart(2,'0')+'-'+String(b.getDate()).padStart(2,'0');}
 function todayStr(){const d=getBrasiliaDate();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function addDays(d,n){const dt=new Date(d+'T00:00:00');dt.setDate(dt.getDate()+n);return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');}
+function fmtDateBR(dateStr){const[y,m,d]=dateStr.split('-');return `${d}/${m}/${y}`;}
 function daysDiff(a,b){return Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/86400000);}
 function fmtTime(s){if(!s)return '0m';const h=Math.floor(s/3600),m=Math.floor((s%3600)/60);return h?`${h}h${m}m`:`${m}m`;}
 function fmtHMS(s){return [Math.floor(s/3600),Math.floor((s%3600)/60),s%60].map(n=>String(n).padStart(2,'0')).join(':');}
@@ -2748,9 +2803,55 @@ const LOCKED_SCREEN_INFO={
   editais:{icon:'📋',title:'Editais é um recurso do plano completo',desc:'O acompanhamento de editais libera junto com o plano completo.'},
   redacoes:{icon:'📝',title:'Redações é um recurso do plano completo',desc:'A correção de redação por IA com cálculo de NPD libera junto com o plano completo.'},
   repertorio:{icon:'🧠',title:'Repertório é um recurso do plano completo',desc:'O banco de repertório sociocultural libera junto com o plano completo.'},
+  renewal:{icon:'⏳',title:'Renove seu acesso completo',desc:'Seu acesso pago está acabando — renove agora pra não perder Revisões, Banco de Erros, Simulado Geral, Editais, Redações e Repertório.'},
 };
 const WHATSAPP_NUMBER_APP='558195820859';
-function hasFullAccess(){return db.plan!=='trial';}
+const PIX_KEY='11803871474';
+const PIX_PRICE=19.90;
+const PIX_ACCESS_DAYS=30;
+// Quantos dias de acesso restam a partir do último pagamento confirmado (negativo = já
+// venceu). null quando a conta nunca pagou (plano trial sem nenhum lastPaymentAt ainda).
+function daysOfAccessLeft(){
+  if(!db.lastPaymentAt)return null;
+  return daysDiff(todayStr(),addDays(db.lastPaymentAt,PIX_ACCESS_DAYS));
+}
+function hasFullAccess(){
+  if(db.plan!=='trial')return true; // conta antiga/legada, sem trava — sempre teve acesso.
+  const left=daysOfAccessLeft();
+  return left!==null&&left>=0;
+}
+// ===== GERAÇÃO DO CÓDIGO PIX (copia e cola) — padrão BR Code / EMV do Banco Central =====
+// Implementado na mão (sem lib externa) porque o proxy de rede deste ambiente bloqueia CDNs
+// de terceiros pra gerar QR code — então por enquanto só o "copia e cola" (que já é o método
+// mais comum pra pagamento remoto/online no Pix, QR é mais usado presencialmente).
+function pixCRC16(payload){
+  let crc=0xFFFF;
+  for(let i=0;i<payload.length;i++){
+    crc^=(payload.charCodeAt(i)<<8);
+    for(let j=0;j<8;j++){
+      crc=(crc&0x8000)?((crc<<1)^0x1021)&0xFFFF:(crc<<1)&0xFFFF;
+    }
+  }
+  return crc.toString(16).toUpperCase().padStart(4,'0');
+}
+function pixTLV(id,value){return id+String(value.length).padStart(2,'0')+value;}
+function buildPixPayload({key,amount,name,city,txid}){
+  const merchantAccountInfo=pixTLV('26',pixTLV('00','br.gov.bcb.pix')+pixTLV('01',key));
+  const amountField=amount?pixTLV('54',Number(amount).toFixed(2)):'';
+  const payload=pixTLV('00','01')+pixTLV('01','11')+merchantAccountInfo+pixTLV('52','0000')+pixTLV('53','986')+amountField+pixTLV('58','BR')+pixTLV('59',name.slice(0,25))+pixTLV('60',city.slice(0,15))+pixTLV('62',pixTLV('05',txid||'***'))+'6304';
+  return payload+pixCRC16(payload);
+}
+function getPixCopiaCola(){
+  return buildPixPayload({key:PIX_KEY,amount:PIX_PRICE,name:'VALE DOS NOMEADOS',city:'BRASIL',txid:'***'});
+}
+function copyPixCode(){
+  const code=getPixCopiaCola();
+  navigator.clipboard.writeText(code).then(()=>{
+    toast('✅ Código Pix copiado — cole no app do seu banco','var(--green)');
+  }).catch(()=>{
+    toast('⚠️ Não foi possível copiar automaticamente. Selecione o texto e copie manualmente.','var(--orange)');
+  });
+}
 function applyPlanGating(){
   const full=hasFullAccess();
   LOCKED_SCREENS.forEach(name=>{
@@ -2773,8 +2874,29 @@ function renderLockedScreen(name){
   document.getElementById('upsell-icon').textContent=info.icon;
   document.getElementById('upsell-title').textContent=info.title;
   document.getElementById('upsell-desc').textContent=info.desc;
-  const msg='Olá! Quero assinar o Vale dos Nomeados pra desbloquear todos os recursos (email da conta: '+(currentUser&&currentUser.email||'')+').';
+  const email=(currentUser&&currentUser.email)||'';
+  document.getElementById('pix-account-email').textContent=email;
+  document.getElementById('pix-copia-cola').value=getPixCopiaCola();
+  const msg='Olá! Fiz o Pix pra assinar o Vale dos Nomeados (email da conta: '+email+'). Pode confirmar meu acesso?';
   document.getElementById('upsell-whatsapp-btn').href='https://wa.me/'+WHATSAPP_NUMBER_APP+'?text='+encodeURIComponent(msg);
+  const histBox=document.getElementById('payment-history-box');
+  const histList=document.getElementById('payment-history-list');
+  if(db.paymentHistory&&db.paymentHistory.length){
+    histBox.style.display='block';
+    histList.innerHTML=db.paymentHistory.slice().reverse().map(p=>`<div>✅ Renovado em ${fmtDateBR(p.date)} — acesso até ${fmtDateBR(addDays(p.date,PIX_ACCESS_DAYS))}</div>`).join('');
+  }else{
+    histBox.style.display='none';
+  }
+}
+// Abre a tela de Pix pra renovação mesmo quando o acesso ainda está válido (usada pelo
+// aviso de "acesso acabando" no Painel do Herói) — diferente de showScreen(), que só
+// mostra essa tela quando o recurso já está de fato bloqueado.
+function openRenewalScreen(){
+  if(typeof fcVoiceStop==='function')fcVoiceStop();
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('screen-locked').classList.add('active');
+  renderLockedScreen('renewal');
 }
 function showScreen(name){
   if(name!=='flashcards'&&typeof fcVoiceStop==='function')fcVoiceStop();
@@ -6163,7 +6285,30 @@ function renderWeekStudyChart(){
   if(tot)tot.textContent=`${studied.length} assunto${studied.length!==1?'s':''} estudado${studied.length!==1?'s':''} nos últimos 7 dias`;
 }
 
+// Mostra o aviso de renovação no Painel do Herói quando o acesso pago via Pix está
+// acabando (últimos PIX_RENEWAL_WARNING_DAYS dias) ou já venceu.
+const PIX_RENEWAL_WARNING_DAYS=5;
+function renderRenewalBanner(){
+  const banner=document.getElementById('renewal-banner');
+  const text=document.getElementById('renewal-banner-text');
+  if(!banner||!text)return;
+  if(db.plan==='trial'&&db.lastPaymentAt){
+    const left=daysOfAccessLeft();
+    if(left!==null&&left<0){
+      text.innerHTML=`<b>Seu acesso completo venceu.</b><br>Renove pelo Pix pra recuperar Revisões, Simulado Geral, Redações e mais.`;
+      banner.style.display='flex';
+    }else if(left!==null&&left<=PIX_RENEWAL_WARNING_DAYS){
+      text.innerHTML=`<b>Seu acesso completo termina em ${left===0?'hoje':left+' dia'+(left===1?'':'s')}.</b><br>Renove pelo Pix pra não perder Revisões, Simulado Geral, Redações e mais.`;
+      banner.style.display='flex';
+    }else{
+      banner.style.display='none';
+    }
+  }else{
+    banner.style.display='none';
+  }
+}
 function renderDashboard(){
+  renderRenewalBanner();
   const today=todayStr();
   let totBoss=0,totMini=0,totRevDone=0,totRevOver=0,p30=0,p70=0,p100=0;
   const kingdoms=[];
