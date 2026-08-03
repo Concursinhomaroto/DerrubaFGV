@@ -11,22 +11,15 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
+/* Tema escuro fixo pra todo mundo (não depende mais da preferência do sistema) — o time
+   achou o visual escuro mais bonito e consistente que o claro nesta landing page. */
 :root{
-  --bg:#f5f3ff; --bg2:#ffffff; --panel:#ffffff; --panel2:#f7f5ff;
-  --border:#e4dffb; --border2:#ddd6fe;
-  --accent:#7c3aed; --accent2:#6d28d9; --cyan:#06b6d4;
-  --text:#241a3d; --text2:#4b3f6b; --muted:#7c6fa0;
+  --bg:#0f0e1a; --bg2:#171528; --panel:#1a1830; --panel2:#201d38;
+  --border:#332f54; --border2:rgba(167,139,250,0.25);
+  --accent:#a78bfa; --accent2:#8b5cf6; --cyan:#22d3ee;
+  --text:#ede9fe; --text2:#c4b5fd; --muted:#8b7fb8;
   --r-md:12px; --r-lg:18px; --r-xl:26px;
-  --shadow:0 10px 30px rgba(108,71,255,0.12);
-}
-@media(prefers-color-scheme:dark){
-  :root{
-    --bg:#0f0e1a; --bg2:#171528; --panel:#1a1830; --panel2:#201d38;
-    --border:#332f54; --border2:rgba(167,139,250,0.25);
-    --accent:#a78bfa; --accent2:#8b5cf6; --cyan:#22d3ee;
-    --text:#ede9fe; --text2:#c4b5fd; --muted:#8b7fb8;
-    --shadow:0 10px 34px rgba(0,0,0,0.45);
-  }
+  --shadow:0 10px 34px rgba(0,0,0,0.45);
 }
 *{box-sizing:border-box;}
 html,body{overflow-x:hidden;}
