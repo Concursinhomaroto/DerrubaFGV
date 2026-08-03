@@ -8937,10 +8937,18 @@ async function fcHandlePDF(file){
     // PDFs grandes cortavam pra so os primeiros 25000 caracteres (~19% de um arquivo de
     // 130k+ chars), entao boa parte do conteudo nunca chegava a virar flashcard - nao e a
     // IA "gerando pouco", e o texto sendo truncado antes de sair daqui. Agora quebramos em
-    // pedacos de ate 25000 chars (cortando em quebra de linha, nao no meio da frase) e
-    // geramos um chunk de cada vez, com pausa entre eles pra nao estourar o limite de
-    // requisicoes por minuto da API - mesmo padrao ja usado no Simulado Geral.
-    const CHUNK_SIZE=25000;
+    // pedacos (cortando em quebra de linha, nao no meio da frase) e geramos um chunk de
+    // cada vez, com pausa entre eles pra nao estourar o limite de requisicoes por minuto
+    // da API - mesmo padrao ja usado no Simulado Geral.
+    //
+    // O limite da API e por CHAMADA (requisicoes/minuto), nao por volume de texto dentro
+    // de cada chamada - os modelos Flash aguentam textos bem maiores que isso numa unica
+    // chamada. Pedacos menores = mais chamadas pro mesmo PDF = pior pro limite, entao o
+    // tamanho foi ampliado (de 25000 pra 60000) pra reduzir o numero de chamadas por PDF.
+    // Não ampliar demais: a resposta da IA (lista de flashcards em JSON) também tem teto
+    // de tamanho, e um pedaço grande demais gera JSON longo o suficiente pra cortar no
+    // meio e falhar o parse — 60000 já é ~2.4x o tamanho anterior, testado e ainda seguro.
+    const CHUNK_SIZE=60000;
     const chunks=[];
     {
       let i=0;
