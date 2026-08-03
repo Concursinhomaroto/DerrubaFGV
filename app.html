@@ -3019,6 +3019,14 @@ function adminGoToPage(delta){
   adminPage+=delta;
   adminRenderPage();
 }
+// Escapa texto antes de jogar em innerHTML — necessário aqui porque accountEmail é
+// gravado no próprio registro do usuário (users/{uid}/vdn_v1), que as Security Rules só
+// protegem por DONO, não por FORMATO. Qualquer pessoa logada pode escrever HTML/JS
+// arbitrário nesse campo direto pelo console do navegador (bypassando o app inteiro) —
+// sem escapar aqui, esse conteúdo executaria na sessão do ADMIN ao abrir o Painel Admin.
+function escapeHtml(s){
+  return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
 function renderAdminResults(matches,totalMatches,totalPages){
   const resultsEl=document.getElementById('admin-results');
   const pagEl=document.getElementById('admin-pagination');
@@ -3041,7 +3049,7 @@ function renderAdminResults(matches,totalMatches,totalPages){
     else if(left!==null)statusHtml=`<span style="color:var(--red)">Vencido há ${Math.abs(left)} dia${Math.abs(left)===1?'':'s'}</span>`;
     else statusHtml='<span style="color:var(--muted)">Trial, sem pagamento ainda</span>';
     return `<div class="admin-result-card">
-      <div class="admin-result-email">${d.accountEmail||'(sem e-mail salvo)'}</div>
+      <div class="admin-result-email">${escapeHtml(d.accountEmail)||'(sem e-mail salvo)'}</div>
       <div class="admin-result-status">${statusHtml}</div>
       <div class="admin-result-actions">
         <button class="btn btn-xs btn-primary" onclick="adminConfirmPayment('${uid}','mensal')">Confirmar Mensal</button>
