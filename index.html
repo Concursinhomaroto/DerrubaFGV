@@ -91,6 +91,17 @@ header{position:sticky;top:0;z-index:20;background:color-mix(in srgb, var(--bg2)
 .stat-num{font-family:'Cinzel',serif;font-size:clamp(22px,3vw,32px);font-weight:900;margin-bottom:4px;}
 .stat-label{font-size:12px;font-weight:700;opacity:0.85;letter-spacing:0.3px;}
 
+/* ===== PRICING ===== */
+.pricing-card{max-width:440px;margin:0 auto;background:var(--panel);border:2px solid var(--accent2);border-radius:var(--r-xl);padding:40px;text-align:center;box-shadow:var(--shadow);position:relative;}
+.pricing-badge{position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:11px;font-weight:800;letter-spacing:0.5px;padding:6px 16px;border-radius:999px;white-space:nowrap;}
+.pricing-name{font-family:'Cinzel',serif;font-size:18px;font-weight:700;color:var(--accent);margin-bottom:8px;}
+.pricing-price{display:flex;align-items:baseline;justify-content:center;gap:4px;margin-bottom:4px;}
+.pricing-price .currency{font-size:18px;font-weight:800;color:var(--text2);}
+.pricing-price .amount{font-family:'Cinzel',serif;font-size:48px;font-weight:900;color:var(--text);}
+.pricing-price .period{font-size:14px;color:var(--muted);font-weight:600;}
+.pricing-trial{font-size:13px;color:var(--accent);font-weight:700;margin-bottom:24px;}
+.pricing-card .check-list{text-align:left;margin-bottom:28px;}
+
 /* ===== FAQ ===== */
 .faq{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:12px;}
 .faq-item{background:var(--panel);border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;}
@@ -130,8 +141,9 @@ footer{border-top:1px solid var(--border);padding:28px 0;margin-top:20px;}
   <div class="header-inner">
     <div class="brand"><span class="brand-logo">🐉</span> VALE DOS NOMEADOS</div>
     <div class="header-cta">
+      <a class="btn btn-ghost" href="#precos" style="background:none;border:none;box-shadow:none">Preços</a>
       <a class="btn btn-ghost" href="app.html">Entrar</a>
-      <a class="btn btn-primary" href="app.html">Criar conta grátis</a>
+      <a class="btn btn-primary" href="app.html">Teste grátis por 7 dias</a>
     </div>
   </div>
 </header>
@@ -143,10 +155,10 @@ footer{border-top:1px solid var(--border);padding:28px 0;margin-top:20px;}
       <h1>Transforme o edital num <span class="accent">jogo que você quer vencer</span></h1>
       <p>Flashcards com revisão espaçada de verdade, simulados e correção de redação por IA, e um painel que te mostra exatamente o que estudar hoje — tudo organizado por matéria, num só lugar.</p>
       <div class="hero-ctas">
-        <a class="btn btn-primary btn-lg" href="app.html">Criar conta grátis <i>→</i></a>
+        <a class="btn btn-primary btn-lg" href="app.html">Começar teste grátis de 7 dias <i>→</i></a>
         <a class="btn btn-ghost btn-lg" href="app.html">Já tenho conta</a>
       </div>
-      <div class="hero-note">Sem cartão de crédito. Leva menos de um minuto pra começar.</div>
+      <div class="hero-note">7 dias grátis, depois R$ 19,90/mês. Cancele quando quiser.</div>
     </div>
     <div class="hero-shot">
       <img src="dashboard.png" alt="Painel do Herói do Vale dos Nomeados, mostrando streak, meta diária, conquistas e tempo estudado por matéria" loading="eager">
@@ -238,6 +250,32 @@ footer{border-top:1px solid var(--border);padding:28px 0;margin-top:20px;}
   </div>
 </section>
 
+<section class="section" id="precos">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>Um plano só, tudo incluído</h2>
+      <p>Sem letra miúda: um preço, acesso completo a todas as ferramentas.</p>
+    </div>
+    <div class="pricing-card">
+      <span class="pricing-badge">7 DIAS GRÁTIS PRA TESTAR</span>
+      <div class="pricing-name">Plano Nomeado</div>
+      <div class="pricing-price"><span class="currency">R$</span><span class="amount">19,90</span></div>
+      <div class="pricing-price"><span class="period">por mês</span></div>
+      <div class="pricing-trial">Comece grátis — só cobra depois dos 7 dias</div>
+      <ul class="check-list">
+        <li>Flashcards ilimitados com revisão espaçada (SM-2)</li>
+        <li>Simulados por assunto e Simulado Geral cronometrado</li>
+        <li>Correção de redação por IA com cálculo de NPD</li>
+        <li>Modo de estudo por voz, automático</li>
+        <li>Gamificação completa: streak, meta diária, conquistas</li>
+        <li>PWA instalável, funciona offline</li>
+        <li>Cancele quando quiser, sem multa</li>
+      </ul>
+      <a class="btn btn-primary btn-lg" href="app.html" style="width:100%">Começar teste grátis</a>
+    </div>
+  </div>
+</section>
+
 <section class="section">
   <div class="wrap">
     <div class="section-head">
@@ -245,8 +283,12 @@ footer{border-top:1px solid var(--border);padding:28px 0;margin-top:20px;}
     </div>
     <div class="faq" id="faq-list">
       <div class="faq-item">
-        <button class="faq-q">O Vale dos Nomeados é gratuito?<span></span></button>
-        <div class="faq-a">Sim, o cadastro e o uso são gratuitos. Os recursos de IA (geração de flashcards, simulados e correção de redação) usam uma chave de API do Google Gemini que você mesmo cola nas configurações — o Google oferece uma cota gratuita generosa pra uso pessoal.</div>
+        <button class="faq-q">Quanto custa e como funciona o teste grátis?<span></span></button>
+        <div class="faq-a">R$ 19,90 por mês, com 7 dias grátis pra testar tudo antes de decidir. Sem taxa de adesão, sem contrato de fidelidade.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">Posso cancelar quando quiser?<span></span></button>
+        <div class="faq-a">Sim, a qualquer momento, sem multa. Você continua com acesso até o fim do período já pago.</div>
       </div>
       <div class="faq-item">
         <button class="faq-q">Preciso instalar algum programa?<span></span></button>
@@ -272,8 +314,8 @@ footer{border-top:1px solid var(--border);padding:28px 0;margin-top:20px;}
   <div class="wrap">
     <div class="final-cta">
       <h2>Bora dominar o edital?</h2>
-      <p>Crie sua conta agora e comece a organizar seus estudos hoje mesmo.</p>
-      <a class="btn btn-primary btn-lg" href="app.html">Criar conta grátis</a>
+      <p>Comece seu teste grátis de 7 dias agora e organize seus estudos hoje mesmo.</p>
+      <a class="btn btn-primary btn-lg" href="app.html">Começar teste grátis</a>
     </div>
   </div>
 </section>
