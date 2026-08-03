@@ -222,6 +222,12 @@ nav{
 .admin-result-email{font-size:13.5px;font-weight:800;color:var(--text);margin-bottom:4px;word-break:break-all;}
 .admin-result-status{font-size:12px;font-weight:700;margin-bottom:10px;}
 .admin-result-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.admin-stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:10px;margin-bottom:16px;}
+.admin-stat{background:var(--panel2);border:1.5px solid var(--border2);border-radius:10px;padding:10px 8px;text-align:center;}
+.admin-stat b{display:block;font-size:20px;font-weight:900;color:var(--text);}
+.admin-stat span{display:block;font-size:10.5px;color:var(--muted);margin-top:2px;}
+.admin-page-btn{background:var(--panel2);border:1.5px solid var(--border2);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;color:var(--text);cursor:pointer;}
+.admin-page-btn:disabled{opacity:.4;cursor:default;}
 
 /* ===== MAIN CONTENT ===== */
 #main-content{
@@ -1653,13 +1659,15 @@ nav{
 <div class="screen" id="screen-admin">
   <div class="sec-title">🛠️ Painel Admin — Confirmar Pagamento</div>
   <div class="section-card" style="max-width:720px">
-    <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Busque pelo e-mail que a pessoa colocou na descrição do Pix. Confirmar já libera o acesso na hora (e, no vitalício, desconta a vaga automaticamente).</div>
+    <div id="admin-stats" class="admin-stats-grid"></div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Busque pelo e-mail que a pessoa colocou na descrição do Pix, ou deixe em branco pra rolar por todas as contas. Confirmar já libera o acesso na hora (e, no vitalício, desconta a vaga automaticamente).</div>
     <div style="display:flex;gap:8px;margin-bottom:6px">
-      <input type="text" id="admin-search-input" placeholder="Buscar por e-mail..." style="flex:1;padding:11px 14px;border-radius:10px;border:1.5px solid var(--border2);background:var(--panel2);color:var(--text);font-family:inherit;font-size:13px" oninput="adminSearchUsers(this.value)">
+      <input type="text" id="admin-search-input" placeholder="Buscar por e-mail (ou deixe vazio pra ver todas)..." style="flex:1;padding:11px 14px;border-radius:10px;border:1.5px solid var(--border2);background:var(--panel2);color:var(--text);font-family:inherit;font-size:13px" oninput="adminOnSearchInput()">
     </div>
     <div id="admin-results" style="margin-top:16px;display:flex;flex-direction:column;gap:10px">
-      <div class="empty" style="padding:16px"><p>Digite um e-mail pra buscar.</p></div>
+      <div class="empty" style="padding:16px"><i class="fa fa-spinner fa-spin"></i><p>Carregando...</p></div>
     </div>
+    <div id="admin-pagination" style="display:flex;align-items:center;justify-content:center;gap:14px;margin-top:14px"></div>
   </div>
 </div>
 
@@ -2940,26 +2948,88 @@ function isLifetimeAvailable(){
 // Se precisar trocar quem é admin, troca esse e-mail aqui E na regra do Firebase Console.
 const ADMIN_EMAIL='leonardobrunotlc@gmail.com';
 function isAdmin(){return !!(currentUser&&currentUser.email===ADMIN_EMAIL);}
-let adminUsersCache=null; // {uid: {vdn_v1:{...}}, ...} — recarregado a cada busca
-function adminSearchUsers(query){
+let adminUsersCache=null; // {uid: {vdn_v1:{...}}, ...} — recarregado a cada busca/refresh
+let adminPage=0;
+const ADMIN_PAGE_SIZE=15;
+// Classifica uma conta num balde só, pro card de estatísticas do topo do painel.
+function adminStatusBucket(d){
+  const full=d.plan!=='trial';
+  if(!d.lastPaymentAt)return full?'vitalicio':'trial';
+  const plan=PIX_PLANS[d.planType];
+  const days=(plan&&plan.accessDays)||PIX_ACCESS_DAYS;
+  const left=daysDiff(todayStr(),addDays(d.lastPaymentAt,days));
+  if(left<0)return 'vencido';
+  return d.planType==='anual'?'anual':'mensal';
+}
+function adminRenderStats(all){
+  const statsEl=document.getElementById('admin-stats');
+  if(!statsEl)return;
+  const counts={total:0,trial:0,mensal:0,anual:0,vitalicio:0,vencido:0};
+  Object.values(all||{}).forEach(u=>{
+    counts.total++;
+    counts[adminStatusBucket((u&&u.vdn_v1)||{})]++;
+  });
+  statsEl.innerHTML=`
+    <div class="admin-stat"><b>${counts.total}</b><span>Total de contas</span></div>
+    <div class="admin-stat"><b>${counts.trial}</b><span>Trial</span></div>
+    <div class="admin-stat"><b>${counts.mensal}</b><span>Mensal ativo</span></div>
+    <div class="admin-stat"><b>${counts.anual}</b><span>Anual ativo</span></div>
+    <div class="admin-stat"><b>${counts.vitalicio}</b><span>Vitalício</span></div>
+    <div class="admin-stat"><b>${counts.vencido}</b><span>Vencidos</span></div>
+  `;
+}
+// Busca do zero no Firebase (chamado ao abrir o painel e depois de confirmar um plano).
+function adminSearchUsers(){
+  adminPage=0;
+  adminRefresh();
+}
+// Digitar na busca não refaz a leitura no Firebase — só refiltra o que já está em cache.
+function adminOnSearchInput(){
+  adminPage=0;
+  if(!adminUsersCache){adminRefresh();return;}
+  adminRenderPage();
+}
+function adminRefresh(){
   const resultsEl=document.getElementById('admin-results');
-  const q=(query||'').trim().toLowerCase();
   if(!resultsEl)return;
-  if(q.length<2){resultsEl.innerHTML='<div class="empty" style="padding:16px"><p>Digite ao menos 2 letras do e-mail...</p></div>';return;}
-  resultsEl.innerHTML='<div class="empty" style="padding:16px"><i class="fa fa-spinner fa-spin"></i><p>Buscando...</p></div>';
+  resultsEl.innerHTML='<div class="empty" style="padding:16px"><i class="fa fa-spinner fa-spin"></i><p>Carregando...</p></div>';
   firebaseDB.ref('users').once('value').then(snap=>{
     adminUsersCache=snap.val()||{};
-    const matches=Object.entries(adminUsersCache)
-      .map(([uid,u])=>({uid,d:(u&&u.vdn_v1)||{}}))
-      .filter(({d})=>(d.accountEmail||'').toLowerCase().includes(q));
-    renderAdminResults(matches);
+    adminRenderStats(adminUsersCache);
+    adminRenderPage();
   }).catch(e=>{
     resultsEl.innerHTML=`<div class="empty" style="padding:16px"><p>Erro ao buscar: ${e.message}</p></div>`;
   });
 }
-function renderAdminResults(matches){
+// Lista completa (ordenada por e-mail), filtrada pela busca quando tiver 2+ letras —
+// com a busca vazia dá pra rolar por todas as contas, página por página.
+function adminFilteredList(){
+  const q=(document.getElementById('admin-search-input')?.value||'').trim().toLowerCase();
+  const all=Object.entries(adminUsersCache||{})
+    .map(([uid,u])=>({uid,d:(u&&u.vdn_v1)||{}}))
+    .sort((a,b)=>(a.d.accountEmail||'').localeCompare(b.d.accountEmail||''));
+  if(q.length<2)return all;
+  return all.filter(({d})=>(d.accountEmail||'').toLowerCase().includes(q));
+}
+function adminRenderPage(){
+  const matches=adminFilteredList();
+  const totalPages=Math.max(1,Math.ceil(matches.length/ADMIN_PAGE_SIZE));
+  adminPage=Math.min(Math.max(0,adminPage),totalPages-1);
+  const pageItems=matches.slice(adminPage*ADMIN_PAGE_SIZE,(adminPage+1)*ADMIN_PAGE_SIZE);
+  renderAdminResults(pageItems,matches.length,totalPages);
+}
+function adminGoToPage(delta){
+  adminPage+=delta;
+  adminRenderPage();
+}
+function renderAdminResults(matches,totalMatches,totalPages){
   const resultsEl=document.getElementById('admin-results');
-  if(!matches.length){resultsEl.innerHTML='<div class="empty" style="padding:16px"><p>Nenhuma conta encontrada com esse e-mail.</p></div>';return;}
+  const pagEl=document.getElementById('admin-pagination');
+  if(!matches.length){
+    resultsEl.innerHTML='<div class="empty" style="padding:16px"><p>Nenhuma conta encontrada.</p></div>';
+    if(pagEl)pagEl.innerHTML='';
+    return;
+  }
   resultsEl.innerHTML=matches.map(({uid,d})=>{
     const full=d.plan!=='trial';
     const left=(()=>{
@@ -2983,6 +3053,17 @@ function renderAdminResults(matches){
       </div>
     </div>`;
   }).join('');
+  if(pagEl){
+    if(totalPages>1){
+      pagEl.innerHTML=`
+        <button class="admin-page-btn" onclick="adminGoToPage(-1)" ${adminPage===0?'disabled':''}>◀ Anterior</button>
+        <span style="font-size:12px;color:var(--muted)">Página ${adminPage+1} de ${totalPages} — ${totalMatches} conta${totalMatches===1?'':'s'}</span>
+        <button class="admin-page-btn" onclick="adminGoToPage(1)" ${adminPage>=totalPages-1?'disabled':''}>Próxima ▶</button>
+      `;
+    }else{
+      pagEl.innerHTML=`<span style="font-size:12px;color:var(--muted)">${totalMatches} conta${totalMatches===1?'':'s'}</span>`;
+    }
+  }
 }
 function adminConfirmPayment(uid,planType){
   const label=(PIX_PLANS[planType]||PIX_PLANS.mensal).label;
@@ -2995,13 +3076,13 @@ function adminConfirmPayment(uid,planType){
       slotsRef.transaction(cur=>Math.max(0,(cur||0)-1));
       toast('✅ Vitalício confirmado','var(--green)');
       sendPlanConfirmedEmail(accountEmail,label);
-      adminSearchUsers(document.getElementById('admin-search-input').value);
+      adminRefresh();
     }).catch(e=>toast('⚠️ Erro: '+e.message,'var(--red)'));
   }else{
     ref.update({lastPaymentAt:todayStr(),planType}).then(()=>{
       toast('✅ '+label+' confirmado','var(--green)');
       sendPlanConfirmedEmail(accountEmail,label);
-      adminSearchUsers(document.getElementById('admin-search-input').value);
+      adminRefresh();
     }).catch(e=>toast('⚠️ Erro: '+e.message,'var(--red)'));
   }
 }
@@ -3142,6 +3223,7 @@ function showScreen(name){
   if(name==='redacoes')renderRedacoesScreen();
   if(name==='repertorio')renderRepertorioScreen();
   if(name==='conquistas')renderConquistasScreen();
+  if(name==='admin')adminSearchUsers();
   if(name==='map')renderMap();
   // 'vale' (Mapa do Vale, D3+GeoJSON) fica suprimido da navegação por enquanto — mais
   // pesado pra carregar e menos prático pro uso diário que o grid de reinos. O código
