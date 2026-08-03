@@ -217,6 +217,12 @@ nav{
 .upsell-renewal-banner .rb-text b{font-size:15px;}
 .upsell-renewal-banner .rb-btn{flex-shrink:0;}
 
+/* ===== PAINEL ADMIN ===== */
+.admin-result-card{background:var(--panel2);border:1.5px solid var(--border2);border-radius:12px;padding:14px 16px;}
+.admin-result-email{font-size:13.5px;font-weight:800;color:var(--text);margin-bottom:4px;word-break:break-all;}
+.admin-result-status{font-size:12px;font-weight:700;margin-bottom:10px;}
+.admin-result-actions{display:flex;gap:8px;flex-wrap:wrap;}
+
 /* ===== MAIN CONTENT ===== */
 #main-content{
   margin-left:220px;
@@ -1279,6 +1285,9 @@ nav{
     <button class="nav-btn" id="nav-conquistas">
       <span class="nav-icon">🏅</span><span class="nav-label">CONQUISTAS</span>
     </button>
+    <button class="nav-btn" id="nav-admin" style="display:none">
+      <span class="nav-icon">🛠️</span><span class="nav-label">ADMIN</span>
+    </button>
   </nav>
 
   <!-- Tema + cronômetro flutuante, fixos no rodapé da sidebar -->
@@ -1638,6 +1647,20 @@ nav{
     <p id="conquistas-summary" class="conq-summary-text"></p>
   </div>
   <div id="conquistas-grid"></div>
+</div>
+
+<!-- ===== PAINEL ADMIN (só visível pra ADMIN_EMAIL) ===== -->
+<div class="screen" id="screen-admin">
+  <div class="sec-title">🛠️ Painel Admin — Confirmar Pagamento</div>
+  <div class="section-card" style="max-width:720px">
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Busque pelo e-mail que a pessoa colocou na descrição do Pix. Confirmar já libera o acesso na hora (e, no vitalício, desconta a vaga automaticamente).</div>
+    <div style="display:flex;gap:8px;margin-bottom:6px">
+      <input type="text" id="admin-search-input" placeholder="Buscar por e-mail..." style="flex:1;padding:11px 14px;border-radius:10px;border:1.5px solid var(--border2);background:var(--panel2);color:var(--text);font-family:inherit;font-size:13px" oninput="adminSearchUsers(this.value)">
+    </div>
+    <div id="admin-results" style="margin-top:16px;display:flex;flex-direction:column;gap:10px">
+      <div class="empty" style="padding:16px"><p>Digite um e-mail pra buscar.</p></div>
+    </div>
+  </div>
 </div>
 
 <!-- ===== TELA DE UPSELL (recursos travados no plano trial) ===== -->
@@ -2231,6 +2254,10 @@ function applyDefaults(){
   if(typeof db.lastPaymentAt!=='string')db.lastPaymentAt='';
   if(typeof db.planType!=='string')db.planType='mensal';
   if(!Array.isArray(db.paymentHistory))db.paymentHistory=[];
+  // Guarda o e-mail dentro do próprio registro (currentUser.email só existe em memória,
+  // some ao recarregar) — é o que permite o Painel Admin (ver ADMIN_EMAIL) buscar contas
+  // por e-mail. Mantém sempre sincronizado, caso a pessoa troque o e-mail de login algum dia.
+  if(currentUser&&currentUser.email&&db.accountEmail!==currentUser.email)db.accountEmail=currentUser.email;
 
   // Limpar revisões inválidas (date=undefined ou extras além de 4)
   const INTERVALOS_MAX=4;
@@ -2811,6 +2838,8 @@ window.addEventListener('focus',()=>tickTimers());
 function renderHeader(){
   document.getElementById('total-xp').textContent=(db.xp||0).toLocaleString();
   if(db.examDate){document.getElementById('exam-date').value=db.examDate;updateDaysLeft();}
+  const adminBtn=document.getElementById('nav-admin');
+  if(adminBtn)adminBtn.style.display=isAdmin()?'flex':'none';
 }
 function saveExamDate(){db.examDate=document.getElementById('exam-date').value;saveDB();updateDaysLeft();}
 function updateDaysLeft(){
@@ -2867,6 +2896,76 @@ function isLifetimeAvailable(){
   if(promoLifetime.deadline&&todayStr()>promoLifetime.deadline)return false;
   return true;
 }
+
+// ===== PAINEL ADMIN (confirmar pagamento sem precisar do Firebase Console) =====
+// Visível só pra essa conta — as Security Rules dão a ela (e só a ela) leitura de
+// users/* inteiro e escrita em qualquer users/{uid}, além de escrita em promo/lifetime.
+// Se precisar trocar quem é admin, troca esse e-mail aqui E na regra do Firebase Console.
+const ADMIN_EMAIL='leonardobrunotlc@gmail.com';
+function isAdmin(){return !!(currentUser&&currentUser.email===ADMIN_EMAIL);}
+let adminUsersCache=null; // {uid: {vdn_v1:{...}}, ...} — recarregado a cada busca
+function adminSearchUsers(query){
+  const resultsEl=document.getElementById('admin-results');
+  const q=(query||'').trim().toLowerCase();
+  if(!resultsEl)return;
+  if(q.length<2){resultsEl.innerHTML='<div class="empty" style="padding:16px"><p>Digite ao menos 2 letras do e-mail...</p></div>';return;}
+  resultsEl.innerHTML='<div class="empty" style="padding:16px"><i class="fa fa-spinner fa-spin"></i><p>Buscando...</p></div>';
+  firebaseDB.ref('users').once('value').then(snap=>{
+    adminUsersCache=snap.val()||{};
+    const matches=Object.entries(adminUsersCache)
+      .map(([uid,u])=>({uid,d:(u&&u.vdn_v1)||{}}))
+      .filter(({d})=>(d.accountEmail||'').toLowerCase().includes(q));
+    renderAdminResults(matches);
+  }).catch(e=>{
+    resultsEl.innerHTML=`<div class="empty" style="padding:16px"><p>Erro ao buscar: ${e.message}</p></div>`;
+  });
+}
+function renderAdminResults(matches){
+  const resultsEl=document.getElementById('admin-results');
+  if(!matches.length){resultsEl.innerHTML='<div class="empty" style="padding:16px"><p>Nenhuma conta encontrada com esse e-mail.</p></div>';return;}
+  resultsEl.innerHTML=matches.map(({uid,d})=>{
+    const full=d.plan!=='trial';
+    const left=(()=>{
+      if(!d.lastPaymentAt)return null;
+      const plan=PIX_PLANS[d.planType];
+      const days=(plan&&plan.accessDays)||PIX_ACCESS_DAYS;
+      return daysDiff(todayStr(),addDays(d.lastPaymentAt,days));
+    })();
+    let statusHtml;
+    if(full&&!d.lastPaymentAt)statusHtml='<span style="color:var(--green)">Acesso completo permanente</span>';
+    else if(left!==null&&left>=0)statusHtml=`<span style="color:var(--green)">${(PIX_PLANS[d.planType]||PIX_PLANS.mensal).label} — ${left} dia${left===1?'':'s'} restante${left===1?'':'s'}</span>`;
+    else if(left!==null)statusHtml=`<span style="color:var(--red)">Vencido há ${Math.abs(left)} dia${Math.abs(left)===1?'':'s'}</span>`;
+    else statusHtml='<span style="color:var(--muted)">Trial, sem pagamento ainda</span>';
+    return `<div class="admin-result-card">
+      <div class="admin-result-email">${d.accountEmail||'(sem e-mail salvo)'}</div>
+      <div class="admin-result-status">${statusHtml}</div>
+      <div class="admin-result-actions">
+        <button class="btn btn-xs btn-primary" onclick="adminConfirmPayment('${uid}','mensal')">Confirmar Mensal</button>
+        <button class="btn btn-xs btn-primary" onclick="adminConfirmPayment('${uid}','anual')">Confirmar Anual</button>
+        <button class="btn btn-xs btn-primary" onclick="adminConfirmPayment('${uid}','vitalicio')" ${isLifetimeAvailable()?'':'disabled title="Promoção vitalícia indisponível (vagas ou prazo esgotados)"'}>Confirmar Vitalício</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function adminConfirmPayment(uid,planType){
+  const label=(PIX_PLANS[planType]||PIX_PLANS.mensal).label;
+  if(!confirm(`Confirmar plano ${label} pra essa conta?`))return;
+  const ref=firebaseDB.ref('users/'+uid+'/vdn_v1');
+  if(planType==='vitalicio'){
+    ref.update({plan:'full'}).then(()=>{
+      const slotsRef=firebaseDB.ref('promo/lifetime/slotsLeft');
+      slotsRef.transaction(cur=>Math.max(0,(cur||0)-1));
+      toast('✅ Vitalício confirmado','var(--green)');
+      adminSearchUsers(document.getElementById('admin-search-input').value);
+    }).catch(e=>toast('⚠️ Erro: '+e.message,'var(--red)'));
+  }else{
+    ref.update({lastPaymentAt:todayStr(),planType}).then(()=>{
+      toast('✅ '+label+' confirmado','var(--green)');
+      adminSearchUsers(document.getElementById('admin-search-input').value);
+    }).catch(e=>toast('⚠️ Erro: '+e.message,'var(--red)'));
+  }
+}
+
 // ===== GERAÇÃO DO CÓDIGO PIX (copia e cola) — padrão BR Code / EMV do Banco Central =====
 // Implementado na mão (sem lib externa) porque o proxy de rede deste ambiente bloqueia CDNs
 // de terceiros pra gerar QR code — então por enquanto só o "copia e cola" (que já é o método
@@ -2983,6 +3082,7 @@ function openRenewalScreen(){
 }
 function showScreen(name){
   if(name!=='flashcards'&&typeof fcVoiceStop==='function')fcVoiceStop();
+  if(name==='admin'&&!isAdmin())name='dashboard'; // proteção extra, além do item ficar oculto no menu
   if(LOCKED_SCREENS.includes(name)&&!hasFullAccess()){
     document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
     document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
@@ -9157,6 +9257,7 @@ function bindStaticEvents(){
   document.getElementById('nav-redacoes')?.addEventListener('click',()=>showScreen('redacoes'));
   document.getElementById('nav-repertorio')?.addEventListener('click',()=>showScreen('repertorio'));
   document.getElementById('nav-conquistas')?.addEventListener('click',()=>showScreen('conquistas'));
+  document.getElementById('nav-admin')?.addEventListener('click',()=>showScreen('admin'));
   document.getElementById('xp-pill-btn')?.addEventListener('click',()=>showScreen('dashboard'));
   document.getElementById('exam-date')?.addEventListener('change',saveExamDate);
   document.getElementById('motive-card')?.addEventListener('click',rotatePhrase);
