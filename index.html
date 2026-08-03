@@ -80,11 +80,19 @@ header{position:sticky;top:0;z-index:20;background:color-mix(in srgb, var(--bg2)
 
 /* ===== SOBRE A PLATAFORMA ===== */
 .platform-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;}
-.platform-item{background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;transition:transform .15s, box-shadow .15s;}
-.platform-item:hover{transform:translateY(-3px);box-shadow:var(--shadow);}
-.platform-item .platform-shot{width:100%;aspect-ratio:16/10;object-fit:cover;object-position:top left;border-bottom:1px solid var(--border);background:var(--panel2);}
+.platform-item{background:var(--panel);border:1px solid var(--border);border-top:4px solid var(--p-accent);border-radius:var(--r-lg);overflow:hidden;transition:transform .15s, box-shadow .15s;}
+.platform-item:hover{transform:translateY(-4px);box-shadow:0 16px 34px color-mix(in srgb, var(--p-accent) 38%, transparent);}
+.platform-item:nth-child(1){--p-accent:#f97316;}
+.platform-item:nth-child(2){--p-accent:#818cf8;}
+.platform-item:nth-child(3){--p-accent:#eab308;}
+.platform-item:nth-child(4){--p-accent:#ec4899;}
+.platform-item:nth-child(5){--p-accent:#22c55e;}
+.platform-item:nth-child(6){--p-accent:#f59e0b;}
+.platform-shot-wrap{background:#0f0e1a;padding:14px;}
+.platform-item .platform-shot{width:100%;aspect-ratio:16/10;object-fit:cover;object-position:top left;border-radius:10px;background:var(--panel2);}
 .platform-item-body{padding:18px 20px;}
-.platform-item-body h3{font-family:'Inter',sans-serif;font-size:15px;font-weight:800;margin-bottom:6px;display:flex;align-items:center;gap:8px;}
+.platform-item-body h3{font-family:'Inter',sans-serif;font-size:15px;font-weight:800;margin-bottom:6px;display:flex;align-items:center;gap:10px;}
+.platform-icon-badge{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:30px;height:30px;border-radius:9px;font-size:15px;background:var(--p-accent);box-shadow:0 4px 10px color-mix(in srgb, var(--p-accent) 55%, transparent);}
 .platform-item-body p{font-size:13px;color:var(--text2);margin:0;}
 
 /* ===== SECTION HEADINGS ===== */
@@ -302,44 +310,44 @@ footer{border-top:1px solid var(--border);padding:28px 0;margin-top:20px;}
     </div>
     <div class="platform-grid">
       <div class="platform-item">
-        <img class="platform-shot" src="landing-assets/dashboard.png" alt="Painel do Herói" loading="lazy">
+        <div class="platform-shot-wrap"><img class="platform-shot" src="landing-assets/dashboard.png" alt="Painel do Herói" loading="lazy"></div>
         <div class="platform-item-body">
-          <h3>🏆 Painel do Herói</h3>
+          <h3><span class="platform-icon-badge">🏆</span> Painel do Herói</h3>
           <p>Sua tela inicial ao entrar: veja seu streak de dias seguidos, a meta diária com anel de progresso, as conquistas mais recentes desbloqueadas e quanto tempo você já estudou em cada matéria — tudo num painel só, sem precisar caçar informação espalhada.</p>
         </div>
       </div>
       <div class="platform-item">
-        <img class="platform-shot" src="landing-assets/mapa-reinos.png" alt="Mapa dos Reinos" loading="lazy">
+        <div class="platform-shot-wrap"><img class="platform-shot" src="landing-assets/mapa-reinos.png" alt="Mapa dos Reinos" loading="lazy"></div>
         <div class="platform-item-body">
-          <h3>🗺️ Mapa dos Reinos</h3>
+          <h3><span class="platform-icon-badge">🗺️</span> Mapa dos Reinos</h3>
           <p>Cada matéria vira um reino com seu próprio card: progresso de estudo, tempo dedicado e revisões atrasadas aparecem de cara, então você sempre sabe pra onde ir estudar em seguida sem precisar abrir planilha nenhuma.</p>
         </div>
       </div>
       <div class="platform-item">
-        <img class="platform-shot" src="landing-assets/revisoes.png" alt="Câmara de Revisões" loading="lazy">
+        <div class="platform-shot-wrap"><img class="platform-shot" src="landing-assets/revisoes.png" alt="Câmara de Revisões" loading="lazy"></div>
         <div class="platform-item-body">
-          <h3>🔔 Revisões</h3>
+          <h3><span class="platform-icon-badge">🔔</span> Revisões</h3>
           <p>Uma fila só, organizada em atrasadas, de hoje e dos próximos dias — o algoritmo SM-2 (o mesmo do Anki) calcula sozinho a hora certa de cada assunto voltar pra revisão, então você nunca esquece nem revisa cedo demais.</p>
         </div>
       </div>
       <div class="platform-item">
-        <img class="platform-shot" src="landing-assets/flashcards.png" alt="Flashcards" loading="lazy">
+        <div class="platform-shot-wrap"><img class="platform-shot" src="landing-assets/flashcards.png" alt="Flashcards" loading="lazy"></div>
         <div class="platform-item-body">
-          <h3>🃏 Flashcards</h3>
+          <h3><span class="platform-icon-badge">🃏</span> Flashcards</h3>
           <p>Organizados por chefão (o assunto) e miniboss (o subtema), com status visual de revisão em dia ou vencida. Crie os cards manualmente ou gere um lote inteiro automaticamente a partir de um PDF, usando IA.</p>
         </div>
       </div>
       <div class="platform-item">
-        <img class="platform-shot" src="landing-assets/redacoes.png" alt="Redações" loading="lazy">
+        <div class="platform-shot-wrap"><img class="platform-shot" src="landing-assets/redacoes.png" alt="Redações" loading="lazy"></div>
         <div class="platform-item-body">
-          <h3>📝 Redações</h3>
+          <h3><span class="platform-icon-badge">📝</span> Redações</h3>
           <p>Cada tema guarda o histórico completo dos seus textos, com cálculo automático de NPD (Nota Padrão de Desempenho) e correção detalhada por IA — feedback de verdade em vez de escrever no escuro.</p>
         </div>
       </div>
       <div class="platform-item">
-        <img class="platform-shot" src="landing-assets/conquistas.png" alt="Conquistas" loading="lazy">
+        <div class="platform-shot-wrap"><img class="platform-shot" src="landing-assets/conquistas.png" alt="Conquistas" loading="lazy"></div>
         <div class="platform-item-body">
-          <h3>🏅 Conquistas</h3>
+          <h3><span class="platform-icon-badge">🏅</span> Conquistas</h3>
           <p>Mais de 160 níveis de conquistas espalhados por categorias diferentes — streak, flashcards criados, tempo estudado, redações escritas — pra manter a motivação alta até nos dias mais difíceis de sentar e estudar.</p>
         </div>
       </div>
