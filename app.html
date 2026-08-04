@@ -1660,12 +1660,10 @@ nav{
       <ol class="pix-steps">
         <li>Copie o código Pix abaixo</li>
         <li>Cole no app do seu banco, na opção "Pix Copia e Cola"</li>
-        <li>Na descrição do Pix, escreva o e-mail da sua conta: <b id="pix-account-email"></b></li>
-        <li>Pronto! Seu acesso é liberado manualmente em até algumas horas.</li>
+        <li>Pronto! Seu acesso libera sozinho em poucos segundos após o pagamento.</li>
       </ol>
       <textarea id="pix-copia-cola" class="pix-copia-cola" readonly onclick="this.select()"></textarea>
       <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="copyPixCode()">Copiar código Pix</button>
-      <div class="pix-key-note">Chave Pix (CPF): <b>118.038.714-74</b></div>
     </div>
 
     <div id="payment-history-box" style="display:none;text-align:left;margin-top:14px">
@@ -2402,6 +2400,7 @@ function loadDB(callback){
       // Se o plano foi liberado (ex: Leo confirmou pagamento no Firebase Console) enquanto
       // a pessoa via a tela de upsell, já reabre a tela real na hora, sem precisar recarregar.
       if(sc==='screen-locked'&&hasFullAccess()){
+        stopPixCheckPolling();
         const lockedNav=document.querySelector('.nav-btn.active');
         const pending=lockedNav?lockedNav.id.replace('nav-',''):null;
         if(pending)showScreen(pending);
@@ -3099,6 +3098,29 @@ function adminConfirmPayment(uid,planType){
 const PIX_WORKER_URL='https://vdn-pix.leonardobrunotlc.workers.dev';
 let selectedPixTier='mensal';
 let pixCodeCache={}; // tier -> {copiaCola, paymentId} — evita gerar cobrança nova toda vez que troca de aba
+let pixCheckTimer=null;
+// Enquanto a tela de pagamento estiver aberta, pergunta de tempos em tempos pro Worker se o
+// Pix já foi pago — assim que ele confirmar, o listener do Firebase (DB_REF.on('value')) já
+// destrava a tela sozinho, sem precisar recarregar a página nem depender só do webhook.
+function startPixCheckPolling(){
+  stopPixCheckPolling();
+  pixCheckTimer=setInterval(checkPixPaymentNow,7000);
+}
+function stopPixCheckPolling(){
+  if(pixCheckTimer){clearInterval(pixCheckTimer);pixCheckTimer=null;}
+}
+async function checkPixPaymentNow(){
+  if(!currentUser)return;
+  try{
+    const res=await fetch(PIX_WORKER_URL+'/check-payment',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({uid:currentUser.uid}),
+    });
+    const data=await res.json();
+    if(data&&data.found)stopPixCheckPolling();
+  }catch(e){/* silencioso — só tenta de novo no próximo ciclo */}
+}
 async function fetchPixCode(tier,force){
   if(!force&&pixCodeCache[tier])return pixCodeCache[tier];
   if(!currentUser)throw new Error('Sessão não encontrada.');
@@ -3187,10 +3209,9 @@ function renderLockedScreen(name){
   document.getElementById('upsell-icon').textContent=info.icon;
   document.getElementById('upsell-title').textContent=info.title;
   document.getElementById('upsell-desc').textContent=info.desc;
-  const email=(currentUser&&currentUser.email)||'';
-  document.getElementById('pix-account-email').textContent=email;
   selectedPixTier=(db.intendedPlan&&PIX_PLANS[db.intendedPlan])?db.intendedPlan:'mensal';
   renderPixTierUI();
+  startPixCheckPolling();
   const histBox=document.getElementById('payment-history-box');
   const histList=document.getElementById('payment-history-list');
   if(db.paymentHistory&&db.paymentHistory.length){
@@ -3225,6 +3246,7 @@ function showScreen(name){
     renderLockedScreen(name);
     return;
   }
+  stopPixCheckPolling();
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('screen-'+name).classList.add('active');
