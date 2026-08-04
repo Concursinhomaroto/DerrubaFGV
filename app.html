@@ -3053,6 +3053,7 @@ function renderAdminResults(matches,totalMatches,totalPages){
         <button class="btn btn-xs btn-primary" onclick="adminConfirmPayment('${uid}','mensal')">Confirmar Mensal</button>
         <button class="btn btn-xs btn-primary" onclick="adminConfirmPayment('${uid}','anual')">Confirmar Anual</button>
         <button class="btn btn-xs btn-primary" onclick="adminConfirmPayment('${uid}','vitalicio')" ${isLifetimeAvailable()?'':'disabled title="Promoção vitalícia indisponível (vagas ou prazo esgotados)"'}>Confirmar Vitalício</button>
+        <button class="btn btn-xs btn-danger" onclick="adminDeleteUser('${uid}','${escapeHtml(d.accountEmail||'')}')">Excluir conta</button>
       </div>
     </div>`;
   }).join('');
@@ -3087,6 +3088,27 @@ function adminConfirmPayment(uid,planType){
       sendPlanConfirmedEmail(accountEmail,label);
       adminRefresh();
     }).catch(e=>toast('⚠️ Erro: '+e.message,'var(--red)'));
+  }
+}
+
+// Exclui a conta por inteiro (login no Authentication + dados no Realtime Database) numa
+// única ação — antes disso, excluir só pelo Firebase Console apagava um lado e deixava o
+// outro órfão (por isso contas de teste "excluídas" continuavam aparecendo aqui).
+async function adminDeleteUser(uid,email){
+  if(!confirm(`Excluir a conta ${email||uid} por inteiro? Essa ação não pode ser desfeita.`))return;
+  try{
+    const callerIdToken=await currentUser.getIdToken();
+    const res=await fetch(PIX_WORKER_URL+'/admin-delete-user',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({callerIdToken,targetUid:uid}),
+    });
+    const data=await res.json();
+    if(!res.ok||!data.ok)throw new Error(data.error||'Falha ao excluir');
+    toast('✅ Conta excluída','var(--green)');
+    adminRefresh();
+  }catch(e){
+    toast('⚠️ Erro ao excluir: '+e.message,'var(--red)');
   }
 }
 
