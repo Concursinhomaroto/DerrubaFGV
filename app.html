@@ -8511,8 +8511,10 @@ function fcStudyHTML(cards){
     <div class="fc-study-nav">
       <span class="fc-study-counter">Card ${fcStudyIdx+1}/${sorted.length} · <span style="color:var(--green)">✓${fcScoreRight}</span> <span style="color:var(--red)">✗${fcScoreWrong}</span></span>
       <div class="fc-study-actions">
+        <button class="fc-btn-skip" onclick="fcStudyBack()" title="Voltar para o card anterior" ${sorted.length<2?'disabled':''}>⟵ Voltar</button>
         <button class="fc-btn-skip" onclick="fcEditCard('${c.id}')" title="Ajustar pergunta, resposta ou dificuldade deste card"><i class="fa fa-pen"></i> Editar</button>
         <button class="fc-btn-skip" onclick="fcStudySkip()">⟶ Pular</button>
+        <button class="fc-btn-skip" onclick="fcStudyDeleteCard('${c.id}')" title="Excluir este flashcard (útil pra cards repetidos gerados pela IA)"><i class="fa fa-trash"></i></button>
       </div>
     </div>
     <div class="fc-study-wrap" onclick="fcStudyFlip()">
@@ -8706,6 +8708,27 @@ function fcStudySkip(){
   fcVoiceStop();fcVoiceLastKey='';
   fcStudyIdx=(fcStudyIdx+1)%fcStudyCards.length;
   fcStudyFlipped=false;renderFCMain();
+}
+
+// Volta pro card anterior da sessão de estudo — não desfaz uma nota já dada (o SM-2 já foi
+// salvo), só deixa revisitar/rever o card sem precisar avançar a fila inteira de novo.
+function fcStudyBack(){
+  if(!fcStudyCards||fcStudyCards.length<2)return;
+  fcVoiceStop();fcVoiceLastKey='';
+  fcStudyIdx=(fcStudyIdx-1+fcStudyCards.length)%fcStudyCards.length;
+  fcStudyFlipped=false;renderFCMain();
+}
+
+// Exclui o card direto da tela de estudo — pensado pra tirar rapidinho os duplicados que a
+// IA às vezes gera, sem precisar sair do modo estudo pra achar o card na lista.
+function fcStudyDeleteCard(id){
+  if(!confirm('Excluir este flashcard? (repetido ou com erro, por exemplo)'))return;
+  fcVoiceStop();fcVoiceLastKey='';
+  if(db.flashcards)delete db.flashcards[id];
+  saveDB();
+  fcStudyFlipped=false;
+  renderFCMbList();renderFCMain();updateFCBadge();
+  toast('🗑️ Flashcard excluído','var(--red)');
 }
 
 function fcBossStudy(tipo){
