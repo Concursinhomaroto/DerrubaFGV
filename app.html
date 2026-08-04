@@ -4115,7 +4115,7 @@ function subItemHTML(s,topicId){
 
   return`<div class="sub-item${s.studied?' sub-studied':''}" id="si-${s.id}">
     <div class="sub-row">
-      <span class="sub-name"><i class="fa fa-user-ninja" style="color:${s.priority===100?'var(--red)':s.priority===70?'var(--orange)':'var(--green)'}"></i> ${s.name}</span>
+      <span class="sub-name" style="cursor:pointer" onclick="closeTimerPanel('${s.id}')" title="Clique pra fechar o painel de estudo desse miniboss, se estiver aberto"><i class="fa fa-user-ninja" style="color:${s.priority===100?'var(--red)':s.priority===70?'var(--orange)':'var(--green)'}"></i> ${s.name}</span>
       <span class="pri-badge ${pCls}" style="cursor:pointer" onclick="cyclePriority('${s.id}','${topicId}')" title="Alterar → ${nextLbl}">${pLbl} ✎</span>
       <span class="time-chip" id="tc-${s.id}" title="Tempo desta sessão (não salvo)">${running?'<i class="fa fa-circle" style="color:var(--red);font-size:6px;animation:pulse 1s infinite"></i> ':'<i class="fa fa-clock"></i> '}${fmtTime(displayTime)}</span>
       ${totalTime>0?`<span class="total-time-chip" title="Tempo total salvo"><i class="fa fa-layer-group"></i> ${fmtTime(totalTime)}</span>`:''}
@@ -5596,6 +5596,17 @@ function renderConquistasScreen(){
   if(summaryEl)summaryEl.textContent=`${unlockedTotal} de ${maxTotal} níveis · ${list.length}/${ACHIEVEMENTS_REGISTRY.length} conquistas exibidas · 🏆 ${gamerscore} pontos`;
 }
 
+// Fecha o painel de cronômetro desse miniboss (clicando no nome dele), sem mexer no tempo
+// acumulado nem pausar um cronômetro em andamento — só esconde o painel grande, que às
+// vezes fica aberto sem querer (ex: depois de um "Reset", que zera mas não fecha). O
+// chip de tempo compacto ao lado do nome continua mostrando o cronômetro rodando, se for
+// o caso, mesmo com o painel fechado.
+function closeTimerPanel(subId){
+  const t=activeTimers[subId];
+  if(t)t.opened=false;
+  const tw=document.getElementById('tw-'+subId);
+  if(tw)tw.style.display='none';
+}
 function resetTimer(subId,topicId){
   if(!confirm('Zerar cronômetro deste miniboss?'))return;
   if(activeTimers[subId]){activeTimers[subId].running=false;activeTimers[subId].startedAt=0;}
