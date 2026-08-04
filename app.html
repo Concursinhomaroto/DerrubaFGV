@@ -2305,6 +2305,16 @@ function applyDefaults(){
         const topicId=findTopicIdForSub(c.mbId);
         if(topicId)c.mbId=topicId;
       }
+      // Limpa cards de erro criados antes do fix de criarFlashcardDeQuestaoErrada (ver
+      // comentário lá): a pergunta vinha colada com todas as alternativas (A, B, C...),
+      // deixando o card poluído. Idempotente: uma vez limpo, não sobra o padrão "\n\nA)"
+      // pra essa condição pegar de novo.
+      if(c&&c.tags==='banco-de-erros'&&typeof c.pergunta==='string'){
+        const idx=c.pergunta.indexOf('\n\n');
+        if(idx>-1&&/^[A-E]\)/.test(c.pergunta.slice(idx+2).trim())){
+          c.pergunta=c.pergunta.slice(0,idx).trim();
+        }
+      }
     });
   }
 }
@@ -4474,7 +4484,10 @@ function criarFlashcardDeQuestaoErrada(subId,q){
   if(!db.flashcards)db.flashcards={};
   const topicId=findTopicIdForSub(subId);
   if(!topicId)return;
-  const pergunta=q.questao+'\n\n'+(q.alternativas||[]).map(a=>`${a.letra}) ${a.texto}`).join('\n');
+  // Só o enunciado na frente do card — colar a questão + todas as alternativas deixava o
+  // card poluído e difícil de revisar rápido. A resposta certa (com a alternativa e a
+  // explicação) já dá o contexto que falta, sem precisar repetir as opções erradas.
+  const pergunta=(q.questao||'').trim();
   const jaExiste=Object.values(db.flashcards).some(c=>c.mbId===topicId&&c.pergunta===pergunta);
   if(jaExiste)return;
   const altCorreta=(q.alternativas||[]).find(a=>a.letra===q.correta);
