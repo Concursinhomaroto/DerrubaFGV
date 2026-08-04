@@ -2901,7 +2901,6 @@ const LOCKED_SCREEN_INFO={
   renewal:{icon:'⏳',title:'Renove seu acesso completo',desc:'Seu acesso pago está acabando — renove agora pra não perder Revisões, Banco de Erros, Simulado Geral, Editais, Redações e Repertório.'},
 };
 const WHATSAPP_NUMBER_APP='558195820859';
-const PIX_KEY='11803871474';
 // Três faixas de assinatura. accessDays é usado por daysOfAccessLeft() pra calcular até
 // quando o acesso vale a partir de lastPaymentAt — vitalício não usa isso (ver instrução
 // em LOCKED_SCREEN_INFO/renderLockedScreen: pra vitalício você marca db.plan='full' direto,
@@ -3092,38 +3091,33 @@ function adminConfirmPayment(uid,planType){
   }
 }
 
-// ===== GERAÇÃO DO CÓDIGO PIX (copia e cola) — padrão BR Code / EMV do Banco Central =====
-// Implementado na mão (sem lib externa) porque o proxy de rede deste ambiente bloqueia CDNs
-// de terceiros pra gerar QR code — então por enquanto só o "copia e cola" (que já é o método
-// mais comum pra pagamento remoto/online no Pix, QR é mais usado presencialmente).
-function pixCRC16(payload){
-  let crc=0xFFFF;
-  for(let i=0;i<payload.length;i++){
-    crc^=(payload.charCodeAt(i)<<8);
-    for(let j=0;j<8;j++){
-      crc=(crc&0x8000)?((crc<<1)^0x1021)&0xFFFF:(crc<<1)&0xFFFF;
-    }
-  }
-  return crc.toString(16).toUpperCase().padStart(4,'0');
-}
-function pixTLV(id,value){return id+String(value.length).padStart(2,'0')+value;}
-function buildPixPayload({key,amount,name,city,txid}){
-  const merchantAccountInfo=pixTLV('26',pixTLV('00','br.gov.bcb.pix')+pixTLV('01',key));
-  const amountField=amount?pixTLV('54',Number(amount).toFixed(2)):'';
-  const payload=pixTLV('00','01')+pixTLV('01','11')+merchantAccountInfo+pixTLV('52','0000')+pixTLV('53','986')+amountField+pixTLV('58','BR')+pixTLV('59',name.slice(0,25))+pixTLV('60',city.slice(0,15))+pixTLV('62',pixTLV('05',txid||'***'))+'6304';
-  return payload+pixCRC16(payload);
-}
+// ===== GERAÇÃO DO CÓDIGO PIX — via Worker (Cloudflare) + Mercado Pago =====
+// O código copia-e-cola agora é gerado do lado do servidor (Worker), vinculado à conta
+// do aluno (uid) e ao plano escolhido. Isso é o que permite liberar o acesso sozinho
+// quando o pagamento cai — o Worker recebe o aviso do Mercado Pago e já atualiza o
+// Firebase, sem precisar de confirmação manual pelo Painel Admin.
+const PIX_WORKER_URL='https://vdn-pix.leonardobrunotlc.workers.dev';
 let selectedPixTier='mensal';
-function getPixCopiaCola(tier){
-  const plan=PIX_PLANS[tier]||PIX_PLANS.mensal;
-  return buildPixPayload({key:PIX_KEY,amount:plan.price,name:'VALE DOS NOMEADOS',city:'BRASIL',txid:'***'});
+let pixCodeCache={}; // tier -> {copiaCola, paymentId} — evita gerar cobrança nova toda vez que troca de aba
+async function fetchPixCode(tier,force){
+  if(!force&&pixCodeCache[tier])return pixCodeCache[tier];
+  if(!currentUser)throw new Error('Sessão não encontrada.');
+  const res=await fetch(PIX_WORKER_URL+'/create-pix',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({uid:currentUser.uid,plano:tier,email:currentUser.email}),
+  });
+  const data=await res.json();
+  if(!res.ok||!data.copiaCola)throw new Error(data.error||'Falha ao gerar o Pix');
+  pixCodeCache[tier]={copiaCola:data.copiaCola,paymentId:data.paymentId};
+  return pixCodeCache[tier];
 }
 function selectPixTier(tier){
   if(tier==='vitalicio'&&!isLifetimeAvailable())return;
   selectedPixTier=tier;
   renderPixTierUI();
 }
-function renderPixTierUI(){
+async function renderPixTierUI(){
   const tabs=document.getElementById('pix-tier-tabs');
   if(!tabs)return;
   const vitAvail=isLifetimeAvailable();
@@ -3142,15 +3136,29 @@ function renderPixTierUI(){
   }else{
     note.style.display='none';
   }
-  document.getElementById('pix-copia-cola').value=getPixCopiaCola(selectedPixTier);
   const email=(currentUser&&currentUser.email)||'';
   const planLabel=(PIX_PLANS[selectedPixTier]||PIX_PLANS.mensal).label;
-  const msg='Olá! Fiz o Pix do plano '+planLabel+' pra assinar o Vale dos Nomeados (email da conta: '+email+'). Pode confirmar meu acesso?';
+  const msg='Olá! Fiz o Pix do plano '+planLabel+' pra assinar o Vale dos Nomeados (email da conta: '+email+'). O acesso costuma liberar sozinho em instantes, mas se demorar pode confirmar aqui.';
   const waBtn=document.getElementById('upsell-whatsapp-btn');
   if(waBtn)waBtn.href='https://wa.me/'+WHATSAPP_NUMBER_APP+'?text='+encodeURIComponent(msg);
+
+  const textarea=document.getElementById('pix-copia-cola');
+  if(!textarea)return;
+  const tierAtRequest=selectedPixTier;
+  textarea.value='Gerando código Pix...';
+  try{
+    const data=await fetchPixCode(tierAtRequest,false);
+    if(selectedPixTier!==tierAtRequest)return; // trocou de aba enquanto carregava
+    textarea.value=data.copiaCola;
+  }catch(e){
+    if(selectedPixTier!==tierAtRequest)return;
+    textarea.value='';
+    toast('⚠️ Não foi possível gerar o Pix agora. Tente de novo em instantes.','var(--red)');
+  }
 }
 function copyPixCode(){
-  const code=getPixCopiaCola(selectedPixTier);
+  const code=document.getElementById('pix-copia-cola')?.value||'';
+  if(!code||code==='Gerando código Pix...'){toast('⚠️ Aguarde o código terminar de gerar.','var(--orange)');return;}
   navigator.clipboard.writeText(code).then(()=>{
     toast('✅ Código Pix copiado — cole no app do seu banco','var(--green)');
   }).catch(()=>{
