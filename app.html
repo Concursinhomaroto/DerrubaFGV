@@ -182,6 +182,9 @@ nav{
 .pix-tier-tab.active b{color:var(--accent);}
 .pix-tier-tab.disabled{opacity:0.4;cursor:not-allowed;}
 .pix-tier-note{background:color-mix(in srgb, var(--accent) 12%, transparent);border:1px solid var(--border2);border-radius:8px;padding:8px 10px;font-size:11px;font-weight:700;color:var(--accent);margin-bottom:12px;}
+.pix-tier-benefits{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-direction:column;gap:5px;}
+.pix-tier-benefits li{font-size:11.5px;color:var(--text2);padding-left:20px;position:relative;line-height:1.4;}
+.pix-tier-benefits li::before{content:'✓';position:absolute;left:0;color:var(--green);font-weight:800;}
 .pix-steps{margin:0 0 14px;padding-left:18px;font-size:12px;color:var(--muted);line-height:1.7;}
 .pix-steps b{color:var(--accent);}
 .pix-copia-cola{width:100%;min-height:64px;resize:vertical;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border2);background:var(--panel);color:var(--text2);font-family:monospace;font-size:10.5px;word-break:break-all;margin-bottom:10px;}
@@ -1656,6 +1659,7 @@ nav{
         <button class="pix-tier-tab" data-tier="anual" onclick="selectPixTier('anual')">Anual<br><b>R$149,90</b></button>
         <button class="pix-tier-tab" data-tier="vitalicio" onclick="selectPixTier('vitalicio')">Vitalício<br><b>R$397</b></button>
       </div>
+      <ul id="pix-tier-benefits" class="pix-tier-benefits"></ul>
       <div id="pix-tier-note" class="pix-tier-note" style="display:none"></div>
       <ol class="pix-steps">
         <li>Copie o código Pix abaixo</li>
@@ -1977,8 +1981,10 @@ const LS_KEY='vdn_local_v1';
 // fora de users/{uid}, então não depende de login pra aparecer no seletor de plano.
 // Você controla isso manualmente no Firebase Console (não tem escrita pelo app):
 //   promo/lifetime/enabled    -> true liga a oferta, false desliga
-//   promo/lifetime/slotsLeft  -> quantas vagas restam (decrementa a cada venda confirmada)
-//   promo/lifetime/deadline   -> data limite "YYYY-MM-DD" (ex: 15 dias a partir do lançamento)
+//   promo/lifetime/slotsLeft  -> quantas vagas restam (começa em 30; decrementa sozinho a
+//                                cada venda confirmada — ver adminConfirmPayment/Worker; ao
+//                                chegar em 0, a promoção some sozinha, sem prazo definido).
+// (campo "deadline" não é mais usado — a oferta não tem mais data-limite, só limite de vagas)
 let promoLifetime={enabled:false,slotsLeft:0,deadline:''};
 
 try{
@@ -2249,6 +2255,10 @@ function applyDefaults(){
   // genuinamente nova (ver loadDB()), então contas que já existiam antes desse campo nunca
   // ficam travadas por engano.
   if(typeof db.plan!=='string')db.plan='full';
+  // Fallback pra contas 'trial' que já existiam antes desse campo existir: usa a data de
+  // criação da conta como início do trial, pra não dar de graça uma nova janela de dias
+  // liberados pra quem já estava travado antes dessa mudança.
+  if(db.plan==='trial'&&!db.trialStartedAt)db.trialStartedAt=db.createdAt||todayStr();
   // Confirmação manual de pagamento (ainda sem gateway integrado) — Firebase Console →
   // Realtime Database → users/{uid}/... Três planos, três jeitos de confirmar:
   //   • Mensal: lastPaymentAt = data de hoje, planType = "mensal" (ou deixa em branco,
@@ -2380,6 +2390,7 @@ function loadDB(callback){
       // entra no plano trial (acesso só às telas liberadas, ver LOCKED_SCREENS).
       db.onboardingCompleted=false;
       db.plan='trial';
+      db.trialStartedAt=todayStr();
     }
     applyDefaults();
     // Histórico de pagamentos: detecta quando lastPaymentAt muda (você confirmou uma
@@ -2897,29 +2908,58 @@ function isAfterExam(dateStr){return db.examDate&&dateStr>db.examDate;}
 
 // ===== SCREENS =====
 // ===== PLANO DE ACESSO (trial x completo) =====
-// Telas liberadas no trial: dashboard, map, flashcards, conquistas. As demais só abrem
-// com acesso completo (ver applyDefaults() pra como db.plan é definido/liberado).
-const LOCKED_SCREENS=['revisions','erros','simgeral','editais','redacoes','repertorio'];
+// Durante os TRIAL_DAYS dias corridos a partir do cadastro (db.trialStartedAt), a
+// plataforma inteira fica liberada, sem nenhuma trava — é o teste grátis de verdade.
+// Depois de expirar, tudo trava (ver LOCKED_SCREENS) exceto o Painel do Herói
+// (dashboard), que continua visível pra pessoa lembrar do progresso e ser convidada a
+// assinar. Ver applyDefaults() pra como db.plan/db.trialStartedAt são definidos.
+const LOCKED_SCREENS=['map','revisions','erros','simgeral','editais','flashcards','redacoes','repertorio','conquistas'];
 const LOCKED_SCREEN_INFO={
+  map:{icon:'🗺️',title:'Mapa dos Reinos é um recurso do plano completo',desc:'O mapa de progresso por reino/chefão libera junto com o plano completo.'},
   revisions:{icon:'🔔',title:'Revisões é um recurso do plano completo',desc:'A fila de revisões espaçadas (SM-2) — atrasadas, de hoje e dos próximos dias — libera junto com o plano completo.'},
   erros:{icon:'📕',title:'Banco de Erros é um recurso do plano completo',desc:'O histórico de questões erradas em simulados, organizado pra revisão, libera junto com o plano completo.'},
   simgeral:{icon:'🏛️',title:'Simulado Geral é um recurso do plano completo',desc:'O simulado cronometrado multi-matéria libera junto com o plano completo.'},
   editais:{icon:'📋',title:'Editais é um recurso do plano completo',desc:'O acompanhamento de editais libera junto com o plano completo.'},
+  flashcards:{icon:'🃏',title:'Flashcards é um recurso do plano completo',desc:'A criação e o estudo de flashcards com revisão espaçada liberam junto com o plano completo.'},
   redacoes:{icon:'📝',title:'Redações é um recurso do plano completo',desc:'A correção de redação por IA com cálculo de NPD libera junto com o plano completo.'},
   repertorio:{icon:'🧠',title:'Repertório é um recurso do plano completo',desc:'O banco de repertório sociocultural libera junto com o plano completo.'},
-  renewal:{icon:'⏳',title:'Renove seu acesso completo',desc:'Seu acesso pago está acabando — renove agora pra não perder Revisões, Banco de Erros, Simulado Geral, Editais, Redações e Repertório.'},
+  conquistas:{icon:'🏆',title:'Conquistas é um recurso do plano completo',desc:'A galeria de conquistas e o progresso de gamificação liberam junto com o plano completo.'},
+  renewal:{icon:'⏳',title:'Renove seu acesso completo',desc:'Seu acesso pago está acabando — renove agora pra não perder o resto da plataforma.'},
 };
 const WHATSAPP_NUMBER_APP='558195820859';
 // Três faixas de assinatura. accessDays é usado por daysOfAccessLeft() pra calcular até
 // quando o acesso vale a partir de lastPaymentAt — vitalício não usa isso (ver instrução
 // em LOCKED_SCREEN_INFO/renderLockedScreen: pra vitalício você marca db.plan='full' direto,
 // sem lastPaymentAt, então nunca expira, igual conta antiga/legada).
+// benefits: lista crescente de propósito — mensal com o básico, anual reforça a
+// economia, vitalício junta tudo + os diferenciais exclusivos dele.
 const PIX_PLANS={
-  mensal:{label:'Mensal',price:19.90,accessDays:30,periodLabel:'/mês'},
-  anual:{label:'Anual',price:149.90,accessDays:365,periodLabel:'/ano'},
-  vitalicio:{label:'Vitalício',price:397.00,accessDays:null,periodLabel:'pagamento único'},
+  mensal:{label:'Mensal',price:19.90,accessDays:30,periodLabel:'/mês',benefits:[
+    'Acesso completo à plataforma',
+    'Cancele quando quiser, sem multa',
+  ]},
+  anual:{label:'Anual',price:149.90,accessDays:365,periodLabel:'/ano',benefits:[
+    'Tudo do plano mensal incluído',
+    'Equivale a R$12,49/mês — 37% mais barato',
+    'Um pagamento só, sem se preocupar todo mês',
+    'Preço travado por 12 meses',
+  ]},
+  vitalicio:{label:'Vitalício',price:397.00,accessDays:null,periodLabel:'pagamento único',benefits:[
+    'Tudo do plano completo, sem mensalidade nunca mais',
+    'Pagamento único — nunca mais paga nada',
+    'Não expira nunca, nem depois da sua aprovação',
+    'Acesso a todas as atualizações futuras da plataforma',
+    'Prioridade no suporte e nas sugestões de recursos',
+  ]},
 };
 const PIX_ACCESS_DAYS=30; // fallback pra lastPaymentAt sem planType (contas de antes dessa mudança)
+const TRIAL_DAYS=3; // dias corridos de teste grátis com a plataforma inteira liberada
+// true enquanto a conta ainda estiver dentro dos TRIAL_DAYS dias corridos a partir do
+// cadastro (db.trialStartedAt) — nesse período, tudo fica liberado, pago ou não.
+function isInTrialWindow(){
+  if(!db.trialStartedAt)return false;
+  return daysDiff(todayStr(),addDays(db.trialStartedAt,TRIAL_DAYS))>=0;
+}
 // Plano que a pessoa clicou na landing (?plano=anual, por ex.) — capturado uma vez em
 // applyDefaults() pra db.intendedPlan (ver mais abaixo) e usado como padrão na tela de
 // pagamento, em vez de sempre cair no Mensal sem relação com o que ela escolheu no site.
@@ -2937,13 +2977,13 @@ function daysOfAccessLeft(){
 }
 function hasFullAccess(){
   if(db.plan!=='trial')return true; // conta antiga/legada OU vitalícia, sem trava — acesso permanente.
+  if(isInTrialWindow())return true; // dentro dos TRIAL_DAYS dias grátis, tudo liberado.
   const left=daysOfAccessLeft();
   return left!==null&&left>=0;
 }
 function isLifetimeAvailable(){
   if(!promoLifetime.enabled)return false;
-  if((promoLifetime.slotsLeft||0)<=0)return false;
-  if(promoLifetime.deadline&&todayStr()>promoLifetime.deadline)return false;
+  if((promoLifetime.slotsLeft||0)<=0)return false; // sem prazo — só limite de vagas
   return true;
 }
 
@@ -3180,9 +3220,14 @@ async function renderPixTierUI(){
     b.classList.toggle('active',b.dataset.tier===selectedPixTier);
     if(b.dataset.tier==='vitalicio')b.classList.toggle('disabled',!vitAvail);
   });
+  const benefitsEl=document.getElementById('pix-tier-benefits');
+  if(benefitsEl){
+    const benefits=(PIX_PLANS[selectedPixTier]||PIX_PLANS.mensal).benefits||[];
+    benefitsEl.innerHTML=benefits.map(b=>`<li>${escapeHtml(b)}</li>`).join('');
+  }
   const note=document.getElementById('pix-tier-note');
   if(selectedPixTier==='vitalicio'){
-    note.textContent=`🔥 Oferta de lançamento: restam ${promoLifetime.slotsLeft} vaga${promoLifetime.slotsLeft===1?'':'s'}, até ${fmtDateBR(promoLifetime.deadline)}.`;
+    note.textContent='🔥 Oferta de lançamento: restam poucas vagas. Acesso vitalício não expira, mesmo depois da sua aprovação.';
     note.style.display='block';
   }else if(selectedPixTier==='anual'){
     note.textContent='Equivale a R$12,49/mês — bem mais em conta que pagar mês a mês.';
