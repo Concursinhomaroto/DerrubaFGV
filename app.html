@@ -4584,8 +4584,8 @@ function subItemHTML(s,topicId){
     <div class="sub-row">
       <span class="sub-name" style="cursor:pointer" onclick="closeTimerPanel('${s.id}')" title="Clique pra fechar o painel de estudo desse miniboss, se estiver aberto"><i class="fa fa-user-ninja" style="color:${s.priority===100?'var(--red)':s.priority===70?'var(--orange)':'var(--green)'}"></i> ${s.name}</span>
       <span class="pri-badge ${pCls}" style="cursor:pointer" onclick="cyclePriority('${s.id}','${topicId}')" title="Alterar → ${nextLbl}">${pLbl} ✎</span>
-      <span class="time-chip" id="tc-${s.id}" title="Tempo desta sessão (não salvo)">${running?'<i class="fa fa-circle" style="color:var(--red);font-size:6px;animation:pulse 1s infinite"></i> ':'<i class="fa fa-clock"></i> '}${fmtTime(displayTime)}</span>
-      ${totalTime>0?`<span class="total-time-chip" title="Tempo total salvo"><i class="fa fa-layer-group"></i> ${fmtTime(totalTime)}</span>`:''}
+      ${(running||time>0)?`<span class="time-chip" id="tc-${s.id}" title="Tempo desta sessão (ainda não salvo)">${running?'<i class="fa fa-circle" style="color:var(--red);font-size:6px;animation:pulse 1s infinite"></i> ':'<i class="fa fa-clock"></i> '}${fmtTime(displayTime)}</span>`:''}
+      <span class="total-time-chip" title="Tempo total estudado (salvo)"><i class="fa fa-layer-group"></i> ${fmtTime(totalTime)}</span>
       ${s.studied?'<span class="studied-badge">✓ ESTUDADO</span>':'<span class="unstudy-badge">NÃO ESTUDADO</span>'}
       ${revStatusBadge}
     </div>
