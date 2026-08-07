@@ -1673,8 +1673,9 @@ nav{
         <li>Cole no app do seu banco, na opção "Pix Copia e Cola"</li>
         <li>Pronto! Seu acesso libera sozinho em poucos segundos após o pagamento.</li>
       </ol>
-      <textarea id="pix-copia-cola" class="pix-copia-cola" readonly onclick="this.select()"></textarea>
-      <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="copyPixCode()">Copiar código Pix</button>
+      <textarea id="pix-copia-cola" class="pix-copia-cola" readonly onclick="this.select()" placeholder="Clique em &quot;Gerar código Pix&quot; abaixo pra receber o código de pagamento."></textarea>
+      <button class="btn btn-primary" id="pix-generate-btn" style="width:100%;justify-content:center" onclick="requestPixCode()">Gerar código Pix</button>
+      <button class="btn btn-ghost" id="pix-copy-btn" style="width:100%;justify-content:center;margin-top:8px;display:none" onclick="copyPixCode()">Copiar código Pix</button>
     </div>
 
     <div id="payment-history-box" style="display:none;text-align:left;margin-top:14px">
@@ -3489,17 +3490,47 @@ async function renderPixTierUI(){
   const waBtn=document.getElementById('upsell-whatsapp-btn');
   if(waBtn)waBtn.href='https://wa.me/'+WHATSAPP_NUMBER_APP+'?text='+encodeURIComponent(msg);
 
+  // Importante: NÃO gera o Pix sozinho aqui. A cobrança só é criada quando o aluno
+  // clica em "Gerar código Pix" (requestPixCode()) — trocar de aba/plano só atualiza
+  // a visualização (mostra de novo o código já gerado nesta sessão pra essa aba, se
+  // houver; senão mostra o botão de gerar).
+  updatePixCodeDisplay();
+}
+function updatePixCodeDisplay(){
   const textarea=document.getElementById('pix-copia-cola');
+  const genBtn=document.getElementById('pix-generate-btn');
+  const copyBtn=document.getElementById('pix-copy-btn');
+  if(!textarea)return;
+  const cached=pixCodeCache[selectedPixTier];
+  if(cached){
+    textarea.value=cached.copiaCola;
+    if(genBtn){genBtn.style.display='none';}
+    if(copyBtn)copyBtn.style.display='';
+  }else{
+    textarea.value='';
+    if(genBtn){genBtn.style.display='';genBtn.disabled=false;genBtn.textContent='Gerar código Pix';}
+    if(copyBtn)copyBtn.style.display='none';
+  }
+}
+async function requestPixCode(){
+  const textarea=document.getElementById('pix-copia-cola');
+  const genBtn=document.getElementById('pix-generate-btn');
+  const copyBtn=document.getElementById('pix-copy-btn');
   if(!textarea)return;
   const tierAtRequest=selectedPixTier;
+  if(genBtn){genBtn.disabled=true;genBtn.textContent='Gerando código Pix...';}
   textarea.value='Gerando código Pix...';
   try{
     const data=await fetchPixCode(tierAtRequest,false);
     if(selectedPixTier!==tierAtRequest)return; // trocou de aba enquanto carregava
     textarea.value=data.copiaCola;
+    if(genBtn)genBtn.style.display='none';
+    if(copyBtn)copyBtn.style.display='';
+    startPixCheckPolling();
   }catch(e){
     if(selectedPixTier!==tierAtRequest)return;
     textarea.value='';
+    if(genBtn){genBtn.disabled=false;genBtn.textContent='Gerar código Pix';}
     toast('⚠️ Não foi possível gerar o Pix agora. Tente de novo em instantes.','var(--red)');
   }
 }
