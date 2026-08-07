@@ -61,7 +61,18 @@ header{position:sticky;top:0;z-index:20;background:color-mix(in srgb, var(--bg2)
 .header-nav a.active{color:var(--accent);}
 .header-nav a.active::after{content:'';position:absolute;left:0;right:0;bottom:-6px;height:3px;border-radius:3px;background:linear-gradient(135deg,var(--accent),var(--accent2));}
 .brand{text-decoration:none;cursor:pointer;}
-.header-cta{display:flex;gap:10px;flex-shrink:0;}
+.header-cta{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.nav-drop{position:relative;flex-shrink:0;}
+.nav-drop summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:14px;font-weight:800;color:var(--text2);padding:9px 14px;border-radius:12px;border:1.5px solid var(--border2);white-space:nowrap;transition:color .15s,border-color .15s;}
+.nav-drop summary::-webkit-details-marker{display:none;}
+.nav-drop summary::marker{content:'';}
+.nav-drop summary:hover,.nav-drop[open] summary{color:var(--accent);border-color:var(--accent);}
+.nav-drop summary .care{font-size:11px;transition:transform .15s;}
+.nav-drop[open] summary .care{transform:rotate(180deg);}
+.nav-drop-menu{position:absolute;top:calc(100% + 10px);right:0;min-width:230px;background:var(--panel);border:1px solid var(--border2);border-radius:var(--r-md);padding:8px;box-shadow:0 18px 40px rgba(0,0,0,.45);z-index:80;}
+.nav-drop-menu a{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:8px;font-size:14px;font-weight:700;color:var(--text);text-decoration:none;transition:background .15s;}
+.nav-drop-menu a:hover{background:var(--panel2);}
+.nav-drop-menu .nav-drop-sep{height:1px;background:var(--border);margin:6px 4px;}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 22px;border-radius:12px;border:none;cursor:pointer;font-size:14px;font-weight:800;text-decoration:none;transition:transform .15s, box-shadow .15s;white-space:nowrap;}
 .btn:hover{transform:translateY(-1px);}
 .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;box-shadow:0 6px 18px rgba(124,58,237,0.35);}
@@ -258,6 +269,16 @@ footer{border-top:1px solid var(--border);padding:28px 0;margin-top:20px;}
       <a href="#precos" data-tab="precos" onclick="return goTab('precos')">Preços</a>
     </nav>
     <div class="header-cta">
+      <details class="nav-drop" id="nav-drop-preedital">
+        <summary>📋 Pré-Edital <span class="care">▾</span></summary>
+        <div class="nav-drop-menu">
+          <a href="inss.html">🛡️ INSS</a>
+          <a href="hu.html">🏥 HU Brasil</a>
+          <a href="pf.html">🚔 Polícia Federal</a>
+          <a href="trt.html">⚖️ TRT</a>
+          <a href="pm.html">👮 Polícia Militar</a>
+        </div>
+      </details>
       <a class="btn btn-ghost" href="app.html">Entrar</a>
       <a class="btn btn-primary" href="app.html">Teste grátis por 3 dias</a>
     </div>
@@ -620,6 +641,16 @@ function sendSuggestion(){
 }
 
 document.getElementById('footer-year').textContent=new Date().getFullYear();
+
+// Dropdown "Pré-Edital" no header: fecha ao clicar fora ou ao escolher um link
+(function(){
+  const drop=document.getElementById('nav-drop-preedital');
+  if(!drop)return;
+  document.addEventListener('click', e=>{
+    if(drop.open && !drop.contains(e.target))drop.open=false;
+  });
+  drop.querySelectorAll('a').forEach(a=>a.addEventListener('click', ()=>{ drop.open=false; }));
+})();
 
 // ===== FAIXA DE URGÊNCIA (promoção vitalício) =====
 // Lê o mesmo caminho público (promo/lifetime) que o app usa — sem login, só leitura —
