@@ -1637,6 +1637,13 @@ nav{
     <div style="display:flex;gap:8px;margin-bottom:6px">
       <input type="text" id="admin-search-input" placeholder="Buscar por e-mail (ou deixe vazio pra ver todas)..." style="flex:1;padding:11px 14px;border-radius:10px;border:1.5px solid var(--border2);background:var(--panel2);color:var(--text);font-family:inherit;font-size:13px" oninput="adminOnSearchInput()">
     </div>
+    <div id="admin-select-bar" style="display:flex;align-items:center;gap:10px;margin-top:12px;padding:8px 12px;background:var(--panel2);border:1.5px solid var(--border2);border-radius:10px;font-size:12px">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:700;color:var(--text2)">
+        <input type="checkbox" id="admin-select-all" onchange="adminToggleSelectAll(this.checked)"> Selecionar todos
+      </label>
+      <span id="admin-selected-count" style="color:var(--muted)">0 selecionados</span>
+      <button class="btn btn-xs" style="margin-left:auto" onclick="adminCopySelectedEmails()"><i class="fa fa-copy"></i> Copiar e-mails selecionados</button>
+    </div>
     <div id="admin-results" style="margin-top:16px;display:flex;flex-direction:column;gap:10px">
       <div class="empty" style="padding:16px"><i class="fa fa-spinner fa-spin"></i><p>Carregando...</p></div>
     </div>
@@ -1942,14 +1949,10 @@ nav{
 
 // ===== DATA =====
 const DEFAULT_KINGDOMS=[
-  {id:'enfermagem',name:'Enfermagem',icon:'🏥',color:'#06b6d4'},
   {id:'portugues',name:'Português',icon:'📚',color:'#8b5cf6'},
-  {id:'sus',name:'SUS',icon:'⚕️',color:'#16a34a'},
-  {id:'direito',name:'Dir. Administrativo',icon:'⚖️',color:'#f5a623'},
+  {id:'matematica',name:'Matemática',icon:'🧮',color:'#2563eb'},
+  {id:'direito',name:'Direito Administrativo',icon:'⚖️',color:'#f5a623'},
   {id:'logica',name:'Raciocínio Lógico',icon:'🧠',color:'#ea580c'},
-  {id:'historia',name:'História',icon:'🏛️',color:'#db2777'},
-  {id:'atualidades',name:'Atualidades',icon:'📰',color:'#0891b2'},
-  {id:'hu',name:'Legislação HU Brasil',icon:'🏨',color:'#7c3aed'},
 ];
 
 // Movido para cima: precisa existir antes de applyDefaults() rodar (chamado de forma
@@ -2994,6 +2997,36 @@ function isLifetimeAvailable(){
 const ADMIN_EMAIL='leonardobrunotlc@gmail.com';
 function isAdmin(){return !!(currentUser&&currentUser.email===ADMIN_EMAIL);}
 let adminUsersCache=null; // {uid: {vdn_v1:{...}}, ...} — recarregado a cada busca/refresh
+// Seleção de e-mails no Painel Admin (pra uso futuro em e-mail marketing) — guardada por
+// e-mail (não uid) e persiste entre páginas/buscas, então dá pra selecionar aos poucos.
+let adminSelectedEmails=new Set();
+function adminToggleOne(email,checked){
+  if(!email)return;
+  if(checked)adminSelectedEmails.add(email);else adminSelectedEmails.delete(email);
+  adminUpdateSelectBar(adminFilteredList());
+}
+function adminToggleSelectAll(checked){
+  adminFilteredList().forEach(({d})=>{if(d.accountEmail){if(checked)adminSelectedEmails.add(d.accountEmail);else adminSelectedEmails.delete(d.accountEmail);}});
+  adminRenderPage();
+}
+function adminUpdateSelectBar(matches){
+  const countEl=document.getElementById('admin-selected-count');
+  if(countEl)countEl.textContent=adminSelectedEmails.size+' selecionado'+(adminSelectedEmails.size===1?'':'s');
+  const allEl=document.getElementById('admin-select-all');
+  if(allEl){
+    const withEmail=matches.filter(({d})=>d.accountEmail);
+    allEl.checked=withEmail.length>0&&withEmail.every(({d})=>adminSelectedEmails.has(d.accountEmail));
+  }
+}
+function adminCopySelectedEmails(){
+  if(!adminSelectedEmails.size){toast('⚠️ Nenhum e-mail selecionado','var(--orange)');return;}
+  const list=[...adminSelectedEmails].join(', ');
+  navigator.clipboard.writeText(list).then(()=>{
+    toast(`✅ ${adminSelectedEmails.size} e-mail${adminSelectedEmails.size===1?'':'s'} copiado${adminSelectedEmails.size===1?'':'s'}`,'var(--green)');
+  }).catch(()=>{
+    toast('⚠️ Não foi possível copiar. Selecione o texto manualmente.','var(--orange)');
+  });
+}
 let adminPage=0;
 const ADMIN_PAGE_SIZE=15;
 // Classifica uma conta num balde só, pro card de estatísticas do topo do painel.
@@ -3096,17 +3129,24 @@ function renderAdminResults(matches,totalMatches,totalPages){
     else if(left!==null&&left>=0)statusHtml=`<span style="color:var(--green)">${(PIX_PLANS[d.planType]||PIX_PLANS.mensal).label} — ${left} dia${left===1?'':'s'} restante${left===1?'':'s'}</span>`;
     else if(left!==null)statusHtml=`<span style="color:var(--red)">Vencido há ${Math.abs(left)} dia${Math.abs(left)===1?'':'s'}</span>`;
     else statusHtml='<span style="color:var(--muted)">Trial, sem pagamento ainda</span>';
+    const email=d.accountEmail||'';
     return `<div class="admin-result-card">
-      <div class="admin-result-email">${escapeHtml(d.accountEmail)||'(sem e-mail salvo)'}</div>
-      <div class="admin-result-status">${statusHtml}</div>
+      <div style="display:flex;align-items:flex-start;gap:8px">
+        <input type="checkbox" class="admin-select-checkbox" data-email="${escapeHtml(email)}" ${email&&adminSelectedEmails.has(email)?'checked':''} ${email?'':'disabled'} onchange="adminToggleOne('${escapeHtml(email)}',this.checked)" style="margin-top:3px">
+        <div style="flex:1">
+          <div class="admin-result-email">${escapeHtml(email)||'(sem e-mail salvo)'}</div>
+          <div class="admin-result-status">${statusHtml}</div>
+        </div>
+      </div>
       <div class="admin-result-actions">
         <button class="btn btn-xs btn-primary" onclick="adminConfirmPayment('${uid}','mensal')">Confirmar Mensal</button>
         <button class="btn btn-xs btn-primary" onclick="adminConfirmPayment('${uid}','anual')">Confirmar Anual</button>
         <button class="btn btn-xs btn-primary" onclick="adminConfirmPayment('${uid}','vitalicio')" ${isLifetimeAvailable()?'':'disabled title="Promoção vitalícia indisponível (vagas ou prazo esgotados)"'}>Confirmar Vitalício</button>
-        <button class="btn btn-xs btn-danger" onclick="adminDeleteUser('${uid}','${escapeHtml(d.accountEmail||'')}')">Excluir conta</button>
+        <button class="btn btn-xs btn-danger" onclick="adminDeleteUser('${uid}','${escapeHtml(email)}')">Excluir conta</button>
       </div>
     </div>`;
   }).join('');
+  adminUpdateSelectBar(matches);
   if(pagEl){
     if(totalPages>1){
       pagEl.innerHTML=`
@@ -3365,7 +3405,7 @@ function renderMap(){
     card.innerHTML=`
       <div style="position:absolute;top:0;left:0;right:0;height:4px;background:${k.color};border-radius:16px 16px 0 0"></div>
       <span class="territory-icon" onclick="event.stopPropagation();openChangeIcon('${k.id}')" title="Clique para trocar o ícone" style="cursor:pointer;position:relative">${k.icon||'🏰'}<span style="position:absolute;bottom:-2px;right:-4px;font-size:9px;background:rgba(108,71,255,0.15);border-radius:50%;width:14px;height:14px;display:inline-flex;align-items:center;justify-content:center">✎</span></span>
-      <div class="territory-name" style="color:${k.color}">${k.name}</div>
+      <div class="territory-name" style="color:${k.color};cursor:pointer" onclick="event.stopPropagation();renameKingdom('${k.id}')" title="Clique para renomear o reino">${k.name} <span style="font-size:10px;opacity:0.6">✎</span></div>
       <div class="territory-stats">
         <div class="t-stat"><div class="tv" style="color:${k.color}">${topics.length}</div><div class="tl">⚔️ Chefões</div></div>
         <div class="t-stat"><div class="tv" style="color:var(--accent)">${subs.length}</div><div class="tl">👾 Miniboss</div></div>
@@ -3475,6 +3515,30 @@ function createKingdom(){
   saveDB();closeModal();renderMap();
   if(document.getElementById('screen-vale')?.classList.contains('active')&&typeof renderValeMap==='function')renderValeMap();
   toast('🏰 Novo reino criado!','var(--accent)');
+}
+function renameKingdom(kingdomId){
+  const k=db.kingdoms.find(x=>x.id===kingdomId);
+  if(!k)return;
+  openModal('✎ Renomear Reino',`
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <label style="font-size:11px;font-weight:800;color:var(--text2);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px">Novo nome</label>
+        <input class="inp" id="rn-kingdom-name" value="${escapeHtml(k.name)}" style="width:100%">
+      </div>
+      <button class="btn btn-primary" onclick="saveKingdomRename('${kingdomId}')" style="width:100%;justify-content:center"><i class="fa fa-check"></i> Salvar</button>
+    </div>
+  `);
+}
+function saveKingdomRename(kingdomId){
+  const k=db.kingdoms.find(x=>x.id===kingdomId);
+  if(!k)return;
+  const name=document.getElementById('rn-kingdom-name').value.trim();
+  if(!name){toast('⚠️ Digite um nome','var(--red)');return;}
+  k.name=name;
+  saveDB();closeModal();renderMap();
+  if(currentKingdom&&currentKingdom.id===kingdomId)openKingdom(k);
+  if(document.getElementById('screen-vale')?.classList.contains('active')&&typeof renderValeMap==='function')renderValeMap();
+  toast('✎ Reino renomeado','var(--accent)');
 }
 function deleteKingdom(id){
   const k=db.kingdoms.find(x=>x.id===id);
@@ -4089,7 +4153,7 @@ function valeDeleteKingdom(kingdomId){
 function openKingdom(k){
   currentKingdom=k;
   document.getElementById('bc-kingdom').textContent=(k.icon||'🏰')+' '+k.name;
-  document.getElementById('kingdom-title').innerHTML=`<span style="font-size:22px">${k.icon||'🏰'}</span><span style="color:${k.color}">${k.name.toUpperCase()}</span>`;
+  document.getElementById('kingdom-title').innerHTML=`<span style="font-size:22px">${k.icon||'🏰'}</span><span style="color:${k.color};cursor:pointer" onclick="renameKingdom('${k.id}')" title="Clique para renomear">${k.name.toUpperCase()} <span style="font-size:12px;opacity:0.6">✎</span></span>`;
   renderTopics();
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
@@ -4117,6 +4181,32 @@ function addTopic(){
   renderTopics();renderMap();toast('⚔️ Chefão invocado!','var(--accent)');
 }
 
+function renameTopic(topicId){
+  let topic=null;
+  for(const k of db.kingdoms){const f=(db.topics[k.id]||[]).find(t=>t.id===topicId);if(f){topic=f;break;}}
+  if(!topic)return;
+  openModal('✎ Renomear Chefão',`
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <label style="font-size:11px;font-weight:800;color:var(--text2);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px">Novo nome</label>
+        <input class="inp" id="rn-topic-name" value="${escapeHtml(topic.name)}" style="width:100%">
+      </div>
+      <button class="btn btn-primary" onclick="saveTopicRename('${topicId}')" style="width:100%;justify-content:center"><i class="fa fa-check"></i> Salvar</button>
+    </div>
+  `);
+}
+function saveTopicRename(topicId){
+  let topic=null;
+  for(const k of db.kingdoms){const f=(db.topics[k.id]||[]).find(t=>t.id===topicId);if(f){topic=f;break;}}
+  if(!topic)return;
+  const name=document.getElementById('rn-topic-name').value.trim();
+  if(!name){toast('⚠️ Digite um nome','var(--red)');return;}
+  topic.name=name;
+  saveDB();closeModal();
+  if(currentKingdom)renderTopics();
+  renderMap();
+  toast('✎ Chefão renomeado','var(--accent)');
+}
 function deleteTopic(tid){
   if(!confirm('Apagar este chefão e todos os seus minibosses?'))return;
   let kId=currentKingdom?.id||'';
@@ -4152,6 +4242,7 @@ function renderTopics(){
           ${pending>0?`<span style="background:rgba(220,38,38,0.1);color:var(--red);border:1.5px solid rgba(220,38,38,0.3);border-radius:8px;padding:2px 7px;font-size:9px;font-weight:900">${pending} atrasadas!</span>`:''}
         </div>
         <button class="btn btn-sm" style="background:linear-gradient(135deg,rgba(108,71,255,0.12),rgba(79,70,229,0.12));border:1.5px solid var(--border2);color:var(--accent);font-size:10px" onclick="event.stopPropagation();intensiveTraining('${topic.id}')"><i class="fa fa-fire" style="color:var(--orange)"></i> Intensivo</button>
+        <button class="btn btn-xs" onclick="event.stopPropagation();renameTopic('${topic.id}')" title="Renomear chefão"><i class="fa fa-pen"></i></button>
         <button class="btn btn-xs btn-danger" onclick="event.stopPropagation();deleteTopic('${topic.id}')"><i class="fa fa-trash"></i></button>
         <i class="fa fa-chevron-down" style="color:var(--muted);font-size:11px;transition:transform 0.2s" id="chev-${topic.id}"></i>
       </div>
@@ -4238,6 +4329,7 @@ function subItemHTML(s,topicId){
       </button>
       <button class="btn btn-sm ${s.legislacao?'btn-cyan':'btn-ghost'}" onclick="toggleLegis('${s.id}')" id="legis-btn-${s.id}"><i class="fa fa-scale-balanced"></i> ${s.legislacao?'Base Legal':'Base Legal'}</button>
       <button class="btn btn-sm ${s.simStats?'btn-pink':'btn-ghost'}" onclick="toggleSim('${s.id}')" id="sim-btn-${s.id}"><i class="fa fa-list-check"></i> Simulado</button>
+      <button class="btn btn-sm" onclick="renameSubtopic('${topicId}','${s.id}')" title="Renomear miniboss"><i class="fa fa-pen"></i></button>
       <button class="btn btn-sm btn-danger" onclick="deleteSub('${topicId}','${s.id}')"><i class="fa fa-trash"></i></button>
     </div>
     <div class="legis-wrap${openLegis.has(s.id)?' legis-open':''}" id="legis-${s.id}">${legisPanelHTML(s)}</div>
@@ -5039,6 +5131,34 @@ function addSubtopic(topicId){
   toast('👾 Miniboss invocado! Inicie o estudo para liberar as revisões.','var(--cyan)');
 }
 
+function renameSubtopic(topicId,subId){
+  let topic=null,kId=currentKingdom?.id||'';
+  if(kId) topic=(db.topics[kId]||[]).find(t=>t.id===topicId);
+  if(!topic){for(const k of db.kingdoms){const f=(db.topics[k.id]||[]).find(t=>t.id===topicId);if(f){topic=f;break;}}}
+  const sub=topic&&(topic.subtopics||[]).find(s=>s.id===subId);
+  if(!sub)return;
+  openModal('✎ Renomear Miniboss',`
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <label style="font-size:11px;font-weight:800;color:var(--text2);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px">Novo nome</label>
+        <input class="inp" id="rn-sub-name" value="${escapeHtml(sub.name)}" style="width:100%">
+      </div>
+      <button class="btn btn-primary" onclick="saveSubtopicRename('${topicId}','${subId}')" style="width:100%;justify-content:center"><i class="fa fa-check"></i> Salvar</button>
+    </div>
+  `);
+}
+function saveSubtopicRename(topicId,subId){
+  let topic=null,kId=currentKingdom?.id||'';
+  if(kId) topic=(db.topics[kId]||[]).find(t=>t.id===topicId);
+  if(!topic){for(const k of db.kingdoms){const f=(db.topics[k.id]||[]).find(t=>t.id===topicId);if(f){topic=f;break;}}}
+  const sub=topic&&(topic.subtopics||[]).find(s=>s.id===subId);
+  if(!sub)return;
+  const name=document.getElementById('rn-sub-name').value.trim();
+  if(!name){toast('⚠️ Digite um nome','var(--red)');return;}
+  sub.name=name;
+  saveDB();closeModal();refreshSubs(topic,topicId);
+  toast('✎ Miniboss renomeado','var(--accent)');
+}
 function deleteSub(topicId,subId){
   if(!confirm('Apagar este miniboss?'))return;
   let topic=null,kId=currentKingdom?.id||'';
@@ -7972,6 +8092,18 @@ function getAllFCForTopic(topicId){
   if(!db.flashcards)return[];
   return Object.values(db.flashcards).filter(c=>c.mbId===topicId);
 }
+function getAllFCEverywhere(){
+  return Object.values(db.flashcards||{});
+}
+// "Estudar tudo" — junta os cards de todos os reinos/chefões numa fila só, reaproveitando
+// a mesma tela de estudo de sempre (SM-2, filtros due/new/ok) via o pseudo-chefão '__ALL__'.
+function fcStudyAllKingdoms(){
+  if(!getAllFCEverywhere().length){toast('Nenhum flashcard criado ainda.','var(--muted)');return;}
+  fcSelectedMb={id:'__ALL__',name:'Todos os Reinos',icon:'🌍',kIcon:'',kingdom:'Todos os reinos combinados'};
+  fcStudyFilter='all';
+  fcMode='study';fcStudyIdx=0;fcStudyFlipped=false;fcScoreRight=0;fcScoreWrong=0;
+  renderFCMbList();renderFCMain();
+}
 
 // ===== EXPORTAR / IMPORTAR DECK DE FLASHCARDS =====
 function fcExportDeck(){
@@ -8128,9 +8260,12 @@ function renderFCMain(){
     el.innerHTML=`
       <div style="padding:4px 0">
         <!-- Título -->
-        <div style="margin-bottom:16px">
-          <div style="font-size:20px;font-weight:900;color:var(--text)">🃏 Seus Flashcards</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:4px">${total} cards no total — selecione um chefão para estudar ou criar cards</div>
+        <div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+          <div>
+            <div style="font-size:20px;font-weight:900;color:var(--text)">🃏 Seus Flashcards</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px">${total} cards no total — selecione um chefão para estudar ou criar cards</div>
+          </div>
+          <button class="btn btn-primary" onclick="fcStudyAllKingdoms()" ${total?'':'disabled'} title="Junta os cards de todos os reinos numa fila só de estudo"><i class="fa fa-globe"></i> Estudar tudo</button>
         </div>
         ${filterKingdom?`
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;background:${filterKingdom.color}14;border:1.5px solid ${filterKingdom.color}40;border-radius:12px;padding:8px 14px">
@@ -8202,7 +8337,8 @@ function renderFCMain(){
     return;
   }
   fcInit();
-  const all=getAllFCForTopic(fcSelectedMb.id);
+  const isAllKingdoms=fcSelectedMb.id==='__ALL__';
+  const all=isAllKingdoms?getAllFCEverywhere():getAllFCForTopic(fcSelectedMb.id);
   const q=(document.getElementById('fc-filter-q')?.value||'').toLowerCase();
   let cards=q?all.filter(c=>c.pergunta.toLowerCase().includes(q)||(c.tags||'').toLowerCase().includes(q)):all;
   if(fcRevFilter==='due')cards=cards.filter(c=>fcStatus(c)==='due');
@@ -8233,10 +8369,11 @@ function renderFCMain(){
         </div>
         <button class="btn btn-sm${fcVoiceMode?' btn-primary':' btn-ghost'}" onclick="fcToggleVoiceMode()" title="Lê a pergunta em voz alta, espera 6s e vira o card sozinho lendo a resposta — pra estudar sem precisar olhar pra tela">${fcVoiceMode?'🔊':'🔇'} Voz</button>
         <button class="btn btn-sm${fcAutoMode?' btn-primary':' btn-ghost'}" onclick="fcToggleAutoMode()" title="Além de ler pergunta e resposta, pergunta 'Como foi?' e OUVE sua resposta falada (fácil/difícil/não lembrei) pra passar pro próximo card sozinho — 100% sem tocar na tela">${fcAutoMode?'🤖':'⚙️'} Automático</button>
-        <button class="btn btn-ghost btn-sm" onclick="fcExportDeck()" title="Baixar todos os cards deste chefão em JSON"><i class="fa fa-download"></i> Exportar</button>
+        <button class="btn btn-ghost btn-sm" onclick="fcExportDeck()" title="Baixar todos os cards ${isAllKingdoms?'de todos os reinos':'deste chefão'} em JSON"><i class="fa fa-download"></i> Exportar</button>
+        ${isAllKingdoms?'':`
         <button class="btn btn-ghost btn-sm" onclick="fcImportDeckPrompt()" title="Importar cards de um arquivo JSON"><i class="fa fa-upload"></i> Importar</button>
         <input type="file" id="fc-import-input" accept="application/json" style="display:none" onchange="fcImportDeckFile(this)">
-        <button class="btn btn-primary btn-sm" onclick="fcOpenForm()"><i class="fa fa-plus"></i> Novo card</button>
+        <button class="btn btn-primary btn-sm" onclick="fcOpenForm()"><i class="fa fa-plus"></i> Novo card</button>`}
       </div>
     </div>
 
