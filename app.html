@@ -1363,11 +1363,13 @@ nav{
 <div class="screen active" id="screen-dashboard">
   <div class="sec-title">🏆 Painel do Herói</div>
 
-  <!-- Aviso de renovação (só aparece perto do vencimento do acesso pago via Pix) -->
+  <!-- Aviso de status do plano: período de teste grátis (ativo/acabado) ou acesso pago
+       perto do vencimento — a única forma de chegar na tela de pagamento enquanto o
+       acesso ainda está liberado (sem isso, não tem como assinar antes do teste acabar). -->
   <div class="upsell-renewal-banner" id="renewal-banner" style="display:none">
-    <span class="rb-icon">⏳</span>
+    <span class="rb-icon" id="renewal-banner-icon">⏳</span>
     <div class="rb-text" id="renewal-banner-text"></div>
-    <button class="btn btn-ghost btn-xs rb-btn" style="background:rgba(255,255,255,0.2);color:#fff;border-color:rgba(255,255,255,0.4)" onclick="openRenewalScreen()">Renovar agora</button>
+    <button class="btn btn-ghost btn-xs rb-btn" id="renewal-banner-btn" style="background:rgba(255,255,255,0.2);color:#fff;border-color:rgba(255,255,255,0.4)" onclick="openRenewalScreen(renewalBannerReason)">Renovar agora</button>
   </div>
 
   <!-- Streak + Meta diária + Conquistas -->
@@ -3167,6 +3169,8 @@ const LOCKED_SCREEN_INFO={
   repertorio:{icon:'🧠',title:'Repertório é um recurso do plano completo',desc:'O banco de repertório sociocultural libera junto com o plano completo.'},
   conquistas:{icon:'🏆',title:'Conquistas é um recurso do plano completo',desc:'A galeria de conquistas e o progresso de gamificação liberam junto com o plano completo.'},
   renewal:{icon:'⏳',title:'Renove seu acesso completo',desc:'Seu acesso pago está acabando — renove agora pra não perder o resto da plataforma.'},
+  trialActive:{icon:'🎁',title:'Você está no período de teste grátis',desc:'Aproveite a plataforma inteira liberada nesses primeiros dias — depois do teste, assine pra continuar com acesso completo.'},
+  trialExpired:{icon:'⏳',title:'Seu período de teste grátis acabou',desc:'Assine agora pra recuperar acesso completo à plataforma.'},
 };
 const WHATSAPP_NUMBER_APP='558195820859';
 // Três faixas de assinatura. accessDays é usado por daysOfAccessLeft() pra calcular até
@@ -3611,15 +3615,16 @@ function renderLockedScreen(name){
     histBox.style.display='none';
   }
 }
-// Abre a tela de Pix pra renovação mesmo quando o acesso ainda está válido (usada pelo
-// aviso de "acesso acabando" no Painel do Herói) — diferente de showScreen(), que só
-// mostra essa tela quando o recurso já está de fato bloqueado.
-function openRenewalScreen(){
+// Abre a tela de Pix mesmo quando o acesso ainda está válido (usada pelo banner do
+// Painel do Herói, tanto pra quem já pagou e o acesso está acabando quanto pra quem
+// ainda está no período de teste grátis e quer ver os planos antes de acabar) —
+// diferente de showScreen(), que só mostra essa tela quando o recurso já está travado.
+function openRenewalScreen(reason){
   if(typeof fcVoiceStop==='function')fcVoiceStop();
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('screen-locked').classList.add('active');
-  renderLockedScreen('renewal');
+  renderLockedScreen(reason||'renewal');
 }
 function showScreen(name){
   if(name!=='flashcards'&&typeof fcVoiceStop==='function')fcVoiceStop();
@@ -7092,26 +7097,60 @@ function renderWeekStudyChart(){
   if(tot)tot.textContent=`${studied.length} assunto${studied.length!==1?'s':''} estudado${studied.length!==1?'s':''} nos últimos 7 dias`;
 }
 
-// Mostra o aviso de renovação no Painel do Herói quando o acesso pago via Pix está
-// acabando (últimos PIX_RENEWAL_WARNING_DAYS dias) ou já venceu.
+// Mostra, no Painel do Herói, o aviso do status do plano — e é a ÚNICA forma de chegar
+// na tela de pagamento enquanto o acesso ainda está liberado (sem isso, quem está no
+// período de teste grátis não tem como assinar antes do teste acabar, porque nenhuma
+// tela fica travada — e travada é a única outra forma de showScreen() abrir o Pix).
+// Cobre 4 situações, em ordem de prioridade:
+//  1) já pagou via Pix e o acesso está acabando/venceu -> aviso de renovação (like antes)
+//  2) nunca pagou e ainda está dentro do período de teste -> aviso "restam X dias"
+//  3) nunca pagou e o teste já acabou -> aviso "teste acabou" (reforça o que a tela
+//     travada de qualquer recurso já mostra, mas aqui aparece mesmo no Painel do Herói,
+//     que nunca fica travado)
+//  4) plano != 'trial' (conta antiga/legada ou vitalícia) -> nunca mostra nada
 const PIX_RENEWAL_WARNING_DAYS=5;
+let renewalBannerReason='renewal';
 function renderRenewalBanner(){
   const banner=document.getElementById('renewal-banner');
   const text=document.getElementById('renewal-banner-text');
+  const icon=document.getElementById('renewal-banner-icon');
+  const btn=document.getElementById('renewal-banner-btn');
   if(!banner||!text)return;
-  if(db.plan==='trial'&&db.lastPaymentAt){
+  if(db.plan!=='trial'){banner.style.display='none';return;}
+
+  if(db.lastPaymentAt){
     const left=daysOfAccessLeft();
     if(left!==null&&left<0){
+      renewalBannerReason='renewal';
+      icon.textContent='⏳';
       text.innerHTML=`<b>Seu acesso completo venceu.</b><br>Renove pelo Pix pra recuperar Revisões, Simulado Geral, Redações e mais.`;
+      btn.textContent='Renovar agora';
       banner.style.display='flex';
     }else if(left!==null&&left<=PIX_RENEWAL_WARNING_DAYS){
+      renewalBannerReason='renewal';
+      icon.textContent='⏳';
       text.innerHTML=`<b>Seu acesso completo termina em ${left===0?'hoje':left+' dia'+(left===1?'':'s')}.</b><br>Renove pelo Pix pra não perder Revisões, Simulado Geral, Redações e mais.`;
+      btn.textContent='Renovar agora';
       banner.style.display='flex';
     }else{
       banner.style.display='none';
     }
+    return;
+  }
+
+  if(isInTrialWindow()){
+    const diasRestantes=daysDiff(todayStr(),addDays(db.trialStartedAt,TRIAL_DAYS));
+    renewalBannerReason='trialActive';
+    icon.textContent='🎁';
+    text.innerHTML=`<b>Você está no período de teste grátis${diasRestantes<=0?' — hoje é o último dia!':` — restam ${diasRestantes} dia${diasRestantes===1?'':'s'}`}.</b><br>Depois disso, assine pra continuar com a plataforma inteira liberada.`;
+    btn.textContent='Ver planos';
+    banner.style.display='flex';
   }else{
-    banner.style.display='none';
+    renewalBannerReason='trialExpired';
+    icon.textContent='⏳';
+    text.innerHTML=`<b>Seu período de teste grátis acabou.</b><br>Assine pelo Pix pra recuperar acesso completo à plataforma.`;
+    btn.textContent='Ver planos';
+    banner.style.display='flex';
   }
 }
 function renderDashboard(){
