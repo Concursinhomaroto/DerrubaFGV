@@ -4894,7 +4894,8 @@ function criarFlashcardDeQuestaoErrada(subId,q){
   // card poluído e difícil de revisar rápido. A resposta certa (com a alternativa e a
   // explicação) já dá o contexto que falta, sem precisar repetir as opções erradas.
   const pergunta=(q.questao||'').trim();
-  const jaExiste=Object.values(db.flashcards).some(c=>c.mbId===topicId&&c.pergunta===pergunta);
+  const chave=normalizeForDedup(pergunta);
+  const jaExiste=Object.values(db.flashcards).some(c=>c.mbId===topicId&&normalizeForDedup(c.pergunta)===chave);
   if(jaExiste)return;
   const altCorreta=(q.alternativas||[]).find(a=>a.letra===q.correta);
   const resposta=`Resposta certa: ${q.correta}) ${altCorreta?altCorreta.texto:''}${q.explicacao?'\n\n'+q.explicacao:''}`;
@@ -4936,36 +4937,71 @@ function simNovoSimulado(subId){
 }
 // Gera e valida as questões de UM assunto — usado tanto pelo simulado por miniboss
 // quanto pelo Simulado Geral (que chama isso uma vez por assunto selecionado e junta tudo).
+// Compara texto de forma tolerante (minúsculas, sem acento/pontuação, espaços colapsados)
+// pra pegar questões/flashcards repetidos mesmo quando a IA reformula ligeiramente a
+// mesma pergunta entre uma chamada e outra — comparar string crua deixa passar duplicata.
+function normalizeForDedup(s){
+  return (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\w\s]/g,'').replace(/\s+/g,' ').trim();
+}
+
 async function generateQuestionsForSubject(apiKey,kingdom,topic,sub,quantidade){
   const nota=(sub.note||'').trim();
-  const prompt=`Você é um elaborador de questões de concurso público brasileiro, especializado em múltipla escolha.
+  const buildPrompt=(qtd,evitar)=>`Você é um elaborador de questões de concurso público brasileiro, especializado em múltipla escolha.
 
-TAREFA: Gere EXATAMENTE ${quantidade} questões de múltipla escolha inéditas sobre o assunto abaixo — nem mais, nem menos que ${quantidade} — no padrão de bancas como FGV/Cebraspe, com DIFICULDADE ENTRE MODERADA E ALTA (nunca questões triviais ou puramente decorativas — exija raciocínio, interpretação ou aplicação prática do conteúdo).
+TAREFA: Gere EXATAMENTE ${qtd} questões de múltipla escolha inéditas sobre o assunto abaixo — nem mais, nem menos que ${qtd} — no padrão de bancas como FGV/Cebraspe, com DIFICULDADE ENTRE MODERADA E ALTA (nunca questões triviais ou puramente decorativas — exija raciocínio, interpretação ou aplicação prática do conteúdo).
 
 REINO/ÁREA: ${kingdom.name}
 CHEFÃO/TÓPICO: ${topic.name}
 MINIBOSS/ASSUNTO ESPECÍFICO: ${sub.name}
-${nota?`\nANOTAÇÃO DO ALUNO SOBRE ESTE ASSUNTO (use como referência principal do recorte a cobrar — as questões devem ser sobre o que está anotado aqui, não só sobre o nome genérico do assunto):\n${nota}\n`:''}
+${nota?`\nANOTAÇÃO DO ALUNO SOBRE ESTE ASSUNTO (use como referência principal do recorte a cobrar — as questões devem ser sobre o que está anotado aqui, não só sobre o nome genérico do assunto):\n${nota}\n`:''}${evitar&&evitar.length?`\nJÁ FORAM GERADAS as questões abaixo sobre este mesmo assunto — NÃO repita nenhuma delas nem gere variações muito parecidas, cubra ângulos/subtemas diferentes:\n${evitar.map(q=>'- '+q).join('\n')}\n`:''}
 REGRAS:
-- O array JSON da resposta deve ter exatamente ${quantidade} elementos.
+- O array JSON da resposta deve ter exatamente ${qtd} elementos.
 - Cada questão tem exatamente 5 alternativas (A a E), com apenas uma correta.
 - Evite pegadinhas de português; o foco é o conteúdo técnico do assunto.
 - Se for citar lei/norma específica, use apenas referência que você tenha certeza que existe; se não tiver certeza do número exato, formule a questão sem citar número de lei.
 - Inclua uma explicação curta (1 a 3 frases) do porquê a alternativa correta está certa.
-- IMPORTANTE — distribuição das respostas: a letra correta deve variar entre A, B, C, D e E ao longo das ${quantidade} questões, o mais equilibrado possível (evite concentrar a resposta certa sempre nas mesmas letras, como só B/C — cada letra de A a E deve aparecer como correta em uma proporção parecida das questões geradas).
+- IMPORTANTE — distribuição das respostas: a letra correta deve variar entre A, B, C, D e E ao longo das ${qtd} questões, o mais equilibrado possível (evite concentrar a resposta certa sempre nas mesmas letras, como só B/C — cada letra de A a E deve aparecer como correta em uma proporção parecida das questões geradas).
 
-RESPONDA APENAS COM UM JSON (array de ${quantidade} itens), sem markdown, no formato exato (o "correta" abaixo é só ilustrativo do formato — varie a letra certa em cada questão real, seguindo a regra de distribuição acima):
+RESPONDA APENAS COM UM JSON (array de ${qtd} itens), sem markdown, no formato exato (o "correta" abaixo é só ilustrativo do formato — varie a letra certa em cada questão real, seguindo a regra de distribuição acima):
 [{"questao":"...","alternativas":[{"letra":"A","texto":"..."},{"letra":"B","texto":"..."},{"letra":"C","texto":"..."},{"letra":"D","texto":"..."},{"letra":"E","texto":"..."}],"correta":"B","explicacao":"..."}]`;
 
-  const raw=await callGeminiGenerate(apiKey,prompt);
-  const parsed=extractAIJson(raw);
-  const arr=Array.isArray(parsed)?parsed:(Array.isArray(parsed?.questoes)?parsed.questoes:null);
-  if(!arr||!arr.length)throw new Error(`IA não retornou questões válidas para "${sub.name}".`);
-  // A IA às vezes ignora a instrução de quantidade e devolve mais itens do que o pedido —
-  // corta aqui pra garantir que a contagem bate com o que o usuário escolheu, em vez de
-  // confiar cegamente no que veio na resposta.
-  const questoes=arr.filter(q=>q&&q.questao&&Array.isArray(q.alternativas)&&q.correta).slice(0,quantidade).map(q=>({...q,userAnswer:null}));
+  // A IA às vezes ignora a instrução de quantidade (ou tem a resposta cortada por limite de
+  // tokens) e devolve menos itens do que o pedido. Em vez de aceitar a quantidade errada,
+  // completa com chamadas extras pedindo só o que falta, até bater o total ou desistir
+  // depois de algumas tentativas — assim o simulado sempre sai com o número escolhido
+  // (ou, na pior hipótese, avisa exatamente quantas faltaram, em vez de simplesmente
+  // entregar menos sem avisar).
+  const questoes=[];
+  const vistas=new Set();
+  let tentativas=0;
+  const MAX_TENTATIVAS=4;
+  while(questoes.length<quantidade&&tentativas<MAX_TENTATIVAS){
+    const faltam=quantidade-questoes.length;
+    const prompt=buildPrompt(faltam,questoes.map(q=>q.questao));
+    tentativas++;
+    let arr;
+    try{
+      const raw=await callGeminiGenerate(apiKey,prompt);
+      const parsed=extractAIJson(raw);
+      arr=Array.isArray(parsed)?parsed:(Array.isArray(parsed?.questoes)?parsed.questoes:null);
+    }catch(e){
+      if(!questoes.length&&tentativas>=MAX_TENTATIVAS)throw e;
+      arr=null; // deixa tentar de novo (ou parar, se acabaram as tentativas) em vez de propagar o erro já na primeira falha
+    }
+    if(!arr)continue;
+    const validas=arr.filter(q=>q&&q.questao&&Array.isArray(q.alternativas)&&q.correta);
+    for(const q of validas){
+      if(questoes.length>=quantidade)break;
+      const chave=normalizeForDedup(q.questao);
+      if(vistas.has(chave))continue;
+      vistas.add(chave);
+      questoes.push({...q,userAnswer:null});
+    }
+  }
   if(!questoes.length)throw new Error(`IA não retornou questões válidas para "${sub.name}".`);
+  if(questoes.length<quantidade){
+    toast(`⚠️ "${sub.name}": só foi possível gerar ${questoes.length} de ${quantidade} questões pedidas — a IA repetiu ou não completou a quantidade após algumas tentativas.`,'var(--orange)');
+  }
   return questoes;
 }
 
@@ -9414,7 +9450,10 @@ async function tryGeminiModel(apiKey,model,prompt){
     const response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})
+      // maxOutputTokens explícito: sem isso a API usa um teto padrão que, em respostas
+      // grandes (ex: simulado com muitas questões), corta o JSON no meio e quebra o
+      // parse — o pedido então volta com menos itens do que o solicitado (ou falha).
+      body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:8192}})
     });
     if(!response.ok){
       const err=await response.text();
@@ -9424,7 +9463,11 @@ async function tryGeminiModel(apiKey,model,prompt){
     }
     const data=await response.json();
     const raw=(data?.candidates?.[0]?.content?.parts?.[0]?.text||'').trim();
+    const finishReason=data?.candidates?.[0]?.finishReason;
     if(!raw)return{ok:false,reason:'sem texto na resposta'};
+    // MAX_TOKENS = resposta cortada no meio (JSON incompleto) — melhor já avisar
+    // aqui do que deixar o parse falhar silenciosamente mais na frente.
+    if(finishReason==='MAX_TOKENS')return{ok:false,reason:'resposta cortada por exceder o limite de tokens'};
     return{ok:true,raw};
   }catch(e){
     return{ok:false,reason:e.message};
@@ -9580,15 +9623,20 @@ LEMBRE: responda APENAS com o JSON array, comecando com [ e terminando com ]`;
     if(statusTxt)statusTxt.textContent=`Salvando ${allCards.length} flashcards...`;
     fcInit();
     // Evita duplicar se o mesmo PDF (ou um com conteúdo parecido) for reenviado pro mesmo
-    // chefão — mesma checagem por texto da pergunta já usada em criarFlashcardDeQuestaoErrada.
+    // chefão. Comparar a pergunta crua deixava passar duplicata: a IA não devolve o texto
+    // idêntico byte a byte entre uma geração e outra (varia maiúscula, pontuação, um
+    // sinônimo aqui e ali), então "rodar o mesmo PDF de novo" parecia gerar tudo novo — na
+    // real eram as mesmas perguntas reformuladas. Normaliza (minúsculas, sem acento/
+    // pontuação, espaços colapsados) antes de comparar, igual ao usado no simulado.
     const existingPerguntas=new Set(
-      Object.values(db.flashcards).filter(c=>c.mbId===fcSelectedMb.id).map(c=>c.pergunta)
+      Object.values(db.flashcards).filter(c=>c.mbId===fcSelectedMb.id).map(c=>normalizeForDedup(c.pergunta))
     );
     let count=0,duplicadas=0;
     allCards.forEach(c=>{
       if(!c||!c.pergunta||!c.resposta)return;
-      if(existingPerguntas.has(c.pergunta)){duplicadas++;return;}
-      existingPerguntas.add(c.pergunta);
+      const chave=normalizeForDedup(c.pergunta);
+      if(existingPerguntas.has(chave)){duplicadas++;return;}
+      existingPerguntas.add(chave);
       const id='fc_'+genId();
       db.flashcards[id]={
         id,mbId:fcSelectedMb.id,
