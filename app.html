@@ -1955,6 +1955,213 @@ const DEFAULT_KINGDOMS=[
   {id:'logica',name:'Raciocínio Lógico',icon:'🧠',color:'#ea580c'},
 ];
 
+// Decks de partida por edital (?origem=inss|hu|pf|trt|pm na landing) — os mesmos cards dos
+// Kits Pré-Edital em PDF, já prontos na plataforma. Só é aplicado uma vez, no cadastro de
+// uma conta genuinamente nova (ver loadDB()), pra cumprir de verdade a promessa da landing
+// page ("os cards deste kit já existem prontos na plataforma").
+const ORIGEM_STARTER_DECKS={
+  inss:{
+    kingdom:{id:'direito_previdenciario',name:'Direito Previdenciário',icon:'⚖️',color:'#7c3aed'},
+    topic:{id:'topico_inss_previdenciario',name:'Seguridade e Benefícios (INSS)',icon:'⚖️'},
+    cards:[
+      {pergunta:'O que é a Seguridade Social e quais são os seus 3 pilares?',resposta:'Conjunto integrado de ações dos Poderes Públicos e da sociedade destinado a assegurar os direitos relativos à Saúde, à Previdência e à Assistência Social (CF, art. 194).'},
+      {pergunta:'Qual pilar da Seguridade é direito de TODOS e independe de contribuição?',resposta:'A Saúde — direito de todos e dever do Estado, com acesso universal e igualitário (CF, art. 196).'},
+      {pergunta:'A Assistência Social exige contribuição?',resposta:'Não. É prestada a quem dela necessitar, independentemente de contribuição (CF, art. 203).'},
+      {pergunta:'Qual é o único pilar contributivo e de filiação obrigatória?',resposta:'A Previdência Social, organizada em regime geral (RGPS), de caráter contributivo e filiação obrigatória (CF, art. 201).'},
+      {pergunta:'Cite os objetivos (princípios) constitucionais da Seguridade Social.',resposta:'Universalidade da cobertura e do atendimento; uniformidade e equivalência entre populações urbanas e rurais; seletividade e distributividade; irredutibilidade do valor dos benefícios; equidade na forma de participação no custeio; diversidade da base de financiamento; caráter democrático e descentralizado da administração.'},
+      {pergunta:'O que é a gestão quadripartite da Seguridade?',resposta:'A administração conta com a participação de 4 grupos: trabalhadores, empregadores, aposentados e Governo, nos órgãos colegiados.'},
+      {pergunta:'Qual princípio permite ao legislador escolher quais riscos sociais cobrir conforme as possibilidades financeiras?',resposta:'A seletividade e distributividade na prestação dos benefícios e serviços.'},
+      {pergunta:'O que garante o princípio da irredutibilidade do valor dos benefícios?',resposta:'Que o valor nominal do benefício não pode ser reduzido; o reajuste periódico busca preservar o valor real, conforme critérios da lei.'},
+      {pergunta:'Quais são os 5 segurados OBRIGATÓRIOS do RGPS?',resposta:'Empregado, empregado doméstico, trabalhador avulso, contribuinte individual e segurado especial (Lei 8.213, art. 11).'},
+      {pergunta:'Quem pode filiar-se como segurado FACULTATIVO?',resposta:'O maior de 16 anos que não exerça atividade que o vincule obrigatoriamente ao RGPS — ex.: dona de casa, estudante, síndico não remunerado.'},
+      {pergunta:'O trabalhador avulso tem vínculo de emprego?',resposta:'Não. Presta serviço a diversas empresas, sem vínculo empregatício, com intermediação obrigatória do OGMO (portuário) ou do sindicato (não portuário).'},
+      {pergunta:'Quem é o segurado especial?',resposta:'O produtor rural pessoa física e o pescador artesanal que trabalham em regime de economia familiar, sem empregados permanentes, tendo a atividade como indispensável à subsistência.'},
+      {pergunta:'Como o segurado especial contribui, em regra?',resposta:'Com alíquota incidente sobre a receita bruta da comercialização da sua produção rural — e não sobre salário de contribuição mensal.'},
+      {pergunta:'A partir de que idade é possível ser segurado empregado?',resposta:'A partir de 16 anos; na condição de aprendiz, a partir de 14 anos (CF, art. 7º, XXXIII).'},
+      {pergunta:'Quais são as 3 classes de dependentes do RGPS?',resposta:'1ª: cônjuge, companheiro(a) e filho não emancipado menor de 21 anos ou inválido/com deficiência; 2ª: os pais; 3ª: irmão não emancipado menor de 21 anos ou inválido/com deficiência (Lei 8.213, art. 16).'},
+      {pergunta:'Qual classe de dependentes tem dependência econômica PRESUMIDA?',resposta:'Apenas a 1ª classe. Pais (2ª) e irmãos (3ª) precisam comprovar a dependência econômica.'},
+      {pergunta:'Havendo dependente de uma classe, o que ocorre com as classes seguintes?',resposta:'A existência de dependente de qualquer classe exclui o direito dos dependentes das classes seguintes.'},
+      {pergunta:'Filho de 22 anos, universitário, é dependente do RGPS?',resposta:'Não. A qualidade de dependente do filho cessa aos 21 anos (salvo invalidez/deficiência). Não há prorrogação por estudo no RGPS.'},
+      {pergunta:"O que é o 'período de graça'?",resposta:'Período em que a pessoa mantém a qualidade de segurado (e a proteção previdenciária) mesmo sem contribuir (Lei 8.213, art. 15).'},
+      {pergunta:'Qual é a regra geral do período de graça após cessar as contribuições?',resposta:'Até 12 meses após a cessação das contribuições, para quem deixa de exercer atividade remunerada.'},
+      {pergunta:'Quando os 12 meses de graça são prorrogados para 24?',resposta:'Se o segurado já tiver mais de 120 contribuições mensais sem interrupção que acarrete perda da qualidade de segurado (+12 meses).'},
+      {pergunta:'E a prorrogação por desemprego? Qual o máximo total possível?',resposta:'Comprovado o desemprego, soma-se +12 meses. Máximo possível: 36 meses (12 regra + 12 pelas 120 contribuições + 12 desemprego).'},
+      {pergunta:'Qual o período de graça do segurado FACULTATIVO?',resposta:'Apenas 6 meses após a cessação das contribuições.'},
+      {pergunta:'O que é carência?',resposta:'O número mínimo de contribuições mensais indispensáveis para que o segurado (ou dependente) faça jus ao benefício.'},
+      {pergunta:'Qual a carência da aposentadoria programada?',resposta:'180 contribuições mensais.'},
+      {pergunta:'Cite benefícios que NÃO exigem carência.',resposta:'Pensão por morte, auxílio-acidente, salário-família e os benefícios por incapacidade decorrentes de acidente de qualquer natureza ou de doenças graves previstas em lista oficial.'},
+      {pergunta:'Qual a carência do auxílio por incapacidade temporária (antigo auxílio-doença)?',resposta:'12 contribuições mensais — dispensada quando decorrer de acidente de qualquer natureza ou doença grave listada.'},
+      {pergunta:'Quem paga os primeiros 15 dias de afastamento do empregado incapacitado?',resposta:'A empresa paga os primeiros 15 dias; a partir do 16º dia, o INSS paga o benefício.'},
+      {pergunta:'Qual o valor da aposentadoria por incapacidade permanente?',resposta:'60% da média dos salários de contribuição + 2% por ano que exceder 20 (homem) / 15 (mulher). Se decorrer de acidente de trabalho ou doença ocupacional: 100% da média.'},
+      {pergunta:'Requisitos da aposentadoria programada na regra permanente (pós-EC 103/2019)?',resposta:'Mulher: 62 anos de idade + 15 de contribuição. Homem: 65 anos + 20 de contribuição (filiados após 13/11/2019; quem já era filiado antes: 15 anos).'},
+      {pergunta:'Como se calcula o valor da aposentadoria programada?',resposta:'60% da média de todos os salários de contribuição desde julho/1994, + 2% por ano que exceder 20 anos de contribuição (homem) ou 15 (mulher).'},
+      {pergunta:'O que é a aposentadoria especial?',resposta:'Devida ao segurado exposto a agentes nocivos à saúde por 15, 20 ou 25 anos, exigindo também idade mínima de 55, 58 ou 60 anos, respectivamente (pós-EC 103).'},
+      {pergunta:'Quais os requisitos da aposentadoria do professor?',resposta:'57 anos (mulher) e 60 anos (homem), com 25 anos de contribuição exclusivamente em funções de magistério na educação infantil, ensino fundamental ou médio.'},
+      {pergunta:'Salário-maternidade: duração e carência?',resposta:'120 dias. Carência de 10 contribuições para contribuinte individual, segurada especial e facultativa; sem carência para empregada, doméstica e avulsa.'},
+      {pergunta:'Qual o valor do salário-maternidade da segurada empregada?',resposta:'Sua remuneração integral — pago diretamente pela empresa, que depois compensa com o INSS.'},
+      {pergunta:'Quem tem direito ao salário-família?',resposta:'Empregado (inclusive doméstico) e trabalhador avulso de baixa renda, na proporção do número de filhos de até 14 anos ou inválidos de qualquer idade.'},
+      {pergunta:'Qual a natureza e o valor do auxílio-acidente?',resposta:'Natureza indenizatória (pode ser acumulado com salário). Valor: 50% do salário de benefício. Devido quando sequela definitiva reduz a capacidade para o trabalho habitual.'},
+      {pergunta:'Quais segurados têm direito ao auxílio-acidente?',resposta:'Empregado, doméstico, avulso e segurado especial. Contribuinte individual e facultativo NÃO têm direito.'},
+      {pergunta:'Qual o valor da pensão por morte (pós-EC 103)?',resposta:'Cota familiar de 50% + 10% por dependente, até o limite de 100%. As cotas individuais cessam e não revertem aos demais dependentes.'},
+      {pergunta:'A pensão por morte exige carência? E quanto tempo dura para o cônjuge?',resposta:'Não exige carência. Duração para o cônjuge: 4 meses se houver menos de 18 contribuições do instituidor ou menos de 2 anos de casamento/união; caso contrário, varia conforme a idade do cônjuge — vitalícia a partir de 44 anos.'},
+      {pergunta:'Quais os requisitos do auxílio-reclusão?',resposta:'Devido aos dependentes do segurado de baixa renda recolhido à prisão em regime fechado. Carência: 24 contribuições. Valor: 1 salário mínimo.'},
+      {pergunta:'O BPC/LOAS é benefício previdenciário?',resposta:'Não — é assistencial (Lei 8.742/93): 1 salário mínimo ao idoso com 65+ ou à pessoa com deficiência cuja renda familiar por pessoa seja inferior a 1/4 do salário mínimo. Não exige contribuição, não paga 13º e não gera pensão por morte.'},
+      {pergunta:'O que é salário de contribuição?',resposta:'A base de cálculo da contribuição do segurado — em regra, a remuneração recebida, respeitados o piso (salário mínimo) e o teto do RGPS.'},
+      {pergunta:'Quais as alíquotas do segurado empregado (pós-EC 103)?',resposta:'Alíquotas progressivas por faixa: 7,5% até 1 salário mínimo; depois 9%, 12% e 14% — aplicadas de forma escalonada, como no Imposto de Renda.'},
+      {pergunta:'Qual a contribuição patronal básica da empresa?',resposta:'20% sobre o total da folha de pagamento (CPP), além do GILRAT de 1%, 2% ou 3% conforme o grau de risco da atividade.'},
+      {pergunta:'Cite parcelas que NÃO integram o salário de contribuição.',resposta:'Verbas indenizatórias em geral: férias indenizadas, aviso prévio indenizado, diárias de viagem, auxílio-alimentação in natura e PLR paga conforme a lei.'},
+      {pergunta:'Quais as alíquotas do contribuinte individual?',resposta:'Regra: 20% do salário de contribuição. Plano simplificado: 11% sobre o salário mínimo (com restrições, como valor limitado a 1 SM). MEI: 5% do salário mínimo.'},
+      {pergunta:'Qual o prazo de DECADÊNCIA para revisão do ato de concessão do benefício?',resposta:'10 anos, contados do primeiro dia do mês seguinte ao do recebimento da primeira prestação.'},
+      {pergunta:'Qual o prazo de PRESCRIÇÃO das parcelas não pagas?',resposta:'5 anos, contados da data em que deveriam ter sido pagas — não corre contra menores, incapazes e ausentes.'},
+      {pergunta:'É possível acumular auxílio por incapacidade temporária com aposentadoria?',resposta:'Não. Também é vedado acumular mais de uma aposentadoria do RGPS e salário-maternidade com benefício por incapacidade.'},
+    ],
+  },
+  hu:{
+    kingdom:{id:'legislacao_sus',name:'Legislação do SUS',icon:'⚕️',color:'#16a34a'},
+    topic:{id:'topico_hu_sus',name:'Princípios e Organização do SUS',icon:'⚕️'},
+    cards:[
+      {pergunta:"Quais são os 3 objetivos do SUS previstos na Lei 8.080/1990?",resposta:"Identificação e divulgação dos fatores condicionantes e determinantes da saúde; formulação de política de saúde; assistência às pessoas por meio de ações de promoção, proteção e recuperação da saúde, com a realização integrada das ações assistenciais e preventivas (art. 5º)."},
+      {pergunta:"O que caracteriza a diretriz da \"descentralização\" no SUS?",resposta:"A direção única em cada esfera de governo (federal, estadual, municipal), com ênfase na descentralização dos serviços para os municípios e na regionalização e hierarquização da rede."},
+      {pergunta:"O que é \"universalidade de acesso\" no SUS?",resposta:"O princípio segundo o qual os serviços de saúde são de acesso universal e igualitário, sem discriminação, a todos os níveis de assistência (CF, art. 196)."},
+      {pergunta:"O que significa \"integralidade da assistência\" no SUS?",resposta:"Conjunto articulado e contínuo das ações e serviços preventivos e curativos, individuais e coletivos, exigidos para cada caso em todos os níveis de complexidade do sistema."},
+      {pergunta:"A iniciativa privada pode participar do SUS?",resposta:"Sim, de forma complementar, quando as disponibilidades do SUS forem insuficientes, preferencialmente com entidades filantrópicas e sem fins lucrativos (Lei 8.080, art. 4º, §2º e art. 24)."},
+      {pergunta:"O que é \"equidade\" como diretriz do SUS?",resposta:"Igualdade da assistência à saúde, sem preconceitos ou privilégios de qualquer espécie — tratar desigualmente os desiguais, priorizando quem mais precisa."},
+      {pergunta:"Como as ações e serviços de saúde são organizados no SUS?",resposta:"De forma regionalizada e hierarquizada em níveis de complexidade crescente, organizados em redes de referência e contrarreferência (Lei 8.080, art. 8º)."},
+      {pergunta:"Quem exerce a direção do SUS em cada esfera de governo?",resposta:"No âmbito da União, o Ministério da Saúde; nos Estados e no DF, a respectiva Secretaria de Saúde (ou órgão equivalente); nos Municípios, a Secretaria Municipal de Saúde (art. 9º)."},
+      {pergunta:"Cite uma competência da direção NACIONAL do SUS.",resposta:"Formular, avaliar e apoiar políticas de alimentação e nutrição; participar na formulação e implementação de políticas de saneamento básico; entre outras atribuições de coordenação nacional (art. 16)."},
+      {pergunta:"Cite uma competência da direção MUNICIPAL do SUS.",resposta:"Planejar, organizar, controlar e avaliar as ações e serviços de saúde e gerir e executar os serviços públicos de saúde no âmbito municipal (art. 18)."},
+      {pergunta:"Municípios podem se organizar em regiões de saúde?",resposta:"Sim — a regionalização é diretriz organizativa, permitindo consórcios e regiões de saúde para melhor distribuição de recursos e serviços entre municípios vizinhos."},
+      {pergunta:"Os serviços privados contratados pelo SUS seguem quais princípios?",resposta:"Os mesmos princípios e diretrizes do SUS, com relevância pública, ficando sujeitos às normas técnicas e administrativas e aos princípios de gratuidade ao usuário (art. 4º, §1º e art. 7º)."},
+      {pergunta:"Quais são as duas instâncias colegiadas de participação social no SUS?",resposta:"A Conferência de Saúde e o Conselho de Saúde, previstos na Lei 8.142/1990."},
+      {pergunta:"Com que periodicidade a Conferência de Saúde deve se reunir?",resposta:"A cada 4 anos, para avaliar a situação de saúde e propor diretrizes para a formulação da política de saúde (art. 1º, §1º)."},
+      {pergunta:"O Conselho de Saúde tem caráter permanente ou temporário?",resposta:"Permanente e deliberativo — atua na formulação de estratégias e no controle da execução da política de saúde, inclusive nos aspectos econômicos e financeiros (art. 1º, §2º)."},
+      {pergunta:"Como é composta a representação nos Conselhos de Saúde?",resposta:"De forma paritária: 50% de representantes de usuários e 50% de representantes de governo, prestadores de serviço e profissionais de saúde."},
+      {pergunta:"O que pode acontecer se um Município não constituir Conselho de Saúde em funcionamento?",resposta:"Pode ficar impedido de receber os recursos do Fundo Nacional de Saúde destinados às ações e serviços de saúde (Lei 8.142, art. 4º)."},
+      {pergunta:"Além do Conselho, o que mais é exigido pra um Município receber recursos do SUS?",resposta:"Fundo de Saúde, Plano de Saúde, relatórios de gestão e contrapartida de recursos no respectivo orçamento (art. 4º)."},
+      {pergunta:"Quais são as fontes de recurso do Fundo Nacional de Saúde previstas na Lei 8.142?",resposta:"Recursos do Orçamento da Seguridade Social, da União, dos Estados, do DF e dos Municípios, além de outras fontes (art. 2º)."},
+      {pergunta:"O SUS é financiado por qual das 3 áreas da Seguridade Social?",resposta:"Pela área da Saúde — um dos três pilares da Seguridade Social (junto com Previdência e Assistência Social), de acesso universal e independente de contribuição (CF, art. 194 e 196)."},
+      {pergunta:"O que é a Atenção Primária/Básica à Saúde?",resposta:"O primeiro nível de atenção do SUS, porta de entrada preferencial do sistema, com foco em promoção, prevenção e cuidado continuado (ex.: unidades básicas de saúde, Estratégia Saúde da Família)."},
+      {pergunta:"Hospitais universitários federais fazem parte de qual rede?",resposta:"Da rede de atenção do SUS, prestando assistência de média e alta complexidade e também servindo de campo de ensino e pesquisa, vinculados às universidades federais."},
+      {pergunta:"A gestão do SUS é única em cada esfera — o que isso quer dizer na prática?",resposta:"Que há um único órgão gestor por esfera de governo (não múltiplos), garantindo comando único, mesmo com a participação de vários entes federativos no sistema."},
+      {pergunta:"Por que estudar a legislação do SUS mesmo em cargos administrativos?",resposta:"Porque toda a atuação dos hospitais universitários (finalidade, organização, financiamento) decorre diretamente dessa legislação — é a base institucional comum a qualquer cargo dentro da rede."},
+    ],
+  },
+  pf:{
+    kingdom:{id:'direito_penal_processual',name:'Direito Penal e Processual Penal',icon:'🛡️',color:'#1e293b'},
+    topic:{id:'topico_pf_penal',name:'Fundamentos de Direito Penal e Processual',icon:'🛡️'},
+    cards:[
+      {pergunta:"O que diz o princípio da legalidade em Direito Penal?",resposta:"\"Não há crime sem lei anterior que o defina, nem pena sem prévia cominação legal\" (CP, art. 1º) — nullum crimen, nulla poena sine lege."},
+      {pergunta:"A lei penal pode retroagir para prejudicar o réu?",resposta:"Não. A lei penal não retroage, salvo para beneficiar o réu (irretroatividade da lei penal mais gravosa; retroatividade da lei mais benéfica)."},
+      {pergunta:"O que é abolitio criminis?",resposta:"A revogação de uma lei penal que descriminaliza uma conduta antes considerada crime — faz cessar a execução e os efeitos penais da condenação."},
+      {pergunta:"Qual a diferença entre tempo do crime pela teoria da atividade e pela teoria do resultado?",resposta:"O Código Penal brasileiro adota a teoria da ATIVIDADE: considera-se praticado o crime no momento da ação/omissão, ainda que outro seja o momento do resultado (art. 4º)."},
+      {pergunta:"Qual teoria o Brasil adota para o lugar do crime?",resposta:"A teoria da UBIQUIDADE: considera-se praticado o crime tanto no lugar da conduta quanto no lugar em que se produziu (ou deveria se produzir) o resultado (art. 6º)."},
+      {pergunta:"O que é o princípio da culpabilidade em sentido estrito?",resposta:"Não há responsabilidade penal objetiva — a pena pressupõe dolo ou culpa do agente; ninguém pode ser punido sem culpabilidade comprovada."},
+      {pergunta:"Quais são os 3 elementos do conceito analítico de crime (corrente majoritária)?",resposta:"Fato típico, ilicitude (antijuridicidade) e culpabilidade."},
+      {pergunta:"O que compõe o fato típico?",resposta:"Conduta, resultado, nexo causal e tipicidade (adequação da conduta ao tipo penal)."},
+      {pergunta:"Qual a diferença entre dolo direto e dolo eventual?",resposta:"Dolo direto: o agente quer diretamente o resultado. Dolo eventual: o agente não quer o resultado diretamente, mas assume o risco de produzi-lo (CP, art. 18, I)."},
+      {pergunta:"Quando o crime culposo é punível no Brasil?",resposta:"Somente quando a lei expressamente o prevê como tal (CP, art. 18, parágrafo único) — a regra geral é a punição a título de dolo."},
+      {pergunta:"O que caracteriza a tentativa?",resposta:"Quando, iniciada a execução, o crime não se consuma por circunstâncias alheias à vontade do agente (CP, art. 14, II) — pune-se com a pena do crime consumado, diminuída de 1/3 a 2/3."},
+      {pergunta:"Cite uma excludente de ilicitude prevista no Código Penal.",resposta:"Estado de necessidade, legítima defesa, estrito cumprimento do dever legal ou exercício regular de direito (CP, art. 23)."},
+      {pergunta:"O que é o inquérito policial?",resposta:"Procedimento administrativo investigatório, presidido pela autoridade policial, destinado a apurar a existência de infração penal e sua autoria, servindo de base para a ação penal."},
+      {pergunta:"O inquérito policial é imprescindível para o ajuizamento da ação penal?",resposta:"Não. É peça meramente informativa — o titular da ação penal pode dispensá-lo se já dispuser de elementos suficientes (CPP, art. 12 e art. 39, §5º)."},
+      {pergunta:"Quais as características do inquérito policial quanto à forma?",resposta:"É escrito, sigiloso (na medida necessária à elucidação do fato) e inquisitivo — não há contraditório pleno nessa fase."},
+      {pergunta:"De quem é a atribuição de presidir o inquérito policial?",resposta:"Da autoridade policial (Delegado de Polícia), que pode determinar diligências, ouvir indiciado e testemunhas e requisitar exames periciais."},
+      {pergunta:"O inquérito policial pode ser arquivado pela própria autoridade policial?",resposta:"Não. A autoridade policial não pode determinar o arquivamento dos autos de inquérito — essa decisão cabe ao Poder Judiciário, mediante requerimento do titular da ação penal."},
+      {pergunta:"Qual o prazo geral para conclusão do inquérito com o indiciado preso?",resposta:"Em regra, 10 dias, conforme o CPP (art. 10) — prazos podem variar conforme a situação (solto/preso) e legislação especial aplicável."},
+      {pergunta:"Quais são os requisitos gerais para decretação de qualquer medida cautelar no processo penal?",resposta:"Necessidade (para aplicação da lei penal, investigação/instrução ou para evitar a prática de infrações) e adequação da medida à gravidade do crime, circunstâncias do fato e condições do agente (CPP, art. 282)."},
+      {pergunta:"O que caracteriza a prisão em flagrante?",resposta:"A prisão de quem está cometendo a infração penal, acaba de cometê-la, ou é perseguido/encontrado logo depois com instrumentos ou indícios que façam presumir ser autor (CPP, art. 302)."},
+      {pergunta:"Qual a finalidade da prisão preventiva?",resposta:"Garantir a ordem pública, a ordem econômica, a conveniência da instrução criminal ou assegurar a aplicação da lei penal, quando houver prova de crime e indícios de autoria (CPP, art. 312)."},
+      {pergunta:"A prisão temporária tem qual finalidade principal?",resposta:"Viabilizar as investigações durante o inquérito policial em crimes específicos previstos em lei própria, por prazo determinado."},
+      {pergunta:"Cite uma medida cautelar diversa da prisão prevista no CPP.",resposta:"Comparecimento periódico em juízo, proibição de acesso a determinados lugares, monitoração eletrônica, recolhimento domiciliar noturno, entre outras (CPP, art. 319)."},
+      {pergunta:"O que é a \"audiência de custódia\"?",resposta:"A apresentação do preso em flagrante à autoridade judicial em prazo determinado, para que o juiz avalie a legalidade da prisão e a necessidade de sua manutenção ou conversão em outra medida."},
+    ],
+  },
+  trt:{
+    kingdom:{id:'direito_trabalho',name:'Direito do Trabalho',icon:'⚙️',color:'#0891b2'},
+    topic:{id:'topico_trt_trabalho',name:'CLT e Processo do Trabalho',icon:'⚙️'},
+    cards:[
+      {pergunta:"O que é o princípio da proteção no Direito do Trabalho?",resposta:"Princípio que orienta todo o Direito do Trabalho a favor do empregado, parte reconhecidamente hipossuficiente na relação, buscando equilibrar a desigualdade fática entre empregado e empregador."},
+      {pergunta:"Quais são os 3 desdobramentos clássicos do princípio da proteção?",resposta:"In dubio pro operario (interpretação mais favorável ao trabalhador em caso de dúvida), norma mais favorável (aplica-se a norma mais benéfica entre as vigentes) e condição mais benéfica (direito adquirido não pode ser suprimido por norma posterior menos favorável)."},
+      {pergunta:"O que é o princípio da irrenunciabilidade de direitos trabalhistas?",resposta:"O empregado não pode renunciar validamente a direitos trabalhistas de forma unilateral, por ser parte hipossuficiente — os direitos trabalhistas são, em regra, indisponíveis."},
+      {pergunta:"O que é o princípio da primazia da realidade?",resposta:"Prevalecem os fatos sobre os documentos formais — se a realidade da prestação de serviço diverge do que consta em contrato escrito, prevalece a situação de fato."},
+      {pergunta:"O que são as fontes formais do Direito do Trabalho?",resposta:"Constituição Federal, leis (CLT e leis esparsas), tratados e convenções internacionais, sentença normativa, convenções e acordos coletivos, regulamento de empresa e, subsidiariamente, costumes."},
+      {pergunta:"Convenção Coletiva e Acordo Coletivo de Trabalho: qual a diferença?",resposta:"Convenção Coletiva é firmada entre sindicatos (dos trabalhadores e dos empregadores); Acordo Coletivo é firmado entre sindicato dos trabalhadores e uma ou mais empresas diretamente."},
+      {pergunta:"Quais são os elementos caracterizadores da relação de emprego (CLT, art. 3º)?",resposta:"Pessoalidade, não eventualidade (habitualidade), onerosidade e subordinação, prestados por pessoa física ao empregador."},
+      {pergunta:"O que é o empregador segundo a CLT (art. 2º)?",resposta:"A empresa, individual ou coletiva, que assumindo os riscos da atividade econômica, admite, assalaria e dirige a prestação pessoal de serviços."},
+      {pergunta:"O que é o \"risco da atividade econômica\" (alteridade)?",resposta:"O empregador assume os riscos do negócio — o empregado não pode ser prejudicado por prejuízos ou oscilações da atividade econômica da empresa."},
+      {pergunta:"O contrato de trabalho pode ser tácito?",resposta:"Sim. O contrato de trabalho pode ser acordado tácita ou expressamente, verbalmente ou por escrito, e por prazo determinado ou indeterminado (CLT, art. 443)."},
+      {pergunta:"Qual o prazo máximo do contrato de experiência?",resposta:"90 dias, admitida uma única prorrogação, desde que a soma dos dois períodos não ultrapasse esse limite (CLT, art. 445, parágrafo único)."},
+      {pergunta:"O que é a subordinação jurídica no contrato de trabalho?",resposta:"O poder do empregador de dirigir a prestação pessoal de serviço, dando ordens e orientações que o empregado deve seguir, dentro dos limites do contrato e da lei."},
+      {pergunta:"Qual a jornada de trabalho padrão prevista na CF/CLT?",resposta:"8 horas diárias e 44 horas semanais, salvo disposição em contrário (CF, art. 7º, XIII; CLT, art. 58)."},
+      {pergunta:"Qual o adicional mínimo constitucional para horas extras?",resposta:"50% sobre o valor da hora normal (CF, art. 7º, XVI), podendo instrumento coletivo prever percentual maior."},
+      {pergunta:"Após quantas horas trabalhadas o intervalo intrajornada de 1 hora é obrigatório?",resposta:"Em jornadas superiores a 6 horas, é obrigatório intervalo de no mínimo 1 hora (podendo ser reduzido por acordo/convenção coletiva em hipóteses previstas em lei) (CLT, art. 71)."},
+      {pergunta:"Quantos dias de férias o empregado tem direito por período aquisitivo, em regra?",resposta:"30 dias corridos, após 12 meses de vigência do contrato (período aquisitivo), podendo ser reduzidos conforme o número de faltas injustificadas (CLT, arts. 129-130)."},
+      {pergunta:"O que é o terço constitucional de férias?",resposta:"Adicional de 1/3 sobre o valor da remuneração de férias, garantido constitucionalmente (CF, art. 7º, XVII)."},
+      {pergunta:"O que é o aviso prévio e qual sua duração mínima?",resposta:"Comunicação prévia da rescisão contratual sem justa causa; duração mínima de 30 dias, acrescida de 3 dias por ano de serviço prestado na mesma empresa, até o máximo de 60 dias adicionais (Lei 12.506/2011)."},
+      {pergunta:"Quem tem competência para julgar ações oriundas da relação de trabalho?",resposta:"A Justiça do Trabalho, conforme CF, art. 114, que trata das ações oriundas da relação de trabalho, abrangendo empregados e outras relações de trabalho previstas em lei."},
+      {pergunta:"Qual é o órgão de primeiro grau da Justiça do Trabalho?",resposta:"A Vara do Trabalho (antiga Junta de Conciliação e Julgamento), com competência para processar e julgar as ações trabalhistas."},
+      {pergunta:"O que caracteriza o princípio da oralidade no Processo do Trabalho?",resposta:"Prestigia a palavra falada em audiência (depoimentos, debates), com registro em ata, buscando celeridade e simplicidade procedimental."},
+      {pergunta:"A conciliação é obrigatória em algum momento do processo trabalhista?",resposta:"Sim — o juiz deve sempre tentar a conciliação em qualquer fase do processo, sendo praxe pelo menos duas tentativas (na abertura da audiência e após a instrução), conforme a CLT."},
+      {pergunta:"O que é o \"jus postulandi\" na Justiça do Trabalho?",resposta:"A capacidade de as próprias partes (empregado e empregador) postularem diretamente perante a Vara do Trabalho e os TRTs, sem a obrigatoriedade de advogado, nos termos da CLT (art. 791) — embora hoje seja pouco usado na prática."},
+      {pergunta:"Qual o recurso cabível contra sentença de primeiro grau na Justiça do Trabalho?",resposta:"O Recurso Ordinário, dirigido ao Tribunal Regional do Trabalho (TRT) da respectiva região (CLT, art. 895)."},
+    ],
+  },
+  pm:{
+    kingdom:{id:'direito_constitucional_pm',name:'Direito Constitucional e Segurança Pública',icon:'🚔',color:'#dc2626'},
+    topic:{id:'topico_pm_constitucional',name:'Fundamentos Constitucionais e Segurança Pública',icon:'🚔'},
+    cards:[
+      {pergunta:"O que garante o caput do art. 5º da Constituição Federal?",resposta:"A igualdade de todos perante a lei, sem distinção de qualquer natureza, garantindo-se a brasileiros e estrangeiros residentes no País a inviolabilidade do direito à vida, à liberdade, à igualdade, à segurança e à propriedade."},
+      {pergunta:"O que é o princípio da legalidade previsto no art. 5º, II?",resposta:"\"Ninguém será obrigado a fazer ou deixar de fazer alguma coisa senão em virtude de lei\" — base do Estado de Direito, aplicável também à atuação policial."},
+      {pergunta:"O art. 5º veda a tortura e tratamento desumano — em que inciso?",resposta:"Inciso III: \"ninguém será submetido a tortura nem a tratamento desumano ou degradante\" — princípio central pra atuação de qualquer agente de segurança pública."},
+      {pergunta:"A casa é asilo inviolável — quando é permitido entrar sem consentimento do morador?",resposta:"A qualquer hora, em caso de flagrante delito ou desastre, ou para prestar socorro; durante o dia, também por determinação judicial (CF, art. 5º, XI)."},
+      {pergunta:"O que garante o inciso LXI sobre prisão?",resposta:"Ninguém será preso senão em flagrante delito ou por ordem escrita e fundamentada de autoridade judiciária competente, salvo transgressão militar ou crime propriamente militar (definidos em lei)."},
+      {pergunta:"O que é o devido processo legal (art. 5º, LIV)?",resposta:"\"Ninguém será privado da liberdade ou de seus bens sem o devido processo legal\" — garante processo justo, com contraditório e ampla defesa, antes de qualquer restrição de direitos."},
+      {pergunta:"Como a Constituição define a segurança pública (art. 144, caput)?",resposta:"Dever do Estado, direito e responsabilidade de todos, exercida para a preservação da ordem pública e da incolumidade das pessoas e do patrimônio."},
+      {pergunta:"Quais são os órgãos de segurança pública listados no art. 144?",resposta:"Polícia Federal, Polícia Rodoviária Federal, Polícia Ferroviária Federal, Polícias Civis, Polícias Militares, Corpos de Bombeiros Militares e, pela EC 104/2019, as polícias penais."},
+      {pergunta:"Qual a atribuição constitucional das Polícias Militares (art. 144, §5º)?",resposta:"Polícia ostensiva e preservação da ordem pública, sendo forças auxiliares e reserva do Exército."},
+      {pergunta:"A quem se subordinam as Polícias Militares e Corpos de Bombeiros Militares?",resposta:"Aos Governadores dos Estados, do Distrito Federal e dos Territórios (CF, art. 144, §6º)."},
+      {pergunta:"Qual é a atribuição constitucional das Polícias Civis?",resposta:"Ressalvada a competência da União, exercem funções de polícia judiciária e apuração de infrações penais, exceto militares (CF, art. 144, §4º)."},
+      {pergunta:"O que caracteriza o policiamento \"ostensivo\"?",resposta:"A atuação visível, preventiva, com fardamento e identificação, voltada a inibir a prática de infrações e garantir a ordem pública — atribuição típica da Polícia Militar."},
+      {pergunta:"Quais são os entes que compõem a organização político-administrativa do Brasil?",resposta:"A União, os Estados, o Distrito Federal e os Municípios, todos autônomos, nos termos da Constituição (CF, art. 18)."},
+      {pergunta:"Quais são os 3 Poderes da União, segundo a CF?",resposta:"Legislativo, Executivo e Judiciário, independentes e harmônicos entre si (CF, art. 2º)."},
+      {pergunta:"A quem compete organizar e manter a Polícia Militar de cada Estado?",resposta:"Ao próprio Estado, dentro da sua autonomia federativa, respeitadas as normas gerais federais (a União organiza e mantém apenas as forças da PM/CBM do Distrito Federal e antigos Territórios)."},
+      {pergunta:"O que são os \"fundamentos\" da República Federativa do Brasil (CF, art. 1º)?",resposta:"Soberania, cidadania, dignidade da pessoa humana, valores sociais do trabalho e da livre iniciativa e pluralismo político."},
+      {pergunta:"Cite um dos objetivos fundamentais da República (CF, art. 3º).",resposta:"Construir uma sociedade livre, justa e solidária; garantir o desenvolvimento nacional; erradicar a pobreza e a marginalização; promover o bem de todos, sem preconceitos."},
+      {pergunta:"O que significa o princípio da separação de Poderes?",resposta:"Cada Poder exerce funções típicas próprias (legislar, administrar, julgar) com independência, mas com mecanismos de controle recíproco (freios e contrapesos)."},
+      {pergunta:"O que é o princípio do uso proporcional da força?",resposta:"A força empregada por um agente de segurança deve ser proporcional à resistência ou ameaça enfrentada, usando o mínimo necessário para conter a situação."},
+      {pergunta:"O que é o \"uso diferenciado/escalonado da força\"?",resposta:"A ideia de que o agente deve graduar sua resposta conforme o nível de resistência (da presença/verbalização até o uso de força letal, como último recurso), e não partir direto pro nível mais grave."},
+      {pergunta:"O que caracteriza um tratado internacional de Direitos Humanos incorporado com status de emenda constitucional?",resposta:"Tratados aprovados em cada Casa do Congresso, em dois turnos, por 3/5 dos votos dos respectivos membros, equivalem às emendas constitucionais (CF, art. 5º, §3º)."},
+      {pergunta:"O que é a dignidade da pessoa humana no contexto da atuação policial?",resposta:"Fundamento da República (CF, art. 1º, III) que exige que toda abordagem, prisão ou uso de força respeite a integridade física e moral da pessoa, mesmo em situação de flagrante ou detenção."},
+      {pergunta:"O policial em serviço pode ser responsabilizado por excesso no uso da força?",resposta:"Sim — o abuso ou excesso no exercício de função pública pode gerar responsabilização administrativa, civil e penal, independentemente da legalidade da ação inicial."},
+      {pergunta:"Por que estudar Direitos Humanos é relevante mesmo em provas técnicas de Direito Constitucional?",resposta:"Porque a atuação policial constitucional está diretamente ligada ao respeito aos direitos fundamentais — é tema recorrente em questões sobre limites e legalidade da ação do Estado."},
+    ],
+  },
+};
+const URL_ORIGEM=(()=>{
+  const o=(new URLSearchParams(location.search).get('origem')||'').toLowerCase();
+  return Object.prototype.hasOwnProperty.call(ORIGEM_STARTER_DECKS,o)?o:null;
+})();
+// Aplica o deck de partida na primeira vez que uma conta genuinamente nova é criada — não
+// mexe em nada se a pessoa já tem reinos (conta existente) nem se ela não veio de nenhuma
+// landing de edital específico.
+function applyOrigemStarterDeck(){
+  if(!URL_ORIGEM)return;
+  if(db.origemDeckApplied)return; // idempotente: já aplicado antes, não duplica
+  const deck=ORIGEM_STARTER_DECKS[URL_ORIGEM];
+  if(!deck)return;
+  if(!db.kingdoms.some(k=>k.id===deck.kingdom.id))db.kingdoms.push(Object.assign({},deck.kingdom));
+  if(!db.topics[deck.kingdom.id])db.topics[deck.kingdom.id]=[];
+  if(!db.topics[deck.kingdom.id].some(t=>t.id===deck.topic.id)){
+    db.topics[deck.kingdom.id].push({id:deck.topic.id,name:deck.topic.name,icon:deck.topic.icon,priority:2,subtopics:[]});
+  }
+  if(!db.flashcards)db.flashcards={};
+  deck.cards.forEach(c=>{
+    const id='origem_'+deck.topic.id+'_'+genId();
+    db.flashcards[id]={id,mbId:deck.topic.id,pergunta:c.pergunta,resposta:c.resposta,tags:'kit-'+URL_ORIGEM,dificuldade:2,acertos:0,erros:0,lastConf:0,criacao:new Date().toISOString(),ultimaRevisao:null};
+  });
+  db.origemDeckApplied=true;
+}
+
 // Movido para cima: precisa existir antes de applyDefaults() rodar (chamado de forma
 // síncrona no fallback local do loadDB, antes do script terminar de ser avaliado).
 const EIXOS_DEFAULT=[
@@ -2396,6 +2603,7 @@ function loadDB(callback){
       db.trialStartedAt=todayStr();
     }
     applyDefaults();
+    applyOrigemStarterDeck();
     // Histórico de pagamentos: detecta quando lastPaymentAt muda (você confirmou uma
     // renovação no Firebase Console) e registra no histórico. Só depois do primeiro load
     // (wasReady), senão logaria uma "renovação" falsa toda vez que a conta simplesmente
