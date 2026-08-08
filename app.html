@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-LQJ00HV771"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-LQJ00HV771');
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Vale dos Nomeados</title>
@@ -2353,6 +2361,7 @@ function authSubmit(){
       cred.user.sendEmailVerification().catch(()=>{});
       sendWelcomeEmail(cred.user.email);
     }
+    if(window.gtag)gtag('event',authMode==='signup'?'sign_up':'login',{method:'email'});
     // onAuthStateChanged cuida do resto (esconder tela de login, iniciar o app)
   }).catch(e=>{
     console.warn('Auth error:',e);
@@ -2784,6 +2793,7 @@ function onboardFinish(){
   if(db.onboardingCompleted)return;
   db.onboardingCompleted=true;
   saveDB();
+  if(window.gtag)gtag('event','onboarding_completed');
   closeModal();
 }
 function renderOnboardStep(){
@@ -3487,11 +3497,13 @@ async function fetchPixCode(tier,force){
   const data=await res.json();
   if(!res.ok||!data.copiaCola)throw new Error(data.error||'Falha ao gerar o Pix');
   pixCodeCache[tier]={copiaCola:data.copiaCola,paymentId:data.paymentId};
+  if(window.gtag)gtag('event','pix_generated',{plano:tier});
   return pixCodeCache[tier];
 }
 function selectPixTier(tier){
   if(tier==='vitalicio'&&!isLifetimeAvailable())return;
   selectedPixTier=tier;
+  if(window.gtag)gtag('event','plan_selected',{plano:tier});
   renderPixTierUI();
 }
 async function renderPixTierUI(){
@@ -3624,6 +3636,7 @@ function openRenewalScreen(reason){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('screen-locked').classList.add('active');
+  if(window.gtag)gtag('event','paywall_shown',{reason:reason||'renewal'});
   renderLockedScreen(reason||'renewal');
 }
 function showScreen(name){
