@@ -1,8 +1,8 @@
 /**
- * Aviso de cookies + carregamento do Google Analytics condicionado ao aceite (LGPD).
- * O gtag() fica sempre definido (só empilha em dataLayer) pra qualquer evento
- * customizado da página não quebrar — mas o script real do Google e o
- * gtag('config', ...) só disparam depois que a pessoa aceita os cookies.
+ * Aviso de cookies + carregamento do Google Analytics e do Microsoft Clarity
+ * condicionados ao aceite (LGPD). O gtag() fica sempre definido (só empilha em
+ * dataLayer) pra qualquer evento customizado da página não quebrar — mas os
+ * scripts reais (GA4 + Clarity) só disparam depois que a pessoa aceita os cookies.
  */
 (function () {
   window.dataLayer = window.dataLayer || [];
@@ -11,6 +11,7 @@
   gtag('js', new Date());
 
   var GA_ID = 'G-LQJ00HV771';
+  var CLARITY_ID = 'xz9vo1frqs';
   var CONSENT_KEY = 'vdn_cookie_consent';
 
   function loadGA() {
@@ -21,6 +22,21 @@
     s.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA_ID;
     document.head.appendChild(s);
     gtag('config', GA_ID);
+  }
+
+  function loadClarity() {
+    if (window.__clarityLoaded) return;
+    window.__clarityLoaded = true;
+    (function (c, l, a, r, i, t, y) {
+      c[a] = c[a] || function () { (c[a].q = c[a].q || []).push(arguments); };
+      t = l.createElement(r); t.async = 1; t.src = 'https://www.clarity.ms/tag/' + i;
+      y = l.getElementsByTagName(r)[0]; y.parentNode.insertBefore(t, y);
+    })(window, document, 'clarity', 'script', CLARITY_ID);
+  }
+
+  function loadAnalytics() {
+    loadGA();
+    loadClarity();
   }
 
   function showBanner() {
@@ -38,7 +54,7 @@
     document.getElementById('cookie-accept').onclick = function () {
       localStorage.setItem(CONSENT_KEY, 'accepted');
       el.remove();
-      loadGA();
+      loadAnalytics();
     };
     document.getElementById('cookie-decline').onclick = function () {
       localStorage.setItem(CONSENT_KEY, 'declined');
@@ -48,7 +64,7 @@
 
   var consent = localStorage.getItem(CONSENT_KEY);
   if (consent === 'accepted') {
-    loadGA();
+    loadAnalytics();
   } else if (consent !== 'declined') {
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', showBanner);
