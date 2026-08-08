@@ -92,9 +92,12 @@ function renderGrid(){
   if(!list.length){ grid.innerHTML = '<div class="empty">Nada aqui.</div>'; return; }
   grid.innerHTML = list.map(item=>`
     <div class="card">
-      <img src="${item.imageUrl}" loading="lazy">
+      ${item.mediaType==='VIDEO'
+        ? `<video src="${item.videoUrl}" controls muted playsinline preload="metadata" style="width:100%;aspect-ratio:4/5;object-fit:cover;background:#0f0a1e"></video>`
+        : `<img src="${item.imageUrl}" loading="lazy">`}
       <div class="card-body">
         <span class="status ${item.status}">${item.status}</span>
+        ${item.mediaType==='VIDEO' ? `<span style="font-size:10px;color:#8b7db8">🎬 Reel</span>` : ''}
         <div class="cap">${(item.caption||'').replace(/</g,'&lt;')}</div>
         ${item.status==='pending' ? `
           <div class="actions">
